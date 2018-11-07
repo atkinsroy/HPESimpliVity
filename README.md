@@ -29,6 +29,6 @@ Some of the cmdlets have parameters to filter on specific properties, like -VM a
 
 ## Things To Do
 
-* The module covers just the REST API GET commands. The POST commands need to be added, focusing on the important ones first, such New-SVTbackup and Move-SVTM.
+* The module covers just the REST API GET commands. The POST commands need to be added, focusing on the important ones first, such New-SVTbackup and Move-SVTVM.
 
 * Test using PowerShell Core 6.0 (Windows and Linux).
