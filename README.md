@@ -23,10 +23,11 @@ Some of the cmdlets have parameters to filter on specific properties, like -VM a
 
 * Copy the files to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity.
 
-* Edit the HPESimpliVity.psm1 file and enter the useranme and password for your virtual controller
+* Restart Powershell to load the module, or type:
 
-* Restart Powershell
-
+```powershell
+    import-module HPESimpliVity -force
+```
 * Issue the following commands:
 ```powershell
     Get-Command -Module HPESimpliVity
