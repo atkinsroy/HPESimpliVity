@@ -21,7 +21,7 @@ Some of the cmdlets have parameters to filter on specific properties, like -VM a
 
 ## Installation
 
-* Copy the files to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity.
+* Copy the files to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity. Note: the folder structure is important to ensure that PowerShell loads the module automatically.
 
 * Restart Powershell to load the module, or type:
 
