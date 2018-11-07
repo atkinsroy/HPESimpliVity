@@ -28,7 +28,7 @@ Some of the cmdlets have parameters to filter on specific properties, like -VM a
 ```powershell
     import-module HPESimpliVity -force
 ```
-* Issue the following commands:
+* After this, the module will automatically load in new PowerShell sessions. Issue the following commands to confirm:
 ```powershell
     Get-Command -Module HPESimpliVity
     Get-Help Get-SVTBackup
