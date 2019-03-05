@@ -63,16 +63,13 @@ function Invoke-SVTRestMethod {
 
     catch [System.Management.Automation.RuntimeException] {
         throw "It looks as though your session has timed out. Use Connect-SVT to reconnect: $($_.Exception.Message)"
-        return
     }
     catch [System.UriFormatException] {
         throw "It looks as though you have not connected to the OVC or you've specified an invalid IP address to connect. Use Connect-SVT to connect first and confirm the IP address used: $($_.Exception.Message)"
-        return
     }
     catch {
         # Catch any other error
         throw "An unexpected error has occured: $($_.Exception.Message)"
-        return
     }
 }
 
@@ -174,8 +171,7 @@ function Connect-SVT {
 	# Confirm the OVC given is a valid IP address
 	$IsValid = ($OVC -as [Net.IPAddress]) -as [Bool]
 	If ( $IsValid -eq $false ) {
-		Write-Error "$OVC is an invalid IP Address"
-		return
+		throw "$OVC is an invalid IP Address"
 	}
 
 	# Three ways to authenticate -  via a credential object, passed as parameters or securely prompt for credential, in that order
@@ -743,7 +739,6 @@ function Get-SVTVM {
         }
         catch {
             throw $_.Exception.Message
-            return
         }
 
         $Response.virtual_machines | Foreach-Object {
