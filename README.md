@@ -16,22 +16,18 @@ The module contains the following exported cmdlets:
 
 Some of the cmdlets have parameters to filter on specific properties, like -VM and -Datastore. All cmdlets output a Powershell custom object which can be piped to other commands like Select-Object, Where-Object, Out-GridView and Export-CSV, etc. Refer to the cmdlet help for details.
 
-<<<<<<< HEAD
 As an example, I have also created a PowerShell script to shutdown an entire HPE SimpliVity cluster. The script uses this module together with VMware PowerCLI to connect to vCenter and any OmniStack VC in federation to shutdown the VMs, the appropriate OVC(s)and the host(s) in the specified cluster. The prequisite for this to work is that, obviously, vCenter cannot be running on a VM in the cluster you're shutting down. The idea of this script is to gracefully shutdown the cluster in a power failure and could be executed from the UPS software (again, running outside the cluster). 
 
-## Installation
-=======
 ## Requirements
 
 * PowerShell V3.0 and above. This module was created and tested using PowerShell V5.1.
-
 * The IP address and the credentials of an authorised SimpliVity user account. Refer to the SimpliVity documentation for details
 
 ## Installation
-* Edit the HPESimpliVity.psm1 file and enter the username and password for your virtual controller
-=======
-* Copy the files to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity. Note: the folder structure is important to ensure that PowerShell loads the module automatically.
->>>>>>> 0e27c65dcb24d445613115b6fb58535573db4180
+
+* Copy the files to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity. 
+
+Note: the folder structure is important to ensure that PowerShell automatically loads the module.
 
 * Restart Powershell to load the module, or type:
 
@@ -49,7 +45,7 @@ As an example, I have also created a PowerShell script to shutdown an entire HPE
 
 * Test using PowerShell Core 6.0 (Windows and Linux).
 
-* I was originally using ps1xml files to determine the format of the commands. I've removed this for now, limiting the number properties to four. Once I've added all of the other commands, I'll re-introduce this. 
+* I was originally using ps1xml files to determine the format of the commands. I've removed this for now, limiting the number properties to four. Once I've added all of the other cmdlets, I'll re-introduce this. Tracking property names bacame tiresome.
 
 * Test using the Hyper-V version of SimpliVity
 
