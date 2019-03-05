@@ -16,18 +16,19 @@ The module contains the following exported cmdlets:
 
 Some of the cmdlets have parameters to filter on specific properties, like -VM and -Datastore. All cmdlets output a Powershell custom object which can be piped to other commands like Select-Object, Where-Object, Out-GridView and Export-CSV, etc. Refer to the cmdlet help for details.
 
-As an example, I have also created a PowerShell script to shutdown an entire HPE SimpliVity cluster. The script uses this module together with VMware PowerCLI to connect to vCenter and any OmniStack VC in federation to shutdown the VMs, the appropriate OVC(s) and  host(s) in the specified cluster. The prequisite for this to work is that, obviously, vCenter cannot be running on a VM in the cluster you're shutting down. The idea of this script is to gracefully shutdown the cluster in a power failure and could be executed from the UPS software (again, running outside the cluster). 
+As an example, I have also created a PowerShell script to shutdown an entire HPE SimpliVity cluster. The script uses this module together with VMware PowerCLI to connect to vCenter and any OmniStack VC in the federation to shutdown the VMs, the appropriate OVC(s) and  host(s) in the specified cluster. The prerequisite for this to work is that, obviously, vCenter cannot be running on a VM in the cluster you're shutting down. The idea of this script is to gracefully shutdown the cluster in a power failure and could be executed from the UPS software (again, running outside the cluster). 
 
 ![This is what the script looks like](/Media/Image%20037.png)
 
 ## Requirements
 
 * PowerShell V3.0 and above. This module was created and tested using PowerShell V5.1.
-* The IP address and the credentials of an authorised SimpliVity user account. Refer to the SimpliVity documentation for details
+* The IP address and the credentials of an authorised SimpliVity user account.
+* Tested with OmniStack 3.7.7.
 
 ## Installation
 
-* Copy the files to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity. 
+* Copy the psm1 file to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity. 
 
 Note: the folder structure is important to ensure that PowerShell automatically loads the module.
 
