@@ -18,6 +18,8 @@ Some of the cmdlets have parameters to filter on specific properties, like -VM a
 
 As an example, I have also created a PowerShell script to shutdown an entire HPE SimpliVity cluster. The script uses this module together with VMware PowerCLI to connect to vCenter and any OmniStack VC in federation to shutdown the VMs, the appropriate OVC(s)and the host(s) in the specified cluster. The prequisite for this to work is that, obviously, vCenter cannot be running on a VM in the cluster you're shutting down. The idea of this script is to gracefully shutdown the cluster in a power failure and could be executed from the UPS software (again, running outside the cluster). 
 
+(/Media/Image%20037.png)
+
 ## Requirements
 
 * PowerShell V3.0 and above. This module was created and tested using PowerShell V5.1.
