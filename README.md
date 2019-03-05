@@ -47,7 +47,7 @@ Note: the folder structure is important to ensure that PowerShell automatically 
 
 * Test using PowerShell Core 6.0 (Windows and Linux).
 
-* I was originally using ps1xml files to determine the format of the commands. I've removed this for now, limiting the number properties to four. Once I've added all of the other cmdlets, I'll re-introduce this. Tracking property names bacame tiresome.
+* I was originally using ps1xml files to determine the format of the commands. I've removed this for now, limiting the number default properties to four. Once I've added all of the other cmdlets, I'll re-introduce this. Tracking property names bacame tiresome.
 
 * Test using the Hyper-V version of SimpliVity
 
