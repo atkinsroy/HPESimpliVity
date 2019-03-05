@@ -24,13 +24,10 @@ As an example, I have also created a PowerShell script to shutdown an entire HPE
 ## Requirements
 
 * PowerShell V3.0 and above. This module was created and tested using PowerShell V5.1.
->>>>>>> 0e27c65dcb24d445613115b6fb58535573db4180
 
 * The IP address and the credentials of an authorised SimpliVity user account. Refer to the SimpliVity documentation for details
 
 ## Installation
-
-<<<<<<< HEAD
 * Edit the HPESimpliVity.psm1 file and enter the username and password for your virtual controller
 =======
 * Copy the files to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity. Note: the folder structure is important to ensure that PowerShell loads the module automatically.
@@ -48,17 +45,11 @@ As an example, I have also created a PowerShell script to shutdown an entire HPE
 ```
 
 ## Things To Do
-
-<<<<<<< HEAD
 * The module mostly covers just the REST API GET commands. More POST commands need to be added, focusing on the important ones first, such New-SVTbackup and Move-SVTVM.
 
 * Test using PowerShell Core 6.0 (Windows and Linux).
 
 * I was originally using ps1xml files to determine the format of the commands. I've removed this for now, limiting the number properties to four. Once I've added all of the other commands, I'll re-introduce this. 
-=======
-* The module covers just the REST API GET commands. The POST commands need to be added, focusing on the important ones first, such New-SVTbackup and Move-SVTVM.
-
-* Test using PowerShell Core 6.0 (Both on Windows and on Linux).
 
 * Test using the Hyper-V version of SimpliVity
->>>>>>> 0e27c65dcb24d445613115b6fb58535573db4180
+
