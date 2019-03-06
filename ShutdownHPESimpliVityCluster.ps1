@@ -46,19 +46,19 @@ THE SOFTWARE.
 #>
 
 [cmdletBinding()]
-    Param (
-        [Parameter(Mandatory=$true, Position=0, HelpMessage="Enter the vCenter server local to the specified cluster")]
-        [System.String]$vCenterName,
+Param (
+    [Parameter(Mandatory = $true, Position = 0, HelpMessage = "Enter the vCenter server local to the specified cluster")]
+    [System.String]$vCenterName,
 
-        [Parameter(Mandatory=$true, Position=1, HelpMessage="Enter any OmniStack Virtual Controller in the Federation")]
-        [System.String]$OVC,
+    [Parameter(Mandatory = $true, Position = 1, HelpMessage = "Enter any OmniStack Virtual Controller in the Federation")]
+    [System.String]$OVC,
 
-        [Parameter(Mandatory=$true, Position=2)]
-        [System.String]$ClusterName,
+    [Parameter(Mandatory = $true, Position = 2)]
+    [System.String]$ClusterName,
 
-        [Parameter(Mandatory=$false, Position=3, HelpMessage="Without -Force, the script just reports without doing anything")]
-        [Switch]$Force
-    )
+    [Parameter(Mandatory = $false, Position = 3, HelpMessage = "Without -Force, the script just reports without doing anything")]
+    [Switch]$Force
+)
 
 # Help function to write pretty things to the console and a log file
 Function Write-Log {
@@ -111,16 +111,17 @@ catch {
 # Tag name = Level1 - shutdown first (e.g. application servers)
 # Level2 - shutdown second (e.g. database servers)
 # Level3 - shutdown third (e.g. critical infrastructure servers, like Active Directory Domain Controllers).
-# You can add more tags if more granularity is required. Use a tag category such as 'ShutDownOrder' to distinguish them from other tags.
+# You can add more tags if more granularity is required. Use a tag category such as 'ShutDownOrder' to distinguish
+# them from other tags. That may be used in the environment
 $CriticalVM = @()
 1..3 | Foreach-Object {
     $tag = "Level$_"
     Write-Log "Looking for VMs on cluster $ClusterName with a shutdown order tag set to $tag"
     try {
-        $Found=$false
+        $Found = $false
         $Cluster = Get-Cluster -Name $ClusterName -ErrorAction Stop
         $vmList = $Cluster | Get-VM -Tag $tag -ErrorAction Stop | Where-Object Name -notmatch 'OmniStackVC' | Where-Object PowerState -eq 'PoweredOn'
-        $Found=$true
+        $Found = $true
     }
     catch {
         if ($_.Exception.Message -match 'Could not find Tag') {
@@ -163,11 +164,11 @@ $CriticalVM = @()
 # Now we've shutdown critical VMs (those with tags), shutdown any other VMs left running, ignoring critical VMs and the OVC(s), of course.
 Write-Log "Looking for any other powered on VMs on cluster $ClusterName with no/unrecognised tags" 0
 try {
-    $vmList =  $Cluster | 
-            Get-VM -ErrorAction Stop | 
-            Where-Object Name -NotMatch 'OmniStackVC' | 
-            Where-Object Name -NotIn $CriticalVM |
-            Where-Object PowerState -eq 'PoweredOn'
+    $vmList = $Cluster | 
+        Get-VM -ErrorAction Stop | 
+        Where-Object Name -NotMatch 'OmniStackVC' | 
+        Where-Object Name -NotIn $CriticalVM |
+        Where-Object PowerState -eq 'PoweredOn'
 }
 catch {
     Write-Log "$_.Exception.Message" 2
@@ -205,18 +206,18 @@ catch {
 }
 
 # Wait until all VMs are shutdown (except the OVC)
-if ($Force){
+if ($Force) {
     do {
         Write-Log "Waiting 10 seconds to allow VMs to shutdown"
         Start-Sleep -Seconds 10
-        $vmName =  $Cluster | Get-VM -ErrorAction Stop | Where-Object Name -NotMatch 'OmniStackVC' | Where-Object PowerState -eq 'PoweredOn'
+        $vmName = $Cluster | Get-VM -ErrorAction Stop | Where-Object Name -NotMatch 'OmniStackVC' | Where-Object PowerState -eq 'PoweredOn'
     } while ($vmName)
 
     # Shutdown the HPE OmniStack Virtual Controller(s).
     try {
         $Response = Get-SVTHost -ClusterName $ClusterName -ErrorAction Stop | Stop-SVTOVC -ErrorAction Stop #-Verbose
         $Response | ForEach-Object {
-             Write-Log "OVC $($_.OVC) has shutdown status of $($_.ShutdownStatus)" 0
+            Write-Log "OVC $($_.OVC) has shutdown status of $($_.ShutdownStatus)" 0
         }
     }
     catch {
@@ -225,7 +226,7 @@ if ($Force){
     }
 }
 else {
-    Get-SVTHost -ClusterName $ClusterName | Foreach {
+    Get-SVTHost -ClusterName $ClusterName | Foreach-Object {
         Write-Log "Whatif: Shutdown of $($_.ManagementIP) (on host $($_.HostName)) would be performed now"
     }
 }
@@ -234,9 +235,9 @@ else {
 $VMHost = $Cluster | Get-VMHost
 if ($Force) {
     do {
-        Write-Log "Waiting 20 seconds to allow OmniStack Controller to shutdown"
+        Write-Log "Waiting 20 seconds to allow OmniStack Controller(s) to shutdown"
         Start-Sleep -Seconds 20
-        $vmName =  $Cluster | Get-VM -ErrorAction Stop | Where-Object PowerState -eq 'PoweredOn'
+        $vmName = $Cluster | Get-VM -ErrorAction Stop | Where-Object PowerState -eq 'PoweredOn'
     } while ($vmName)
 
     # Shutdown the host(s)
