@@ -6,7 +6,7 @@
 #   REST API. This module has been written and tested with version 3.7.7.
 # 
 # Download:
-#   https://github.com/atkinsroy/POSH-HPESimpliVity
+#   https://github.com/atkinsroy/HPESimpliVity
 #
 #   VERSION 1.0
 #

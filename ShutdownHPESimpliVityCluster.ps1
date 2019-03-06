@@ -15,7 +15,7 @@
 #   HPESimpliVity module installed locally
 # 
 # Download:
-#   https://github.com/atkinsroy/POSH-HPESimpliVity
+#   https://github.com/atkinsroy/HPESimpliVity
 #
 #   VERSION 1.0
 #
