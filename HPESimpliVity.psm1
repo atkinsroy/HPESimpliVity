@@ -2135,7 +2135,7 @@ function Get-SVTcapacity {
 
             # Unpack the Json into a Custom object. This outputs each Metric with a date and value
             $CustomObject = $Response.metrics | foreach-object {
-                $MetricName = $_.name
+                $MetricName = $_.name -replace '_',''
                 $_.data_points | ForEach-Object {
                     [pscustomobject] @{
                         Name  = $MetricName
