@@ -1,12 +1,34 @@
  # HPE SimpliVity PowerShell Module
 
-This PowerShell module utilises the HPE SimpliVity REST API to display information and manage a SimpliVity federation.
+This PowerShell module utilises the HPE SimpliVity REST API to display information and manage a SimpliVity federation and works by connecting to any OmniStack Virtual Controller in your environment.
 
-The module uses V1.11 of the Rest API, which comes with HPE SimpliVity 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters.
+The module uses V1.11 of the Rest API, which comes with HPE SimpliVity 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters, but it works with 3.7.7 too. 
 
-All cmdlets are written as advanced cmdlets, with extensive comment based help and most with the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtering parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API, for example limiting the number of records to 500 when returning virtual machines and backup objects.
+All cmdlets are written as advanced cmdlets, with extensive comment based help and most have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtering parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API, for example limiting the number of records to 500 when returning virtual machines and backup objects.
 
-Most "Get" commands provide way too many properties to show at once, so I have introduced ps1xml files into this version, to provide default display properties. All properties are still accessible, by piping to format-list or Select-Object -property *
+Most "Get" commands provide way too many properties to show at once, so I have introduced ps1xml files into this version, to provide default display properties. All properties are still accessible, by piping to Format-List or Select-Object -property *
+
+For Example:
+```powershell
+    PS C:\>Connect-SVT -OVC 192.168.1.11 -Credential $Cred
+    PS C:\>Get-SVThost
+    
+    HostName      DataCenterName    ClusterName   FreeSpaceGB    ManagementIP   StorageIP     FederationIP 
+    --------      --------------    -----------   -----------    ------------   ---------     ------------
+    192.168.1.1   Redfreds Labs     Primary             2,671    192.168.1.11   192.168.2.1   192.168.3.1
+    192.168.1.2   Redfreds Labs     Primary             2,671    192.168.1.12   192.168.2.2   192.168.3.2
+   
+    PS C:\>Get-SVThost -Name 192.168.1.1 | Format-List
+    
+    PolicyEnabled            : True
+    ClusterId                : 3baba7ec-6d02-4fb6-b510-5ce19cd9c1d0
+    StorageMask              : 255.255.255.0
+    Model                    : HPE SimpliVity 380 Series 4000
+    .
+    .
+    .
+```
+
 
 The module currently contains 51 exported cmdlets, in the following feature categories:
 
@@ -49,13 +71,14 @@ Note: the folder structure is important to ensure that PowerShell automatically 
 * Restart Powershell to load the module, or type:
 
 ```powershell
-    import-module HPESimpliVity -force
+    PS C:\>import-module HPESimpliVity -force
 ```
 * After this, the module will automatically load in new PowerShell sessions. Issue the following commands to confirm:
 ```powershell
-    Get-Command -Module HPESimpliVity
-    Get-Help Get-SVTBackup
+    PS C:\>Get-Command -Module HPESimpliVity
+    PS C:\>Get-Help Get-SVTBackup
 ```
+* Once installed, you're ready to connect to the OmniStack
 
 ## Things To Do
 * The module mostly covers just the REST API GET commands. More POST commands need to be added, focusing on the important ones first, such New-SVTbackup and Move-SVTVM.
