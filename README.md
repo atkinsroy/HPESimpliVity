@@ -1,10 +1,12 @@
  # HPE SimpliVity PowerShell Module
 
-This PowerShell module utilises the HPE SimpliVity REST API to display information about a SimpliVity federation. 
+This PowerShell module utilises the HPE SimpliVity REST API to display information and manage a SimpliVity federation.
 
-The module contains 51 exported cmdlets, as follows:
+The module uses V1.11 of the Rest API, which comes with HPE SimpliVity 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters. 
 
-Backup | Policy | Datastore & cluster
+The module currently contains 51 exported cmdlets, in the following feature categories:
+
+Backups | Backup Policy | Datastore & cluster
 --- | --- | ---
 Stop-SVTbackup | Suspend-SVTpolicy | Get-SVTcluster
 Rename-SVTbackup | Rename-SVTpolicy | Get-SVTclusterConnected
