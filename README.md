@@ -4,57 +4,47 @@ This PowerShell module utilises the HPE SimpliVity REST API to display informati
 
 The module contains the following exported cmdlets:
 
+Backup | Policy | Datastore & cluster
+--- | --- | ---
+Stop-SVTbackup | Suspend-SVTpolicy | Get-SVTcluster
+Rename-SVTbackup | Rename-SVTpolicy | Get-SVTclusterConnected
+Lock-SVTbackup | Resume-SVTpolicy | Get-SVTdatastore
+Remove-SVTbackup | New-SVTpolicy | Publish-SVTdatastore
+New-SVTbackup | Remove-SVTpolicy | Remove-SVTdatastore
+Copy-SVTbackup | Get-SVTpolicy | Resize-SVTdatastore
+Get-SVTbackup | Set-SVTpolicyRule | New-SVTdatastore
+Set-SVTbackupRetention | Update-SVTpolicyRule | Unpublish-SVTdatastore
+Update-SVTbackupUniqueSize | Remove-SVTpolicyRule | Get-SVTdatastoreComputeNode
+. | Get-SVTpolicyScheduleReport | Set-SVTdatastorePolicy
 
-| --- | ---
-* Connect-SVT | * New-SVTpolicy
-* Copy-SVTbackup
-* Get-SVTbackup
-* Get-SVTcapacity
-* Get-SVTcluster
-* Get-SVTclusterConnected
-* Get-SVTdatastore
-* Get-SVTdatastoreComputeNode
-* Get-SVThardware
-* Get-SVThost
-* Get-SVTmetric
-* Get-SVTovcShutdownStatus
-* Get-SVTpolicy
-* Get-SVTpolicyScheduleReport
-* Get-SVTtask
-* Get-SVTthroughput
-* Get-SVTtimezone
-* Get-SVTversion
-* Get-SVTvm
-* Get-SVTvmReplicaSet
-* Lock-SVTbackup
-* Move-SVTvm
-* New-SVTbackup
-* New-SVTclone
-* New-SVTdatastore
 
---- | ---
-Publish-SVTdatastore | Remove-SVTbackup
-Remove-SVTdatastore | Remove-SVThost
-
-Remove-SVTpolicy
-Remove-SVTpolicyRule
-Rename-SVTbackup
-Rename-SVTpolicy
-Resize-SVTdatastore
-Restore-SVTvm
-Resume-SVTpolicy
-Set-SVTbackupRetention
-Set-SVTdatastorePolicy
-Set-SVTtimezone
-Set-SVTvmPolicy
-Start-SVTvm
-Stop-SVTbackup
+Get-SVThardware
+Get-SVThost
+Remove-SVThost
 Stop-SVTovc
-Stop-SVTvm
-Suspend-SVTpolicy
 Undo-SVTovcShutdown
-Unpublish-SVTdatastore
-Update-SVTbackupUniqueSize
+Get-SVTovcShutdownStatus
+Get-SVTthroughput
+
+
+
+New-SVTclone
+Get-SVTvm
+Start-SVTvm
+Move-SVTvm
+Restore-SVTvm
+Stop-SVTvm
+Set-SVTvmPolicy
+Get-SVTvmReplicaSet
+
+Connect-SVT
+Get-SVTcapacity
+Get-SVTmetric
+Get-SVTtask
+Get-SVTtimezone
+Set-SVTtimezone
+Get-SVTversion
+
 
 Some of the cmdlets have parameters to filter on specific properties, like -VM and -Datastore. All cmdlets output a Powershell custom object which can be piped to other commands like Select-Object, Where-Object, Out-GridView and Export-CSV, etc. Refer to the cmdlet help for details.
 
