@@ -4,7 +4,9 @@ This PowerShell module utilises the HPE SimpliVity REST API to display informati
 
 The module contains the following exported cmdlets:
 
-* Connect-SVT                         * New-SVTpolicy
+
+| --- | ---
+* Connect-SVT | * New-SVTpolicy
 * Copy-SVTbackup
 * Get-SVTbackup
 * Get-SVTcapacity
@@ -30,10 +32,10 @@ The module contains the following exported cmdlets:
 * New-SVTclone
 * New-SVTdatastore
 
-Publish-SVTdatastore
-Remove-SVTbackup
-Remove-SVTdatastore
-Remove-SVThost
+--- | ---
+Publish-SVTdatastore | Remove-SVTbackup
+Remove-SVTdatastore | Remove-SVThost
+
 Remove-SVTpolicy
 Remove-SVTpolicyRule
 Rename-SVTbackup
