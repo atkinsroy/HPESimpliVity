@@ -12,39 +12,21 @@ Lock-SVTbackup | Resume-SVTpolicy | Get-SVTdatastore
 Remove-SVTbackup | New-SVTpolicy | Publish-SVTdatastore
 New-SVTbackup | Remove-SVTpolicy | Remove-SVTdatastore
 Copy-SVTbackup | Get-SVTpolicy | Resize-SVTdatastore
-Get-SVTbackup | Set-SVTpolicyRule | New-SVTdatastore
+Get-SVTbackup | Set-SVTpolicyRule | New-SVTdatastore 
 Set-SVTbackupRetention | Update-SVTpolicyRule | Unpublish-SVTdatastore
 Update-SVTbackupUniqueSize | Remove-SVTpolicyRule | Get-SVTdatastoreComputeNode
 . | Get-SVTpolicyScheduleReport | Set-SVTdatastorePolicy
 
-
-Get-SVThardware
-Get-SVThost
-Remove-SVThost
-Stop-SVTovc
-Undo-SVTovcShutdown
-Get-SVTovcShutdownStatus
-Get-SVTthroughput
-
-
-
-New-SVTclone
-Get-SVTvm
-Start-SVTvm
-Move-SVTvm
-Restore-SVTvm
-Stop-SVTvm
-Set-SVTvmPolicy
+VM | Host | Utility
+---------------- | --- | ---
+New-SVTclone | Get-SVThardware | Connect-SVT
+Get-SVTvm | Get-SVThost | Get-SVTcapacity
+Start-SVTvm | Remove-SVThost | Get-SVTmetric
+Move-SVTvm | Stop-SVTovc | Get-SVTtask
+Restore-SVTvm | Undo-SVTovcShutdown | Get-SVTtimezone
+Stop-SVTvm | Get-SVTovcShutdownStatus | Set-SVTtimezone
+Set-SVTvmPolicy | Get-SVTthroughput | Get-SVTversion
 Get-SVTvmReplicaSet
-
-Connect-SVT
-Get-SVTcapacity
-Get-SVTmetric
-Get-SVTtask
-Get-SVTtimezone
-Set-SVTtimezone
-Get-SVTversion
-
 
 Some of the cmdlets have parameters to filter on specific properties, like -VM and -Datastore. All cmdlets output a Powershell custom object which can be piped to other commands like Select-Object, Where-Object, Out-GridView and Export-CSV, etc. Refer to the cmdlet help for details.
 
