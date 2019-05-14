@@ -77,8 +77,9 @@ Note: the folder structure is important to ensure that PowerShell automatically 
 ```powershell
     PS C:\>Get-Command -Module HPESimpliVity
     PS C:\>Get-Help Get-SVTBackup
+    PS C:\>Get-Help Connect-SVT
 ```
-* Once installed, you're ready to connect to the OmniStack
+* Once installed, you're ready to connect to the OmniStack virtual controller.
 
 ## Things To Do
 * Test using PowerShell Core 6.0 (Windows and Linux)
