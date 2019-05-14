@@ -6,7 +6,7 @@ The module uses V1.11 of the Rest API, which comes with HPE SimpliVity 3.7.8 and
 
 All cmdlets are written as advanced cmdlets, with extensive comment based help and most have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtering parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API, for example limiting the number of records to 500 when returning virtual machines and backup objects.
 
-Most "Get" commands provide way too many properties to show at once, so I have introduced ps1xml files into this version, to provide default display properties. All properties are still accessible, by piping to Format-List or Select-Object -property *
+Most "Get" commands provide way too many properties to show at once, so ps1xml files have been introduced into this version, to provide default display properties. All properties are still accessible, by piping to Format-List or Select-Object -property *
 
 For Example:
 ```powershell
@@ -15,8 +15,8 @@ For Example:
     
     HostName      DataCenterName    ClusterName   FreeSpaceGB    ManagementIP   StorageIP     FederationIP 
     --------      --------------    -----------   -----------    ------------   ---------     ------------
-    192.168.1.1   Redfreds Labs     Primary             2,671    192.168.1.11   192.168.2.1   192.168.3.1
-    192.168.1.2   Redfreds Labs     Primary             2,671    192.168.1.12   192.168.2.2   192.168.3.2
+    192.168.1.1   SunGod            Production1         2,671    192.168.1.11   192.168.2.1   192.168.3.1
+    192.168.1.2   SubGod            Production1         2,671    192.168.1.12   192.168.2.2   192.168.3.2
    
     PS C:\>Get-SVThost -Name 192.168.1.1 | Format-List
     
