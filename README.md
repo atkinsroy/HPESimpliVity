@@ -81,10 +81,6 @@ Note: the folder structure is important to ensure that PowerShell automatically 
 * Once installed, you're ready to connect to the OmniStack
 
 ## Things To Do
-* The module mostly covers just the REST API GET commands. More POST commands need to be added, focusing on the important ones first, such New-SVTbackup and Move-SVTVM.
+* Test using PowerShell Core 6.0 (Windows and Linux)
 
-* Test using PowerShell Core 6.0 (Windows and Linux).
-
-* I was originally using ps1xml files to determine the format of the commands. I've removed this for now, limiting the number default properties to four. Once I've added all of the other cmdlets, I'll re-introduce this. Tracking property names bacame tiresome.
-
-
+* Provide a -Graph parameter on Get-SVTmetric and on Get-SVTcapacity to output a web chart or Excel, or both.
