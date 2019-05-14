@@ -4,15 +4,55 @@ This PowerShell module utilises the HPE SimpliVity REST API to display informati
 
 The module contains the following exported cmdlets:
 
-* Get-SVTBackup
-* Get-SVTCluster
-* Get-SVTDatastore
-* Get-SVTHost
-* Get-SVTPolicy
-* Get-SVTVM
-* Get-SVTOVCShutdownStatus
-* Stop-SVTOVC
-* Connect-SVT
+* Connect-SVT                         * New-SVTpolicy
+* Copy-SVTbackup
+* Get-SVTbackup
+* Get-SVTcapacity
+* Get-SVTcluster
+* Get-SVTclusterConnected
+* Get-SVTdatastore
+* Get-SVTdatastoreComputeNode
+* Get-SVThardware
+* Get-SVThost
+* Get-SVTmetric
+* Get-SVTovcShutdownStatus
+* Get-SVTpolicy
+* Get-SVTpolicyScheduleReport
+* Get-SVTtask
+* Get-SVTthroughput
+* Get-SVTtimezone
+* Get-SVTversion
+* Get-SVTvm
+* Get-SVTvmReplicaSet
+* Lock-SVTbackup
+* Move-SVTvm
+* New-SVTbackup
+* New-SVTclone
+* New-SVTdatastore
+
+Publish-SVTdatastore
+Remove-SVTbackup
+Remove-SVTdatastore
+Remove-SVThost
+Remove-SVTpolicy
+Remove-SVTpolicyRule
+Rename-SVTbackup
+Rename-SVTpolicy
+Resize-SVTdatastore
+Restore-SVTvm
+Resume-SVTpolicy
+Set-SVTbackupRetention
+Set-SVTdatastorePolicy
+Set-SVTtimezone
+Set-SVTvmPolicy
+Start-SVTvm
+Stop-SVTbackup
+Stop-SVTovc
+Stop-SVTvm
+Suspend-SVTpolicy
+Undo-SVTovcShutdown
+Unpublish-SVTdatastore
+Update-SVTbackupUniqueSize
 
 Some of the cmdlets have parameters to filter on specific properties, like -VM and -Datastore. All cmdlets output a Powershell custom object which can be piped to other commands like Select-Object, Where-Object, Out-GridView and Export-CSV, etc. Refer to the cmdlet help for details.
 
