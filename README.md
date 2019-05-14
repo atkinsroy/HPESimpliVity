@@ -32,7 +32,7 @@ For Example:
 
 The module currently contains 51 exported cmdlets, in the following feature categories:
 
-Backups | Backup Policy | Datastore & cluster
+Backups | Backup Policy | Datastore & Cluster
 --- | --- | ---
 Stop-SVTbackup | Suspend-SVTpolicy | Get-SVTcluster
 Rename-SVTbackup | Rename-SVTpolicy | Get-SVTclusterConnected
