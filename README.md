@@ -1,54 +1,86 @@
- # HPE SimpliVity PowerShell Module
+ # HPE SimpliVity PowerShell Module V1.1.0
 
-This PowerShell module utilises the HPE SimpliVity REST API to display information about a SimpliVity federation. 
+This PowerShell module utilises the HPE SimpliVity REST API to display information and manage a SimpliVity federation and works by connecting to any OmniStack Virtual Controller in your environment.
 
-The module contains the following exported cmdlets:
+The module uses V1.11 of the Rest API, which comes with HPE SimpliVity 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters, but it works with 3.7.7 too. 
 
-* Get-SVTBackup
-* Get-SVTCluster
-* Get-SVTDatastore
-* Get-SVTHost
-* Get-SVTPolicy
-* Get-SVTVM
-* Get-SVTOVCShutdownStatus
-* Stop-SVTOVC
-* Connect-SVT
+All cmdlets are written as advanced cmdlets, with extensive comment based help and most have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtering parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API, for example limiting the number of records to 500 when returning virtual machines and backup objects.
 
-Some of the cmdlets have parameters to filter on specific properties, like -VM and -Datastore. All cmdlets output a Powershell custom object which can be piped to other commands like Select-Object, Where-Object, Out-GridView and Export-CSV, etc. Refer to the cmdlet help for details.
+Most "Get" commands provide way too many properties to show at once, so ps1xml files have been introduced into this version, to provide default display properties. All properties are still accessible, by piping to Format-List or Select-Object -property *
 
-As an example, I have also created a PowerShell script to shutdown an entire HPE SimpliVity cluster. The script uses this module together with VMware PowerCLI to connect to vCenter and any OmniStack VC in the federation to shutdown the VMs, the appropriate OVC(s) and  host(s) in the specified cluster. The prerequisite for this to work is that, obviously, vCenter cannot be running on a VM in the cluster you're shutting down. The idea of this script is to gracefully shutdown the cluster in a power failure and could be executed from the UPS software (again, running outside the cluster). 
+For Example:
+```powershell
+    PS C:\>Connect-SVT -OVC 192.168.1.11 -Credential $Cred
+    PS C:\>Get-SVThost
+    
+    HostName      DataCenterName    ClusterName   FreeSpaceGB    ManagementIP   StorageIP     FederationIP 
+    --------      --------------    -----------   -----------    ------------   ---------     ------------
+    192.168.1.1   SunGod            Production1         2,671    192.168.1.11   192.168.2.1   192.168.3.1
+    192.168.1.2   SubGod            Production1         2,671    192.168.1.12   192.168.2.2   192.168.3.2
+   
+    PS C:\>Get-SVThost -HostName 192.168.1.1 | Format-List
+    
+    PolicyEnabled            : True
+    ClusterId                : 3baba7ec-6d02-4fb6-b510-5ce19cd9c1d0
+    StorageMask              : 255.255.255.0
+    Model                    : HPE SimpliVity 380 Series 4000
+    .
+    .
+    .
+```
 
-![This is what the script looks like](/Media/Image%20037.png)
+
+The module currently contains 51 exported cmdlets, in the following feature categories:
+
+Backups | Backup Policy | Datastore & Cluster
+--- | --- | ---
+Stop-SVTbackup | Suspend-SVTpolicy | Get-SVTcluster
+Rename-SVTbackup | Rename-SVTpolicy | Get-SVTclusterConnected
+Lock-SVTbackup | Resume-SVTpolicy | Get-SVTdatastore
+Remove-SVTbackup | New-SVTpolicy | Publish-SVTdatastore
+New-SVTbackup | Remove-SVTpolicy | Remove-SVTdatastore
+Copy-SVTbackup | Get-SVTpolicy | Resize-SVTdatastore
+Get-SVTbackup | Set-SVTpolicyRule | New-SVTdatastore 
+Set-SVTbackupRetention | Update-SVTpolicyRule | Unpublish-SVTdatastore
+Update-SVTbackupUniqueSize | Remove-SVTpolicyRule | Get-SVTdatastoreComputeNode
+&nbsp; | Get-SVTpolicyScheduleReport | Set-SVTdatastorePolicy
+
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; VM &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Host &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; |  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Utility &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+---------------- | --- | ---
+New-SVTclone | Get-SVThardware | Connect-SVT
+Get-SVTvm | Get-SVThost | Get-SVTcapacity
+Start-SVTvm | Remove-SVThost | Get-SVTmetric
+Move-SVTvm | Stop-SVTovc | Get-SVTtask
+Restore-SVTvm | Undo-SVTovcShutdown | Get-SVTtimezone
+Stop-SVTvm | Get-SVTovcShutdownStatus | Set-SVTtimezone
+Set-SVTvmPolicy | Get-SVTthroughput | Get-SVTversion
+Get-SVTvmReplicaSet
 
 ## Requirements
 
 * PowerShell V3.0 and above. This module was created and tested using PowerShell V5.1.
 * The IP address and the credentials of an authorised SimpliVity user account.
-* Tested with OmniStack 3.7.7.
+* Tested with OmniStack 3.7.8. (Works with 3.7.7 too. Both VMware and Hyper-V have been tested).
 
 ## Installation
 
-* Copy the psm1 file to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity. 
+* Copy all the files to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity. 
 
 Note: the folder structure is important to ensure that PowerShell automatically loads the module.
 
 * Restart Powershell to load the module, or type:
 
 ```powershell
-    import-module HPESimpliVity -force
+    PS C:\>import-module HPESimpliVity -force
 ```
 * After this, the module will automatically load in new PowerShell sessions. Issue the following commands to confirm:
 ```powershell
-    Get-Command -Module HPESimpliVity
-    Get-Help Get-SVTBackup
+    PS C:\>Get-Command -Module HPESimpliVity
+    PS C:\>Get-Help Get-SVTBackup
 ```
+* Once installed, you're ready to connect to the OmniStack
 
 ## Things To Do
-* The module mostly covers just the REST API GET commands. More POST commands need to be added, focusing on the important ones first, such New-SVTbackup and Move-SVTVM.
+* Test using PowerShell Core 6.0 (Windows and Linux)
 
-* Test using PowerShell Core 6.0 (Windows and Linux).
-
-* I was originally using ps1xml files to determine the format of the commands. I've removed this for now, limiting the number default properties to four. Once I've added all of the other cmdlets, I'll re-introduce this. Tracking property names bacame tiresome.
-
-* Test using the Hyper-V version of SimpliVity
-
+* Provide a -Graph parameter on Get-SVTmetric and on Get-SVTcapacity to output a web chart or Excel, or both.
