@@ -2,7 +2,11 @@
 
 This PowerShell module utilises the HPE SimpliVity REST API to display information and manage a SimpliVity federation.
 
-The module uses V1.11 of the Rest API, which comes with HPE SimpliVity 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters. 
+The module uses V1.11 of the Rest API, which comes with HPE SimpliVity 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters.
+
+All cmdlets are written as advanced cmdlets, with extensive comment based help and most with the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtering parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API, for example limiting the number of records to 500 when returning virtual machines and backup objects.
+
+Most "Get" commands provide way too many properties to show at once, so I have introduced ps1xml files into this version, to provide default display properties. All properties are still accessible, by piping to format-list or Select-Object -property *
 
 The module currently contains 51 exported cmdlets, in the following feature categories:
 
@@ -30,19 +34,15 @@ Stop-SVTvm | Get-SVTovcShutdownStatus | Set-SVTtimezone
 Set-SVTvmPolicy | Get-SVTthroughput | Get-SVTversion
 Get-SVTvmReplicaSet
 
-All cmdlets are written as advanced cmdlets, with extensive comment based help and most with the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtering parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API, for example limiting the number of records to 500 when returning virtual machines and backup objects.
-
-
-
 ## Requirements
 
 * PowerShell V3.0 and above. This module was created and tested using PowerShell V5.1.
 * The IP address and the credentials of an authorised SimpliVity user account.
-* Tested with OmniStack 3.7.7.
+* Tested with OmniStack 3.7.8. (Works with 3.7.7 too. Both VMware and Hyper-V have been tested).
 
 ## Installation
 
-* Copy the psm1 file to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity. 
+* Copy all the files to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity. 
 
 Note: the folder structure is important to ensure that PowerShell automatically loads the module.
 
@@ -64,5 +64,4 @@ Note: the folder structure is important to ensure that PowerShell automatically 
 
 * I was originally using ps1xml files to determine the format of the commands. I've removed this for now, limiting the number default properties to four. Once I've added all of the other cmdlets, I'll re-introduce this. Tracking property names bacame tiresome.
 
-* Test using the Hyper-V version of SimpliVity
 
