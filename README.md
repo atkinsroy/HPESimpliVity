@@ -15,9 +15,9 @@ Copy-SVTbackup | Get-SVTpolicy | Resize-SVTdatastore
 Get-SVTbackup | Set-SVTpolicyRule | New-SVTdatastore 
 Set-SVTbackupRetention | Update-SVTpolicyRule | Unpublish-SVTdatastore
 Update-SVTbackupUniqueSize | Remove-SVTpolicyRule | Get-SVTdatastoreComputeNode
-. | Get-SVTpolicyScheduleReport | Set-SVTdatastorePolicy
+&nbsp; | Get-SVTpolicyScheduleReport | Set-SVTdatastorePolicy
 
-VM | Host | Utility
+VM &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | Host &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | Utility
 ---------------- | --- | ---
 New-SVTclone | Get-SVThardware | Connect-SVT
 Get-SVTvm | Get-SVThost | Get-SVTcapacity
