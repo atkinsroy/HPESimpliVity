@@ -9,7 +9,11 @@
             <TableControl>
                 <TableHeaders>
                     <TableColumnHeader>
-                        <Width>50</Width>
+                        <Width>40</Width>
+                        <Alignment>left</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
@@ -25,6 +29,10 @@
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Width>10</Width>
+                        <Alignment>left</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
                         <Width>20</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
@@ -34,6 +42,9 @@
                         <TableColumnItems>
                             <TableColumnItem>
                                 <PropertyName>VMname</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>HostName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>DataCenterName</PropertyName>
@@ -46,6 +57,9 @@
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>State</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>PolicyName</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>

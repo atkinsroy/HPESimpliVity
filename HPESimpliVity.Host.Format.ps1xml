@@ -13,15 +13,15 @@
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>20</Width>
+                        <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>12</Width>
+                        <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>20</Width>
+                        <Width>14</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
@@ -50,7 +50,7 @@
                                 <PropertyName>ClusterName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>Version</PropertyName>
+                                <PropertyName>FreeSpaceGB</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>ManagementIP</PropertyName>
