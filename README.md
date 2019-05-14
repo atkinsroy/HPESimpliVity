@@ -30,11 +30,9 @@ Stop-SVTvm | Get-SVTovcShutdownStatus | Set-SVTtimezone
 Set-SVTvmPolicy | Get-SVTthroughput | Get-SVTversion
 Get-SVTvmReplicaSet
 
-Some of the cmdlets have parameters to filter on specific properties, like -VM and -Datastore. All cmdlets output a Powershell custom object which can be piped to other commands like Select-Object, Where-Object, Out-GridView and Export-CSV, etc. Refer to the cmdlet help for details.
+All cmdlets are written as advanced cmdlets, with extensive comment based help and most with the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtering parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API, for example limiting the number of records to 500 when returning virtual machines and backup objects.
 
-As an example, I have also created a PowerShell script to shutdown an entire HPE SimpliVity cluster. The script uses this module together with VMware PowerCLI to connect to vCenter and any OmniStack VC in the federation to shutdown the VMs, the appropriate OVC(s) and  host(s) in the specified cluster. The prerequisite for this to work is that, obviously, vCenter cannot be running on a VM in the cluster you're shutting down. The idea of this script is to gracefully shutdown the cluster in a power failure and could be executed from the UPS software (again, running outside the cluster). 
 
-![This is what the script looks like](/Media/Image%20037.png)
 
 ## Requirements
 
