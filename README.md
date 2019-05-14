@@ -18,7 +18,7 @@ For Example:
     192.168.1.1   SunGod            Production1         2,671    192.168.1.11   192.168.2.1   192.168.3.1
     192.168.1.2   SubGod            Production1         2,671    192.168.1.12   192.168.2.2   192.168.3.2
    
-    PS C:\>Get-SVThost -Name 192.168.1.1 | Format-List
+    PS C:\>Get-SVThost -HostName 192.168.1.1 | Format-List
     
     PolicyEnabled            : True
     ClusterId                : 3baba7ec-6d02-4fb6-b510-5ce19cd9c1d0
