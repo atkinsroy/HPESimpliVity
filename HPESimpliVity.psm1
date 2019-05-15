@@ -3597,7 +3597,6 @@ function Remove-SVTpolicy {
 
     try {
         $PolicyId = Get-SVTpolicy -PolicyName $PolicyName -ErrorAction Stop | Select-Object -ExpandProperty PolicyId -Unique
-        "policyid = $policyid"
     }
     catch {
         throw $_.Exception.Message
@@ -3611,8 +3610,30 @@ function Remove-SVTpolicy {
         'Accept'                = 'application/json'
     }
    
+    # Confirm the the policy is not in use before deleting it. To do this, check both datastores and VMs
+    $UriList = @(
+        $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId + '/virtual_machines'
+        $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId + '/datastores'
+    )
+    [Bool]$ObjectFound = $false
+    [String]$Message = ''
+    Foreach ($Uri in $UriList) {
+        $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
+        if ($Task.datastores) {
+            $Message += "There are $(($Task.datastores).Count) databases using backup policy $PolicyName. "
+            $ObjectFound = $true 
+        }
+        If ($Task.virtual_machines) {
+            $Message += "There are $(($Task.virtual_machines).Count) virtual machines using backup policy $PolicyName. "
+            $ObjectFound = $true  
+        }
+    }
+    if ($ObjectFound) {
+        throw $Message + 'Cannot remove a backup policy that is still in use'
+    }
+    
+    # Delete the policy
     $Uri = $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId
-
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Delete -ErrorAction Stop
     }
