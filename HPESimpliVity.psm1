@@ -434,16 +434,16 @@ function Get-SVTmetric {
         $TimeOffset = $TimeOffsetHour * 3600
 
         if ($Resolution -eq 'SECOND' -and $Range -gt 43200 ) {
-            throw "Maximum range value for resoltuon $resolution is 12 hours"
+            throw "Maximum range value for resolution $resolution is 12 hours"
         }
         elseif ($Resolution -eq 'MINUTE' -and $Range -gt 604800 ) {
-            throw "Maximum range value for resoltuon $resolution is 168 hours (1 week)"
+            throw "Maximum range value for resolution $resolution is 168 hours (1 week)"
         }
         elseif ($Resolution -eq 'HOUR' -and $Range -gt 5184000 ) {
-            throw "Maximum range value for resoltuon $resolution is 1,440 hours (2 months)"
+            throw "Maximum range value for resolution $resolution is 1,440 hours (2 months)"
         }
         elseif ($Resolution -eq 'DAY' -and $Range -gt 94608000 ) {
-            throw "Maximum range value for resoltuon $resolution is 26,280 hours (3 years)"
+            throw "Maximum range value for resolution $resolution is 26,280 hours (3 years)"
         }
     }
 
@@ -520,9 +520,15 @@ function Get-SVTmetric {
             $CustomObject = $Response.metrics | foreach-object {
                 $MetricName = (Get-Culture).TextInfo.ToTitleCase($_.name)
                 $_.data_points | ForEach-Object {
+                    if ($_.date -as [DateTime]) {
+                        $Date = Get-Date -Date $_.date
+                    }
+                    else {
+                        $Date = $null
+                    }
                     [pscustomobject] @{
                         Name  = $MetricName
-                        Date  = $_.date
+                        Date  = $Date
                         Read  = $_.reads
                         Write = $_.writes
                     }
@@ -531,9 +537,12 @@ function Get-SVTmetric {
 
             #Transpose the custom object to output each date with the value for each metric
             $CustomObject | Sort-Object -Property Date | Group-Object -Property Date | ForEach-Object {
-                $Property = [ordered]@{ Date = $_.Name }
+                $Property = [ordered]@{ 
+                    PStypeName = 'HPE.SimpliVity.Metric' 
+                    Date       = $_.Name 
+                }
                 $_.Group | Foreach-object {
-                    $Property += @{ 
+                    $Property += @{
                         "$($_.Name)Read"  = $_.Read 
                         "$($_.Name)Write" = $_.Write
                     }
@@ -689,11 +698,11 @@ function Get-SVTbackup {
     #
     # There are two known issues in release notes. 
     # 1. You can't filter on more than one item. Filtering on Backup Name, DataStore and ClusterName together produces unexpected results.
-    # 2. its case sensitive only (this is opposite to what release notes says). /backups GET RESTAPI ignore the caseinsensitive parameter.
+    # 2. its case sensitive only (this is opposite to what release notes says). /backups GET RESTAPI ignores the caseinsensitive parameter.
     #
     # So at present, don't filter using the API, get all objects and and filter in PowerShell later. This fixes both issues. 
     # We are filtering on 'created_after' by default so hopefully there are not too many objects. 
-    # This is less efficient than the RESTaPI doing the filtering (if it worked) but produces the expected results.
+    # This is less efficient than the RESTAPI doing the filtering (if it worked) but produces the expected results.
     #
     # Hopefully, this will be fixed in a later release.
     # 
@@ -761,7 +770,7 @@ function Get-SVTbackup {
     }
         
     # Added this block to get around case sensitivity/duplicate filter bugs in the /backups GET RESTAPI. These commands are iterative so you 
-    # could end up with no objects. e.g. user specifies a datastore where there are no backups for a specified VM
+    # could end up with no objects. e.g. the user specifies a datastore where there are no backups for a specified VM
     if ($VMname) {
         $BackupObject = $BackupObject | Where-Object VMname -eq $VMname
     }
@@ -2252,7 +2261,7 @@ function Get-SVThardware {
     system.string
     HPESimpliVity.Host
 .OUTPUTS
-    PSCustomObject
+    HPE.SimpliVity.Capacity
 .NOTES
     Tested with SVT 3.7.8
 #>
@@ -2283,16 +2292,16 @@ function Get-SVTcapacity {
         $TimeOffset = $TimeOffsetHour * 3600
 
         if ($Resolution -eq 'SECOND' -and $Range -gt 43200 ) {
-            throw "Maximum range value for resoltuon $resolution is 12 hours"
+            throw "Maximum range value for resolution $resolution is 12 hours"
         }
         elseif ($Resolution -eq 'MINUTE' -and $Range -gt 604800 ) {
-            throw "Maximum range value for resoltuon $resolution is 168 hours (1 week)"
+            throw "Maximum range value for resolution $resolution is 168 hours (1 week)"
         }
         elseif ($Resolution -eq 'HOUR' -and $Range -gt 5184000 ) {
-            throw "Maximum range value for resoltuon $resolution is 1,440 hours (2 months)"
+            throw "Maximum range value for resolution $resolution is 1,440 hours (2 months)"
         }
         elseif ($Resolution -eq 'DAY' -and $Range -gt 94608000 ) {
-            throw "Maximum range value for resoltuon $resolution is 26,280 hours (3 years)"
+            throw "Maximum range value for resolution $resolution is 26,280 hours (3 years)"
         }
         $allhost = Get-SVThost
     }
@@ -2325,13 +2334,16 @@ function Get-SVTcapacity {
 
             #Transpose the custom object to output each date with the value for each metric
             $CustomObject | Sort-Object -Property Date | Group-Object -Property Date | ForEach-Object {
-                $Property = [ordered]@{ Date = $_.Name }
+                $Property = [ordered]@{ 
+                    PStypeName = 'HPE.SimpiVity.Capacity'
+                    Date = $_.Name 
+                }
                 $_.Group | Foreach-object {
                     $Property += @{ 
                         "$($_.Name)" = $_.Value
                     }
                 }
-                $Property += @{ Host = $Thishost }
+                $Property += @{ HostName = $Thishost }
                 New-Object -TypeName PSObject -Property $Property
             }
             # Graph stuff goes here.
@@ -2760,8 +2772,14 @@ function Get-SVTthroughput {
     }
 
     $Response.omnistack_cluster_throughput | ForEach-Object {
+        if ($_.date -as [DateTime]) {
+            $Date = Get-Date -Date $_.date
+        }
+        else {
+            $Date = $null
+        }
         [PSCustomObject]@{
-            Date                             = $_.date
+            Date                             = $Date
             DestinationClusterHypervisorId   = $_.destination_omnistack_cluster_hypervisor_object_parent_id
             DestinationClusterHypervisorName = $_.destination_omnistack_cluster_hypervisor_object_parent_name
             DestinationClusterId             = $_.destination_omnistack_cluster_id
@@ -2793,7 +2811,6 @@ function Get-SVTthroughput {
 function Get-SVTtimezone {
     $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'                = 'application/json'
-        'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
     }
    
     $Uri = $($global:SVTconnection.OVC) + '/api/omnistack_clusters/time_zone_list'
@@ -2850,7 +2867,7 @@ function Set-SVTtimezone {
     
     $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'                = 'application/json'
-        'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
+        'Content-Type'          = 'application/vnd.simplivity.v1.7+json'
     }
    
     $Body = @{
@@ -3069,7 +3086,7 @@ function New-SVTpolicy {
 
     $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'                = 'application/json'
-        'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
+        'Content-Type'          = 'application/vnd.simplivity.v1.7+json'
     }
    
     $Body = @{
@@ -3236,7 +3253,7 @@ function Set-SVTpolicyRule {
 
     $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'                = 'application/json'
-        'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
+        'Content-Type'          = 'application/vnd.simplivity.v1.7+json'
     }
    
     $Body = [ordered]@{
@@ -3396,7 +3413,7 @@ function Update-SVTpolicyRule {
 
     $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'                = 'application/json'
-        'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
+        'Content-Type'          = 'application/vnd.simplivity.v1.7+json'
     }
    
     $Body = [ordered]@{
@@ -3469,7 +3486,6 @@ function Remove-SVTpolicyRule {
 
     $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'                = 'application/json'
-        'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
     }
    
     $Uri = $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId + '/rules/' + $RuleId
@@ -3531,7 +3547,7 @@ function Rename-SVTpolicy {
 
     $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'                = 'application/json'
-        'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
+        'Content-Type'          = 'application/vnd.simplivity.v1.7+json'
     }
    
     $Body = @{
@@ -3593,7 +3609,6 @@ function Remove-SVTpolicy {
 
     $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'                = 'application/json'
-        'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
     }
    
     $Uri = $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId
@@ -3682,7 +3697,7 @@ function Suspend-SVTpolicy {
 
     $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'                = 'application/json'
-        'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
+        'Content-Type'          = 'application/vnd.simplivity.v1.7+json'
     }
    
     $Body = @{
@@ -3777,7 +3792,7 @@ function Resume-SVTpolicy {
 
     $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'                = 'application/json'
-        'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
+        'Content-Type'          = 'application/vnd.simplivity.v1.7+json'
     }
    
     $Body = @{
