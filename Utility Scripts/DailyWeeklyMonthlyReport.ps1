@@ -1,4 +1,5 @@
 # This script creates a report for Daily, weekly, monthly, Old and Latest backups, based on the Expiry date of the backups
+# Using -All might be slow. Limited to 500 backups by default; you can increase this to a max of 3000 records using -Limit parameter.
 
 $Daily = (Get-Date).AddDays(1)
 $Weekly = (Get-Date).AddDays(7)
