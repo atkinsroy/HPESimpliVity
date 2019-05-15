@@ -18,3 +18,7 @@ Get-SvtBackup -All | Where-Object ExpiryDate -gt $Monthly
 
 Write-Output "Latest Backup for each VM"
 Get-SVTBackup -Latest
+
+# Less sexy method. Report based on the policy name
+
+Get-SVTBackup | Where-Object PolicyName -eq "DailyBackup"
