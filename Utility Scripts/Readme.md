@@ -10,3 +10,7 @@ The prerequisite for this to work is that, obviously, vCenter cannot be running 
 
 Here's an example of what it does:
 ![This is what the script looks like](/Media/Image%20037.png)
+
+## MismatchedVMpolicy.ps1
+
+This script displays VMs that have different backup policies to the backup policy assigned to the datastore on which they reside.

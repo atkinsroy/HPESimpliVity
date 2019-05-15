@@ -1,4 +1,4 @@
-# Script to find VMs that are using backup policies different to the datastore policy
+# Script to find VMs that are using backup policies different to their datastores' backup policy
 
 $AllDatastore = Get-SVTdatastore
 Get-SVTvm | ForEach-Object {
