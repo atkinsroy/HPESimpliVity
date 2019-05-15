@@ -20,5 +20,7 @@ Write-Output "Latest Backup for each VM"
 Get-SVTBackup -Latest
 
 # Less sexy method. Report based on the policy name
+Get-SVTBackup -PolicyName "DailyBackup"
+# Or
+Get-SVTBackup -All | Where-Object PolicyName -eq "DailyBackup"
 
-Get-SVTBackup | Where-Object PolicyName -eq "DailyBackup"
