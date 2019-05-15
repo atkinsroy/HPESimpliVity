@@ -2,7 +2,7 @@
 
 $Daily = (Get-Date).AddDays(1)
 $Weekly = (Get-Date).AddDays(7)
-$Monthly = (Get-Date).AddDays(7)
+$Monthly = (Get-Date).AddDays(28)
 
 Write-Output "Daily Backups"
 Get-SvtBackup -All | Where-Object ExpiryDate -le $Daily
