@@ -2189,7 +2189,7 @@ function Get-SVThardware {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
-        [System.String[]]$HostName = (Get-SVThost | Select-Object -ExpandProperty HostName)
+        [System.String[]]$HostName
     )
 
     begin {
@@ -2197,7 +2197,10 @@ function Get-SVThardware {
             'Accept'                = 'application/json'
         }
 
-        $Allhost = Get-SVThost
+        $Allhost = Get-SVThost  # Rest call once, outside loop
+        if (-not $HostName) {
+            $HostName = $AllHost
+        }
     }
 
     process {
@@ -2270,7 +2273,7 @@ function Get-SVTcapacity {
     param
     (
         [parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
-        [string[]]$HostName = (Get-SVThost | Select-Object -ExpandProperty HostName),
+        [string[]]$HostName,
 
         [Parameter(Mandatory = $false, Position = 1)]
         [int]$TimeOffsetHour = 0,
@@ -2303,13 +2306,16 @@ function Get-SVTcapacity {
         elseif ($Resolution -eq 'DAY' -and $Range -gt 94608000 ) {
             throw "Maximum range value for resolution $resolution is 26,280 hours (3 years)"
         }
-        $allhost = Get-SVThost
+        $Allhost = Get-SVThost
+        if (-not $HostName) {
+            $HostName = $Allhost
+        }
     }
 
     process {
         foreach ($Thishost in $Hostname) {
             # Get the HostId for this host
-            $HostId = ($allhost | Where-Object HostName -eq $Thishost).HostId
+            $HostId = ($Allhost | Where-Object HostName -eq $Thishost).HostId
             
             $Uri = $($global:SVTconnection.OVC) + '/api/hosts/' + $HostId + '/capacity?time_offset=' + 
             $TimeOffset + '&range=' + $Range + '&resolution=' + $Resolution
@@ -4081,30 +4087,33 @@ function Get-SVTvmReplicaSet {
         $Allhost = Get-SVThost
 
         if ($VMname) {
-            $Allvm = Get-SVTvm -VMname $VMname
+            $VMobj = Get-SVTvm -VMname $VMname
         }
         elseif ($DataStoreName) {
-            $Allvm = Get-SVTvm -DataStoreName $DataStoreName
+            $VMobj = Get-SVTvm -DataStoreName $DataStoreName
         }
         elseif ($ClusterName) {
-            $Allvm = Get-SVTvm -ClusterName $ClusterName
+            $VMobj = Get-SVTvm -ClusterName $ClusterName
         }
         elseif ($HostName) {
-            $Allvm = Get-SVTvm -HostName $HostName
+            $VMobj = Get-SVTvm -HostName $HostName
         }
         else {
-            $Allvm = Get-SVTvm
+            $VMobj = Get-SVTvm
         }
     }
 
     process {
-        foreach ($VM in $Allvm) {
+        foreach ($VM in $VMobj) {
             $PrimaryId = $VM.ReplicaSet | Where-Object role -eq 'PRIMARY' | Select-Object -ExpandProperty id
             $SecondaryId = $VM.ReplicaSet | Where-Object role -eq 'SECONDARY' | Select-Object -ExpandProperty id
             $PrimaryHost = $Allhost | Where-Object HostId -eq $PrimaryId | Select-Object -ExpandProperty HostName
             $SecondaryHost = $Allhost | Where-Object HostId -eq $SecondaryId | Select-Object -ExpandProperty HostName
             [PSCustomObject]@{
                 VMname    = $VM.VMname
+                State     = $VM.State
+                HAstatus  = $VM.HAstatus
+                ClusterName = $VM.ClusterName
                 Primary   = $PrimaryHost
                 Secondary = $SecondaryHost
             }
