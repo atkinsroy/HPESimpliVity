@@ -9,7 +9,7 @@
 # Download:
 #   https://github.com/atkinsroy/HPESimpliVity
 #
-#   VERSION 1.1.0
+#   VERSION 1.1.1
 #
 #   AUTHOR
 #   Roy Atkins    HPE Pointnext, Advisory & Professional Services
@@ -18,6 +18,7 @@
 #   Date        Version  Description
 #   05/03/2019  1.0.0    First version containing initial set of cmdlets that implement GET API calls
 #   14/05/2019  1.1.0    Added cmdlets that add,update and delete - POST, PUT and DELETE API calls
+#   12/06/2019  1.1.1    Added a type for Metrics, minor bug fixes
 #
 # (C) Copyright 2019 Hewlett Packard Enterprise Development LP
 ##############################################################################################################
@@ -2339,9 +2340,15 @@ function Get-SVTcapacity {
             $CustomObject = $Response.metrics | foreach-object {
                 $MetricName = ($_.name -split '_' | ForEach-Object { (Get-Culture).TextInfo.ToTitleCase($_) }) -join ''
                 $_.data_points | ForEach-Object {
+                    if ($_.date -as [DateTime]) {
+                        $Date = Get-Date -Date $_.date
+                    }
+                    else {
+                        $Date = $null
+                    }
                     [pscustomobject] @{
                         Name  = $MetricName
-                        Date  = Get-Date -Date $_.date
+                        Date  = Get-Date -Date $Date
                         Value = $_.value
                     }
                 }
@@ -2363,10 +2370,6 @@ function Get-SVTcapacity {
             }
             # Graph stuff goes here.
         }
-    }
-
-    end {
-
     }
 }
 
