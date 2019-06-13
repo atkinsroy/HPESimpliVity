@@ -168,7 +168,7 @@ function Get-SVTtask {
 
     process {
         foreach ($ThisTask in $Task) {
-            $Uri = $($global:SVTconnection.OVC) + '/api/tasks/' + $ThisTask.TaskId
+            $Uri = $global:SVTconnection.OVC + '/api/tasks/' + $ThisTask.TaskId
 
             try {
                 Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get
@@ -331,7 +331,7 @@ Function Get-SVTversion {
         'Accept'                = 'application/json'
     }
    
-    $Uri = $($global:SVTconnection.OVC) + '/api/version'
+    $Uri = $global:SVTconnection.OVC + '/api/version'
 
     try {
         $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -652,7 +652,7 @@ function Get-SVTbackup {
 
         [Parameter(Mandatory = $false, ParameterSetName = 'AllBackup')]
         [Parameter(Mandatory = $false, ParameterSetName = 'LatestBackup')]
-        [ValidateRange(1, 3000)]   # 3.7.8 Release Notes recommend 3,000 records to avoid out of memory errors
+        [ValidateRange(1, 3000)]   # 3.7.8 Release Notes recommend 5000 max. records to avoid out of memory errors
         [Int]$Limit = 500,
         
         [System.String]$VMname,
@@ -668,7 +668,7 @@ function Get-SVTbackup {
 
     $BackupObject = @()
     
-    $Uri = $($global:SVTconnection.OVC) + '/api/backups?case=insensitive'
+    $Uri = $global:SVTconnection.OVC + '/api/backups?case=insensitive'
     
     # If -All or -Latest are specified grab everything, but use -Limit to constrain the number of records.
     if ($All -or $Latest) {
@@ -677,7 +677,7 @@ function Get-SVTbackup {
             Write-Warning "Limiting the number of backup objects to display to $Limit. This improves performance but some backups may not be included"
         }
         else {
-            Write-Warning "You have chosen a limit of $Limit backup objects. This command may take a long time to complete or cause out of memory errors"
+            Write-Warning "You have chosen a limit of $Limit backup objects. This command may take a long time to complete"
         }
     }
     else {
@@ -694,17 +694,17 @@ function Get-SVTbackup {
             Write-Verbose "Displaying backups from the last $Hour hours, (created after $CreatedAfter)"
         }
     }
-    
+
     #
-    # There are two known issues in release notes. 
+    # There are two known issues in 3.7.8 release notes. 
     # 1. You can't filter on more than one item. Filtering on Backup Name, DataStore and ClusterName together produces unexpected results.
-    # 2. its case sensitive only (this is opposite to what release notes says). /backups GET RESTAPI ignores the caseinsensitive parameter.
+    # 2. its case sensitive only (this is opposite to what release notes say). /backups GET RESTAPI ignores the caseinsensitive parameter.
     #
     # So at present, don't filter using the API, get all objects and and filter in PowerShell later. This fixes both issues. 
     # We are filtering on 'created_after' by default so hopefully there are not too many objects. 
     # This is less efficient than the RESTAPI doing the filtering (if it worked) but produces the expected results.
     #
-    # Hopefully, this will be fixed in a later release.
+    # This is the code to use the REST options when this is fixed in a later release.
     # 
     #if ($VMname) {
     #    $Uri += '&virtual_machine_name=' + $VMname
@@ -768,7 +768,7 @@ function Get-SVTbackup {
         }
         $BackupObject += $CustomObject
     }
-        
+
     # Added this block to get around case sensitivity/duplicate filter bugs in the /backups GET RESTAPI. These commands are iterative so you 
     # could end up with no objects. e.g. the user specifies a datastore where there are no backups for a specified VM
     if ($VMname) {
@@ -845,6 +845,7 @@ function New-SVTbackup {
         [System.String]$VMname,
 
         [Parameter(Mandatory = $false, Position = 1)]
+        [Alias("DestinationName")]
         [System.String]$ClusterName,
 
         [Parameter(Mandatory = $false, Position = 2)]
@@ -988,7 +989,7 @@ function Restore-SVTvm {
     process {
         foreach ($BkpId in $BackupId) {
             if ($RestoreToOriginal) {
-                $Uri = $($global:SVTconnection.OVC) + '/api/backups/' + $BkpId + '/restore?restore_original=true'
+                $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/restore?restore_original=true'
             }
             else {
                 try {
@@ -1011,7 +1012,7 @@ function Restore-SVTvm {
                 } | ConvertTo-Json
                 Write-Verbose $body
 
-                $Uri = $($global:SVTconnection.OVC) + '/api/backups/' + $BkpId + '/restore?restore_original=false'
+                $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/restore?restore_original=false'
             }
 
             try {
@@ -1059,9 +1060,11 @@ function Restore-SVTvm {
 .OUTPUTS
     HPE.SimpliVity.Task
 .NOTES
-    This cmdlet uses the /api/backups/<bkpId> RESTAPI delete call which creates a task to delete the specified backup ID.
-    There is another delete call (/api/backups) which accepts a list of Backup ID's in the body. It might be worth investigating
-    because it would be more efficient - single RESTAPI call, single task.
+    This cmdlet uses the /api/backups REST API POST call which creates a task to delete the specified backup. This call can accept
+    multiple backup IDs, but its used here to delete one backup Id at a time.
+
+    There is another specific DELETE call (/api/backups/<bkpId>) which works locally (i.e. if you're connected to an OVC where the backup 
+    resides), but this fails when trying to delete remote backups.
 
     Tested with HPE OmniStack 3.7.8
 #>
@@ -1075,15 +1078,21 @@ function Remove-SVTbackup {
     begin {
         $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
             'Accept'                = 'application/json'
+            'Content-Type'          = 'application/vnd.simplivity.v1.7+json'
         }
     }
 
     process {
         foreach ($BkpId in $BackupId) {
-            $Uri = $($global:SVTconnection.OVC) + '/api/backups/' + $BkpId
+            $Uri = $global:SVTconnection.OVC + '/api/backups/delete'
+            
+            $Body = @{
+                'backup_id' = @($BkpId)
+            } | ConvertTo-Json
+            Write-Verbose $Body
 
             try {
-                $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Delete -ErrorAction Stop
+                $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
             }
             catch {
                 throw $_.Exception.Message
@@ -1135,7 +1144,7 @@ function Stop-SVTbackup {
 
     process {
         foreach ($BkpId in $BackupId) {
-            $Uri = $($global:SVTconnection.OVC) + '/api/backups/' + $BkpId + '/cancel'
+            $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/cancel'
 
             try {
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -1179,6 +1188,7 @@ function Copy-SVTbackup {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
+        [alias("DestinationName")]
         [System.String]$ClusterName,
 
         [Parameter(Mandatory = $true, Position = 1, ValueFromPipelinebyPropertyName = $true)]
@@ -1201,7 +1211,7 @@ function Copy-SVTbackup {
             } | ConvertTo-Json
             Write-Verbose $Body
 
-            $Uri = $($global:SVTconnection.OVC) + '/api/backups/' + $thisbackup + '/copy'
+            $Uri = $global:SVTconnection.OVC + '/api/backups/' + $thisbackup + '/copy'
 
             try {
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -1256,7 +1266,7 @@ function Lock-SVTbackup {
 
     process {
         foreach ($BkpId in $BackupId) {
-            $Uri = $($global:SVTconnection.OVC) + '/api/backups/' + $BkpId + '/lock'
+            $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/lock'
 
             try {
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Post -ErrorAction Stop
@@ -1323,7 +1333,7 @@ function Rename-SVTbackup {
             } | ConvertTo-Json
             Write-Verbose $Body
 
-            $Uri = $($global:SVTconnection.OVC) + '/api/backups/' + $BkpId + '/rename'
+            $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/rename'
 
             try {
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -1413,7 +1423,7 @@ function Set-SVTbackupRetention {
             } | ConvertTo-Json
             Write-Verbose $Body
 
-            $Uri = $($global:SVTconnection.OVC) + '/api/backups/set_retention'
+            $Uri = $global:SVTconnection.OVC + '/api/backups/set_retention'
 
             try {
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -1469,7 +1479,7 @@ function Update-SVTbackupUniqueSize {
 
     process {
         foreach ($BkpId in $BackupId) {
-            $Uri = $($global:SVTconnection.OVC) + '/api/backups/' + $BkpId + '/calculate_unique_size'
+            $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/calculate_unique_size'
 
             try {
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Post -ErrorAction Stop
@@ -1528,12 +1538,11 @@ function Get-SVTdatastore {
     }
    
     #Get OmniStack Datastores in Federation
-    $Uri = $($global:SVTconnection.OVC) + '/api/datastores?show_optional_fields=true'
+    $Uri = $global:SVTconnection.OVC + '/api/datastores?show_optional_fields=true&case=insensitive'
 
     if ($DatastoreName) {
         $Uri += '&name=' + $DatastoreName
     }
-    $Uri += '&case=insensitive'
 
     try {
         $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -1593,6 +1602,7 @@ function New-SVTdatastore {
         [System.String]$DatastoreName,
 
         [Parameter(Mandatory = $true, Position = 1)]
+        [Alias("DestinationName")]
         [System.String]$ClusterName,
 
         [Parameter(Mandatory = $true, Position = 2)]
@@ -1633,7 +1643,7 @@ function New-SVTdatastore {
     } | ConvertTo-Json
     Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/datastores/'
+    $Uri = $global:SVTconnection.OVC + '/api/datastores/'
   
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -1687,7 +1697,7 @@ function Remove-SVTdatastore {
         'Accept'                = 'application/json'
     }
    
-    $Uri = $($global:SVTconnection.OVC) + '/api/datastores/' + $DatastoreId
+    $Uri = $global:SVTconnection.OVC + '/api/datastores/' + $DatastoreId
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Delete -ErrorAction Stop
@@ -1755,7 +1765,7 @@ function Resize-SVTdatastore {
     } | ConvertTo-Json
     Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/datastores/' + $DatastoreId + '/resize'
+    $Uri = $global:SVTconnection.OVC + '/api/datastores/' + $DatastoreId + '/resize'
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -1821,7 +1831,7 @@ function Set-SVTdatastorePolicy {
     } | ConvertTo-Json
     Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/datastores/' + $DatastoreId + '/set_policy'
+    $Uri = $global:SVTconnection.OVC + '/api/datastores/' + $DatastoreId + '/set_policy'
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -1885,7 +1895,7 @@ function Publish-SVTdatastore {
     } | ConvertTo-Json
     Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/datastores/' + $DatastoreId + '/share'
+    $Uri = $global:SVTconnection.OVC + '/api/datastores/' + $DatastoreId + '/share'
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -1949,7 +1959,7 @@ function Unpublish-SVTdatastore {
     } | ConvertTo-Json
     Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/datastores/' + $DatastoreId + '/unshare'
+    $Uri = $global:SVTconnection.OVC + '/api/datastores/' + $DatastoreId + '/unshare'
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -2010,7 +2020,7 @@ function Get-SVTdatastoreComputeNode {
                 throw 'Specified datastore name not found'
             }
             
-            $Uri = $($global:SVTconnection.OVC) + '/api/datastores/' + $DatastoreId + '/standard_hosts'
+            $Uri = $global:SVTconnection.OVC + '/api/datastores/' + $DatastoreId + '/standard_hosts'
 
             try {
                 $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -2088,7 +2098,7 @@ function Get-SVThost {
     }
 
     #Get OmniStack Hosts in Federation
-    $Uri = $($global:SVTconnection.OVC) + '/api/hosts?show_optional_fields=true'
+    $Uri = $global:SVTconnection.OVC + '/api/hosts?show_optional_fields=true&case=insensitive'
 
     if ($HostName) {
         $Uri += '&name=' + $HostName
@@ -2096,7 +2106,6 @@ function Get-SVThost {
     if ($ClusterName) {
         $Uri += '&compute_cluster_name=' + $ClusterName
     }
-    $Uri += '&case=insensitive'
     
     # get hosts
     try {
@@ -2199,7 +2208,7 @@ function Get-SVThardware {
 
         $Allhost = Get-SVThost  # Rest call once, outside loop
         if (-not $HostName) {
-            $HostName = $AllHost
+            $HostName = $AllHost | Select-Object -ExpandProperty HostName
         }
     }
 
@@ -2208,7 +2217,7 @@ function Get-SVThardware {
             # Get the HostId for this host
             $HostId = ($Allhost | Where-Object HostName -eq $Thishost).HostId
             
-            $Uri = $($global:SVTconnection.OVC) + '/api/hosts/' + $HostId + '/hardware'
+            $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $HostId + '/hardware'
         
             try {
                 $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -2288,7 +2297,7 @@ function Get-SVTcapacity {
 
     begin {
         $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
-            'Accept'                = 'application/json'
+                    'Accept'        = 'application/json'
         }
 
         $Range = $RangeHour * 3600
@@ -2308,7 +2317,7 @@ function Get-SVTcapacity {
         }
         $Allhost = Get-SVThost
         if (-not $HostName) {
-            $HostName = $Allhost
+            $HostName = $Allhost | Select-Object -ExpandProperty HostName
         }
     }
 
@@ -2317,7 +2326,7 @@ function Get-SVTcapacity {
             # Get the HostId for this host
             $HostId = ($Allhost | Where-Object HostName -eq $Thishost).HostId
             
-            $Uri = $($global:SVTconnection.OVC) + '/api/hosts/' + $HostId + '/capacity?time_offset=' + 
+            $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $HostId + '/capacity?time_offset=' + 
             $TimeOffset + '&range=' + $Range + '&resolution=' + $Resolution
             try {
                 $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -2342,7 +2351,7 @@ function Get-SVTcapacity {
             $CustomObject | Sort-Object -Property Date | Group-Object -Property Date | ForEach-Object {
                 $Property = [ordered]@{ 
                     PStypeName = 'HPE.SimpiVity.Capacity'
-                    Date = $_.Name 
+                    Date       = $_.Name 
                 }
                 $_.Group | Foreach-object {
                     $Property += @{ 
@@ -2425,7 +2434,7 @@ function Remove-SVThost {
     } | ConvertTo-Json
     Write-Verbose $Body
    
-    $Uri = $($global:SVTconnection.OVC) + '/api/hosts/' + $HostId + '/remove_from_federation'
+    $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $HostId + '/remove_from_federation'
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -2697,12 +2706,11 @@ function Get-SVTcluster {
         'Accept'                = 'application/json'
     }
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/omnistack_clusters?show_optional_fields=true'
+    $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters?show_optional_fields=true&case=insensitive'
 
     if ($ClusterName) {
         $Uri += '&name=' + $ClusterName
     }
-    $Uri += '&case=insensitive'
 
     try {
         $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -2768,7 +2776,7 @@ function Get-SVTthroughput {
         'Accept'                = 'application/json'
     }
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/omnistack_clusters/throughput'
+    $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/throughput'
 
     try {
         $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -2819,7 +2827,7 @@ function Get-SVTtimezone {
         'Accept'                = 'application/json'
     }
    
-    $Uri = $($global:SVTconnection.OVC) + '/api/omnistack_clusters/time_zone_list'
+    $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/time_zone_list'
 
     try {
         $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -2853,7 +2861,6 @@ function Set-SVTtimezone {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
-        [ValidateScript( { $_ -in (Get-SVTcluster).ClusterName })]
         [System.String]$ClusterName,
 
         [Parameter(Mandatory = $true, Position = 1)]
@@ -2881,7 +2888,7 @@ function Set-SVTtimezone {
     } | ConvertTo-Json
     Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/omnistack_clusters/' + $ClusterId + '/set_time_zone'
+    $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/' + $ClusterId + '/set_time_zone'
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -2933,7 +2940,7 @@ function Get-SVTclusterConnected {
     }
    
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/omnistack_clusters/' + $ClusterId + '/connected_clusters'
+    $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/' + $ClusterId + '/connected_clusters'
 
     try {
         $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -3012,7 +3019,7 @@ function Get-SVTpolicy {
         'Accept'                = 'application/json'
     }
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/policies?case=insensitive'
+    $Uri = $global:SVTconnection.OVC + '/api/policies?case=insensitive'
 
     if ($PolicyName) {
         $Uri += '&name=' + $PolicyName
@@ -3100,7 +3107,7 @@ function New-SVTpolicy {
     } | ConvertTo-Json
     Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/policies/'
+    $Uri = $global:SVTconnection.OVC + '/api/policies/'
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -3182,8 +3189,9 @@ function Set-SVTpolicyRule {
         [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByAllDay')]
         [switch]$All,
 
-        [Parameter(Mandatory = $true, Position = 2)]
-        [System.String]$ClusterName,
+        [Parameter(Mandatory = $false, Position = 2)]
+        [Alias("DestinationName")]
+        [System.String]$ClusterName = '', # Default is local
 
         [Parameter(Mandatory = $false, Position = 3)]
         [System.String]$StartTime = '00:00',
@@ -3211,13 +3219,18 @@ function Set-SVTpolicyRule {
 
     try {
         $PolicyId = Get-SVTpolicy -PolicyName $PolicyName -ErrorAction Stop | Select-Object -ExpandProperty PolicyId -Unique
-        $ClusterId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | Select-Object -ExpandProperty ClusterId
+        if ($ClusterName) {
+            $ClusterId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | Select-Object -ExpandProperty ClusterId
+        }
+        else {
+            $ClusterId = ''
+        }
     }
     catch {
         throw $_.Exception.Message
     }
-    if (-not ($PolicyId) -or -not ($ClusterId)) {
-        throw 'Specified policy name or cluster name not found'
+    if (-not ($PolicyId)) {
+        throw 'Specified policy name not found'
     }
 
     if ($WeekDay) {
@@ -3278,7 +3291,7 @@ function Set-SVTpolicyRule {
     
     # Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId + '/rules'
+    $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/rules'
 
     if ($ReplaceRules) {
         $Uri += "?replace_all_rules=$true"
@@ -3340,8 +3353,9 @@ function Update-SVTpolicyRule {
         [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByAllDay')]
         [switch]$All,
 
-        [Parameter(Mandatory = $true, Position = 3)]
-        [System.String]$ClusterName,
+        [Parameter(Mandatory = $false, Position = 3)]
+        [Alias("DestinationName")]
+        [System.String]$ClusterName = '',
 
         [Parameter(Mandatory = $false, Position = 4)]
         [System.String]$StartTime = '00:00',
@@ -3368,16 +3382,18 @@ function Update-SVTpolicyRule {
         $Policy = Get-SVTpolicy -PolicyName $PolicyName -RuleNumber $RuleNumber -ErrorAction Stop
         $PolicyId = $Policy | Select-Object -ExpandProperty PolicyId -Unique
         $RuleId = $Policy | Select-Object -ExpandProperty RuleId -Unique
-        $ClusterId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | Select-Object -ExpandProperty ClusterId
+        if ($ClusterName) {
+            $ClusterId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | Select-Object -ExpandProperty ClusterId
+        }
+        else {
+            $ClusterId = ''
+        }
     }
     catch {
         throw $_.Exception.Message
     }
     if (-not ($PolicyId)) {
         throw 'Specified policy name or Rule number not found. Use Get-SVTpolicy to determine rule number for the rule you want to edit'
-    }
-    if (-not ($ClusterId)) {
-        throw 'Specified cluster name not found'
     }
 
     if ($WeekDay) {
@@ -3434,7 +3450,7 @@ function Update-SVTpolicyRule {
     } | ConvertTo-Json
     Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId + '/rules/' + $RuleId
+    $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/rules/' + $RuleId
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Put -ErrorAction Stop
@@ -3494,7 +3510,7 @@ function Remove-SVTpolicyRule {
         'Accept'                = 'application/json'
     }
    
-    $Uri = $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId + '/rules/' + $RuleId
+    $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/rules/' + $RuleId
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Delete -ErrorAction Stop
@@ -3561,7 +3577,7 @@ function Rename-SVTpolicy {
     } | ConvertTo-Json
     Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId + '/rename'
+    $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/rename'
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -3618,8 +3634,8 @@ function Remove-SVTpolicy {
    
     # Confirm the the policy is not in use before deleting it. To do this, check both datastores and VMs
     $UriList = @(
-        $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId + '/virtual_machines'
-        $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId + '/datastores'
+        $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/virtual_machines'
+        $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/datastores'
     )
     [Bool]$ObjectFound = $false
     [String]$Message = ''
@@ -3639,7 +3655,7 @@ function Remove-SVTpolicy {
     }
     
     # Delete the policy
-    $Uri = $($global:SVTconnection.OVC) + '/api/policies/' + $PolicyId
+    $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Delete -ErrorAction Stop
     }
@@ -3733,7 +3749,7 @@ function Suspend-SVTpolicy {
     } | ConvertTo-Json
     Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/policies/suspend'
+    $Uri = $global:SVTconnection.OVC + '/api/policies/suspend'
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -3828,7 +3844,7 @@ function Resume-SVTpolicy {
     } | ConvertTo-Json
     Write-Verbose $Body
 
-    $Uri = $($global:SVTconnection.OVC) + '/api/policies/resume'
+    $Uri = $global:SVTconnection.OVC + '/api/policies/resume'
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -3860,7 +3876,7 @@ function Get-SVTpolicyScheduleReport {
         'Accept'                = 'application/json'
     }
    
-    $Uri = $($global:SVTconnection.OVC) + '/api/policies/policy_schedule_report'
+    $Uri = $global:SVTconnection.OVC + '/api/policies/policy_schedule_report'
 
     try {
         $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -3950,7 +3966,7 @@ function Get-SVTvm {
         [System.String]$State = "ALIVE",
 
         [Parameter(Mandatory = $false)]
-        [ValidateRange(1, 3000)]   # 3.7.8 Release Notes recommend 3,000 records to avoid out of memory errors
+        [ValidateRange(1, 3000)]   # 3.7.8 Release Notes recommend 5000 max. records to avoid out of memory errors
         [Int]$Limit = 500
     )
 
@@ -3967,13 +3983,13 @@ function Get-SVTvm {
             $State = "ALIVE"
         }
 
-        $Uri = $($global:SVTconnection.OVC) + "/api/virtual_machines?show_optional_fields=true&case=insensitive&offset=0&limit=$limit"
+        $Uri = $global:SVTconnection.OVC + '/api/virtual_machines?show_optional_fields=true&case=insensitive&offset=0&limit=' + $limit
         if (-not $DataStoreName -and -not $HostName -and -not $VMname) {
             if ($limit -le 500) {
                 Write-Warning "Limiting the number of VM objects to display to $Limit. This improves performance but some virtual machines may not be included"
             }
             else {
-                Write-Warning "You have chosen a limit of $Limit VM objects. This command may take a long time to complete or cause out of memory errors"
+                Write-Warning "You have chosen a limit of $Limit VM objects. This command may take a long time to complete"
             }
         }
     }
@@ -4099,7 +4115,7 @@ function Get-SVTvmReplicaSet {
             $VMobj = Get-SVTvm -HostName $HostName
         }
         else {
-            $VMobj = Get-SVTvm
+            $VMobj = Get-SVTvm  # default is all VMs
         }
     }
 
@@ -4110,12 +4126,13 @@ function Get-SVTvmReplicaSet {
             $PrimaryHost = $Allhost | Where-Object HostId -eq $PrimaryId | Select-Object -ExpandProperty HostName
             $SecondaryHost = $Allhost | Where-Object HostId -eq $SecondaryId | Select-Object -ExpandProperty HostName
             [PSCustomObject]@{
-                VMname    = $VM.VMname
-                State     = $VM.State
-                HAstatus  = $VM.HAstatus
+                PSTypeName  = 'HPE.SimpliVity.ReplicaSet'
+                VMname      = $VM.VMname
+                State       = $VM.State
+                HAstatus    = $VM.HAstatus
                 ClusterName = $VM.ClusterName
-                Primary   = $PrimaryHost
-                Secondary = $SecondaryHost
+                Primary     = $PrimaryHost
+                Secondary   = $SecondaryHost
             }
         }
     }
@@ -4296,7 +4313,7 @@ function New-SVTclone {
 .EXAMPLE
     PS C:\>Move-SVTVM -VMname MyVM -Datastore DR-DS01
     
-    Moves the specified VM to the specfiied datastore
+    Moves the specified VM to the specified datastore
 .EXAMPLE
     PS C:\>"VM1", "VM2" | Move-SVTVM -Datastore DS03
     

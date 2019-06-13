@@ -68,7 +68,7 @@
                                 <PropertyName>BackupState</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>DataCenterName</PropertyName>
+                                <PropertyName>ClusterName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>DataStoreName</PropertyName>
