@@ -1,4 +1,4 @@
- # HPE SimpliVity PowerShell Module V1.1.1
+ # HPE SimpliVity PowerShell Module
 
 This PowerShell module utilises the HPE SimpliVity REST API to display information and manage a SimpliVity federation and works by connecting to any OmniStack Virtual Controller in your environment.
 

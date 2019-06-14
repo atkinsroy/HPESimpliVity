@@ -14,12 +14,6 @@
 #   AUTHOR
 #   Roy Atkins    HPE Pointnext, Advisory & Professional Services
 #
-#   HISTORY
-#   Date        Version  Description
-#   05/03/2019  1.0.0    First version containing initial set of cmdlets that implement GET API calls
-#   14/05/2019  1.1.0    Added cmdlets that add,update and delete - POST, PUT and DELETE API calls
-#   12/06/2019  1.1.1    Added a type for Metrics, minor bug fixes
-#
 # (C) Copyright 2019 Hewlett Packard Enterprise Development LP
 ##############################################################################################################
 
@@ -91,6 +85,12 @@ function Invoke-SVTrestMethod {
     # calling cmdlet. A lot of cmdlets produce task object types, so this cuts out repetition in the module.
     if ($Response.task) {
         $Response.task | ForEach-Object {
+            if ($_.start_time -as [datetime]) {
+                $StartTime = Get-Date -Date $_.start_time
+            }
+            else {
+                $StartTime = $_.start_time 
+            }
             if ($_.end_time -as [datetime]) {
                 $EndTime = Get-Date -Date $_.end_time
             }
@@ -103,7 +103,7 @@ function Invoke-SVTrestMethod {
                 State           = $_.state
                 AffectedObjects = $_.affected_objects
                 ErrorCode       = $_.error_code
-                StartTime       = Get-Date -Date $_.start_time
+                StartTime       = $StartTime
                 EndTime         = $EndTime
                 Message         = $_.message
             }
@@ -689,8 +689,8 @@ function Get-SVTbackup {
         }
         else {
             # Get date for specified hour
-            $StartDate = (get-date).AddHours(-$Hour).ToUniversalTime()
-            $CreatedAfter = "$(get-date $StartDate -format s)Z"
+            $StartDate = (Get-Date).AddHours(-$Hour).ToUniversalTime()
+            $CreatedAfter = "$(Get-Date $StartDate -format s)Z"
             $Uri += '&created_after=' + $CreatedAfter
             Write-Verbose "Displaying backups from the last $Hour hours, (created after $CreatedAfter)"
         }
@@ -725,6 +725,12 @@ function Get-SVTbackup {
     }
 
     $Response.backups | ForEach-Object {
+        if ($_.created_at -as [datetime]) {
+            $CreateDate = Get-Date -Date $_.created_at
+        }
+        else {
+            $CreateDate = $null
+        }
         if ($_.unique_size_timestamp -as [DateTime]) {
             $UniqueSizeDate = Get-Date -Date $_.unique_size_timestamp
         }
@@ -742,7 +748,7 @@ function Get-SVTbackup {
         $CustomObject = [PSCustomObject]@{
             PSTypeName       = 'HPE.SimpliVity.Backup'
             VMname           = $_.virtual_machine_name
-            CreateDate       = Get-Date -Date $_.created_at
+            CreateDate       = $CreateDate
             ConsistencyType  = $_.consistency_type
             BackupType       = $_.type
             DataStoreName    = $_.datastore_name
@@ -1551,13 +1557,20 @@ function Get-SVTdatastore {
     catch {
         throw $_.Exception.Message
     }
+    
 
     $Response.datastores | ForEach-Object {
+        if ($_.created_at -as [datetime]) {
+            $CreateDate = Get-Date -Date $_.created_at
+        }
+        else {
+            $CreateDate = $null
+        }
         [PSCustomObject]@{
             PSTypeName               = 'HPE.SimpliVity.DataStore'
             PolicyId                 = $_.policy_id
             MountDirectory           = $_.mount_directory
-            CreateDate               = Get-Date -Date $_.created_at
+            CreateDate               = $CreateDate
             PolicyName               = $_.policy_name
             ClusterName              = $_.omnistack_cluster_name
             Shares                   = $_.shares
@@ -2117,6 +2130,12 @@ function Get-SVThost {
     }
 
     $Response.hosts | Foreach-Object {
+        if ($_.date -as [datetime]) {
+            $Date = Get-Date -Date $_.date
+        }
+        else {
+            $Date = $null
+        }
         [PSCustomObject]@{
             PSTypeName               = 'HPE.SimpliVity.Host'
             PolicyEnabled            = $_.policy_enabled
@@ -2148,7 +2167,7 @@ function Get-SVThost {
             ManagementMask           = $_.management_mask
             HypervisorManagementName = $_.hypervisor_management_system_name
             HypervisorClusterId      = $_.compute_cluster_hypervisor_object_id
-            Date                     = Get-Date -Date $_.date
+            Date                     = $Date
             UsedLogicalCapacityGB    = "{0:n0}" -f ($_.used_logical_capacity / 1gb)
             UsedCapacityGB           = "{0:n0}" -f ($_.used_capacity / 1gb)
             CompressionRatio         = $_.compression_ratio
@@ -2298,7 +2317,7 @@ function Get-SVTcapacity {
 
     begin {
         $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
-                    'Accept'        = 'application/json'
+            'Accept'                = 'application/json'
         }
 
         $Range = $RangeHour * 3600
@@ -2348,7 +2367,7 @@ function Get-SVTcapacity {
                     }
                     [pscustomobject] @{
                         Name  = $MetricName
-                        Date  = Get-Date -Date $Date
+                        Date  = $Date
                         Value = $_.value
                     }
                 }
@@ -4021,6 +4040,12 @@ function Get-SVTvm {
 
         $Response.virtual_machines | ForEach-Object {
             if ($_.state -eq $State -or $State -eq "ALL") {
+                if ($_.created_at -as [datetime]) {
+                    $CreateDate = Get-Date -Date $_.created_at
+                }
+                else {
+                    $CreateDate = $null
+                }
                 if ($_.deleted_at -as [DateTime]) {
                     $DeletedDate = Get-Date -Date $_.deleted_at
                 }
@@ -4033,7 +4058,7 @@ function Get-SVTvm {
                 [PSCustomObject]@{
                     PSTypeName               = 'HPE.SimpliVity.VirtualMachine'
                     PolicyId                 = $_.policy_id
-                    CreateDate               = Get-date -Date $_.created_at
+                    CreateDate               = $CreateDate
                     PolicyName               = $_.policy_name
                     DataStoreName            = $_.datastore_name
                     ClusterName              = $_.omnistack_cluster_name
