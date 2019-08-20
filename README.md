@@ -2,7 +2,7 @@
 
 This PowerShell module utilises the HPE SimpliVity REST API to display information and manage a SimpliVity federation and works by connecting to any OmniStack Virtual Controller in your environment.
 
-The module uses V1.11 of the Rest API, which comes with HPE SimpliVity 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters, but it works with 3.7.7 too. 
+The module was written using V1.11 of the Rest API, which comes with HPE SimpliVity 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters. The module works with 3.7.7 and greater. 
 
 All cmdlets are written as advanced cmdlets, with extensive comment based help and most have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtering parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API, for example limiting the number of records to 500 when returning virtual machines and backup objects.
 
@@ -64,14 +64,13 @@ Get-SVTvmReplicaSet
 
 ## Installation
 
-* Copy all the files to %userprofile%\Documents\WindowsPowershell\Modules\HPESimpliVity. 
-
-Note: the folder structure is important to ensure that PowerShell automatically loads the module.
-
-* Restart Powershell to load the module, or type:
-
+* Install the HPESimplivity module from the PowerShell Gallery, using the following command:
 ```powershell
-    PS C:\>import-module HPESimpliVity -force
+    PS C:\>Install-Module -Name HPESimpliVity
+```
+* Restart Powershell to load the module, or type:
+```powershell
+    PS C:\>Import-Module HPESimpliVity -Force
 ```
 * After this, the module will automatically load in new PowerShell sessions. Issue the following commands to confirm:
 ```powershell
@@ -79,7 +78,12 @@ Note: the folder structure is important to ensure that PowerShell automatically 
     PS C:\>Get-Help Get-SVTBackup
     PS C:\>Get-Help Connect-SVT
 ```
-* Once installed, you're ready to connect to the OmniStack virtual controller.
+* Once installed, you're ready to connect to the OmniStack virtual controller, as follows:
+```powershell
+    PS C:\>$Cred = Get-Credential -Message 'Enter OVC Credentials'
+    PS C:\>Connect-SVT -OVC 192.168.1.11 -Credential $Cred
+    PS C:\>Get-SVThost
+```
 
 ## Things To Do
 * Test using PowerShell Core 6.0 (Windows and Linux)

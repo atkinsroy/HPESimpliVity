@@ -9,7 +9,7 @@
 # Download:
 #   https://github.com/atkinsroy/HPESimpliVity
 #
-#   VERSION 1.1.1
+#   VERSION 1.1.2
 #
 #   AUTHOR
 #   Roy Atkins    HPE Pointnext, Advisory & Professional Services
