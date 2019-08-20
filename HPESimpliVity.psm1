@@ -41,6 +41,7 @@ THE SOFTWARE.
 
 # Helper function for Invoke-RestMethod to handle REST errors in one place. The calling function then re-throws the error, 
 # generated here. This cmdlet either outputs a custom task object if the REST API response is a task object, or otherwise the raw JSON.
+
 function Invoke-SVTrestMethod {
     [CmdletBinding()]
     param (
@@ -89,13 +90,13 @@ function Invoke-SVTrestMethod {
                 $StartTime = Get-Date -Date $_.start_time
             }
             else {
-                $StartTime = $_.start_time 
+                $StartTime = $null
             }
             if ($_.end_time -as [datetime]) {
                 $EndTime = Get-Date -Date $_.end_time
             }
             else {
-                $EndTime = $_.end_time 
+                $EndTime = $null
             }
             [PSCustomObject]@{
                 PStypeName      = 'HPE.SimpliVity.Task'
