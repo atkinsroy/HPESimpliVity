@@ -2,11 +2,11 @@
 
 This PowerShell module utilises the HPE SimpliVity REST API to display information and manage a SimpliVity federation and works by connecting to any OmniStack Virtual Controller in your environment.
 
-The module was written using V1.11 of the Rest API, which comes with HPE SimpliVity 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters. The module works with 3.7.7 and greater. 
+The module was written using V1.11 of the Rest API, which comes with HPE OmniStack 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters. The module has been tested and works with HPE OmniStack 3.7.7 and above. 
 
-All cmdlets are written as advanced cmdlets, with extensive comment based help and most have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtering parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API, for example limiting the number of records to 500 when returning virtual machines and backup objects.
+All cmdlets are written as advanced cmdlets, with extensive comment based help and most have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API, for example limiting the number of records to 500 when returning virtual machines and backup objects.
 
-Most "Get" commands provide way too many properties to show at once, so ps1xml files have been introduced into this version, to provide default display properties. All properties are still accessible, by piping to Format-List or Select-Object -property *
+Most "Get" commands provide way too many properties to show at once, so ps1xml files are used to provide default display properties. All properties are still accessible, by piping to Format-List or Select-Object -property *
 
 For Example:
 ```powershell
@@ -30,7 +30,7 @@ For Example:
 ```
 
 
-The module currently contains 51 exported cmdlets, in the following feature categories:
+The module contains 51 exported cmdlets, in the following feature categories:
 
 Backups | Backup Policy | Datastore & Cluster
 --- | --- | ---
@@ -59,8 +59,8 @@ Get-SVTvmReplicaSet
 ## Requirements
 
 * PowerShell V3.0 and above. This module was created and tested using PowerShell V5.1.
-* The IP address and the credentials of an authorised SimpliVity user account.
-* Tested with OmniStack 3.7.8. (Works with 3.7.7 too. Both VMware and Hyper-V have been tested).
+* The IP address and the credentials of an authorised OmniStack user account.
+* Tested with OmniStack 3.7.7 and above. Both VMware and Hyper-V versions have been tested.
 
 ## Installation
 
@@ -68,6 +68,8 @@ Get-SVTvmReplicaSet
 ```powershell
     PS C:\>Install-Module -Name HPESimpliVity
 ```
+The module is signed, so it will work with an execution policy set to Remote Signed.
+
 * Restart Powershell to load the module, or type:
 ```powershell
     PS C:\>Import-Module HPESimpliVity -Force
@@ -81,7 +83,7 @@ Get-SVTvmReplicaSet
 * Once installed, you're ready to connect to the OmniStack virtual controller, as follows:
 ```powershell
     PS C:\>$Cred = Get-Credential -Message 'Enter OVC Credentials'
-    PS C:\>Connect-SVT -OVC 192.168.1.11 -Credential $Cred
+    PS C:\>Connect-SVT -OVC <IP or FQDN of OVC> -Credential $Cred
     PS C:\>Get-SVThost
 ```
 

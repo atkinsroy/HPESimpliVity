@@ -5,23 +5,24 @@ $Daily = (Get-Date).AddDays(1)
 $Weekly = (Get-Date).AddDays(7)
 $Monthly = (Get-Date).AddDays(28)
 
-Write-Output "Daily Backups"
-Get-SvtBackup -All | Where-Object ExpiryDate -le $Daily
+$AllBackup = Get-SVTbackup -All
+Write-Output 'Daily Backups'
+$AllBackup | Where-Object ExpiryDate -le $Daily
 
-Write-Output "Weekly Backups"
-Get-SvtBackup -All | Where-Object { $_.ExpiryDate -le $Weekly -and $_.ExpiryDate -gt $Daily }
+Write-Output 'Weekly Backups'
+$AllBackup | Where-Object { $_.ExpiryDate -le $Weekly -and $_.ExpiryDate -gt $Daily }
 
-Write-Output "Monthly Backups"
-Get-SvtBackup -All | Where-Object { $_.ExpiryDate -le $Monthly -and $_.ExpiryDate -gt $Weekly }
+Write-Output 'Monthly Backups'
+$AllBackup | Where-Object { $_.ExpiryDate -le $Monthly -and $_.ExpiryDate -gt $Weekly }
 
-Write-Output "Older Backups"
-Get-SvtBackup -All | Where-Object ExpiryDate -gt $Monthly
+Write-Output 'Older Backups'
+$AllBackup | Where-Object ExpiryDate -gt $Monthly
 
-Write-Output "Latest Backup for each VM"
+Write-Output 'Latest Backup for each VM'
 Get-SVTBackup -Latest
 
 # Less sexy method. Report based on the policy name
-Get-SVTBackup -PolicyName "DailyBackup"
+#Get-SVTBackup -PolicyName "DailyBackup"
 # Or
-Get-SVTBackup -All | Where-Object PolicyName -eq "DailyBackup"
+#$AllBackup | Where-Object PolicyName -eq "DailyBackup"
 

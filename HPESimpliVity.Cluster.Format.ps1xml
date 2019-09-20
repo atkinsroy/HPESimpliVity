@@ -26,7 +26,7 @@
                     </TableColumnHeader>
                     <TableColumnHeader>
                         <Width>14</Width>
-                        <Alignment>left</Alignment>
+                        <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
                         <Width>16</Width>

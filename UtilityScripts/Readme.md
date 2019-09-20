@@ -1,4 +1,4 @@
-This folder will contain PowerShell scripts that utilise the HPESimpliVity module to do specific things.
+This folder contains PowerShell scripts that utilise the HPESimpliVity module to do specific things.
 
 ## DailyWeeklyMonthlyReport.ps1
 
