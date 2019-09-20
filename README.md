@@ -86,6 +86,8 @@ The module is signed, so it will work with an execution policy set to Remote Sig
     PS C:\>Connect-SVT -OVC <IP or FQDN of OVC> -Credential $Cred
     PS C:\>Get-SVThost
 ```
+-Note
+You must login with an admin account (vCenter Admin Role).
 
 ## Things To Do
 * Test using PowerShell Core 6.0 (Windows and Linux)
