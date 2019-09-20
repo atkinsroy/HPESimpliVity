@@ -16,7 +16,7 @@ For Example:
     HostName      DataCenterName    ClusterName   FreeSpaceGB    ManagementIP   StorageIP     FederationIP 
     --------      --------------    -----------   -----------    ------------   ---------     ------------
     192.168.1.1   SunGod            Production1         2,671    192.168.1.11   192.168.2.1   192.168.3.1
-    192.168.1.2   SubGod            Production1         2,671    192.168.1.12   192.168.2.2   192.168.3.2
+    192.168.1.2   SunGod            Production1         2,671    192.168.1.12   192.168.2.2   192.168.3.2
    
     PS C:\>Get-SVThost -HostName 192.168.1.1 | Format-List
     
