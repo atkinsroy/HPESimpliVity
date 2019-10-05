@@ -57,9 +57,39 @@ Stop-SVTvm | Get-SVTshutdownStatus | Set-SVTtimezone
 Set-SVTvmPolicy | Get-SVTthroughput | Get-SVTversion
 Get-SVTvmReplicaSet
 
+## Latest update (V1.1.4)
+
+With V1.1.4, the Get-SVTmetric cmdlet now produces charts. You can create charts for clusters, hosts and virtual machines. Here's
+how it works:
+
+```powershell
+    PS C:\> Get-SVThost | Select-Object -First 1 | Get-SVTmetric -Hour 48 -Chart
+```
+
+This will create a single chart for the first host in the Federation using the specified range. The cmdlet has a new -Force 
+parameter. By default, up to five charts are created, one for each object passed in. If there are more objects than this in the 
+pipeline, the cmdlet issues a warning. You can override this limit with the -Force switch. Be careful when using Get-SVTvm though,
+you may create many, many charts!
+
+Here's a sample metric chart:
+
+![Here is a sample metric chart](/Media/SVTmetric-sample.png)
+
+Similarly, Get-SVTcapacity also has a new -Chart switch. Use the following command to create a chart for each host in the federation.
+
+```powershell
+    PS C:\> Get-SVTcapacity -Chart
+```
+
+Here's a sample capacity chart:
+
+![Here is a sample capacity chart](/Media/SVTcapacity-sample.png)
+
+**Note:** Both of these commands require Windows PowerShell (tested with V5.1 only). They do not work with PowerShell Core V6.x 
+
 ## Requirements
 
-* PowerShell V3.0 and above. This module was created and tested using PowerShell V5.1.
+* PowerShell V5.1 and above. This module was created and tested using PowerShell V5.1.
 * The IP address and the credentials of an authorised OmniStack user account.
 * Tested with OmniStack 3.7.7 and above. Both VMware and Hyper-V versions have been tested.
 
@@ -87,6 +117,18 @@ The module is signed, so it will work with an execution policy set to Remote Sig
     PS C:\> Connect-SVT -OVC <IP or FQDN of an OmniStack Virtual Controller> -Credential $Cred
     PS C:\> Get-SVThost
 ```
+Or, if you need to run commands in batch (non-interactively), save your crednetials to a file first:
+
+```powershell
+    PS C:\> $Cred = Get-Credential -Username 'administrator@vsphere.local' | Export-Clixml OVCcred.XML 
+```
+and then in your script, import the credential:
+```powershell
+    PS C:\> $Cred = Import-CLIXML C:\<folder>\OVCcred.XML
+    PS C:\> Connect-SVT -OVC <IP or FQDN of an OmniStack Virtual Controller> -Credential $Cred
+    PS C:\> Get-SVThost
+```
+
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
 ## Things To Do
