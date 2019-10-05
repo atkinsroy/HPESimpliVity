@@ -8,7 +8,7 @@
 # Website:
 #   https://github.com/atkinsroy/HPESimpliVity
 #
-#   VERSION 1.1.3
+#   VERSION 1.1.4
 #
 #   AUTHOR
 #   Roy Atkins    HPE Pointnext, Advisory & Professional Services
@@ -78,13 +78,13 @@ function Invoke-SVTrestMethod {
         }
     }
     catch {
-        # Catch any other error - SimpliVity might had provided a nic little message
+        # Catch any other error - SimpliVity might provide a nice little message
         throw "An unexpected error occured: $($_.Exception.Message)" 
     }
 
     # If the JSON output is a task, convert it to a custom object of type 'HPE.SimpliVity.Task' and pass this back to the 
     # calling cmdlet. A lot of cmdlets produce task object types, so this cuts out repetition in the module.
-    # Note: $Response.task is positive with /api/omnistack_clusters/throughput, so added the other condition.
+    # Note: $Response.task is positive with /api/omnistack_clusters/throughput, so added a condition to ignore this.
     if ($Response.task -and $URI -notmatch '/api/omnistack_clusters/throughput') {
         $Response.task | ForEach-Object {
             if ($_.start_time -as [datetime]) {
@@ -158,8 +158,9 @@ function Invoke-SVTrestMethod {
 function Get-SVTtask {
     [CmdletBinding()]
     param(
+        # by default, use the global variable. i.e. the output from the last task producing cmdlet in this session
         [Parameter(Mandatory = $false, ValueFromPipeLine = $true)]
-        [PSobject]$Task = $SVTtask
+        [PSobject]$Task = $SVTtask  
     )
 
     begin {
@@ -319,7 +320,7 @@ function Connect-SVT {
 .INPUTS
     None
 .OUTPUTS
-    PSCustomObject
+    System.Management.Automation.PSCustomObject
 .EXAMPLE
     PS C:\> Get-SVTversion
 
@@ -352,7 +353,7 @@ Function Get-SVTversion {
 .SYNOPSIS
     Display the performance information about the specified HPE SimpliVity resource(s)
 .DESCRIPTION
-    Displays the performance metrics for one of the following specified HPE SimpliVity objects:
+    Displays the performance metrics for one of the following specified HPE SimpliVity resources:
         - Cluster
         - Host
         - VM
@@ -361,33 +362,50 @@ Function Get-SVTversion {
 .PARAMETER SVTobject
     Used to accept input from the pipeline. Accepts HPESimpliVity objects with a specific type
 .PARAMETER ClusterName
-    The SimpliVity cluster(s) you want to show performance information for
+    Show performance metrics for the specified SimpliVity cluster(s)
 .PARAMETER Hostname
-    The SimpliVity node(s) you want to show performance information for
+    Show performance metrics for the specified SimpliVity node(s)
 .PARAMETER VMName
-    The virtual machine(s) hosted on SimpliVity storage you want to show performance information for
-.PARAMETER TimeOffsetHour
-    Timeoffset in hours from now
-.PARAMETER RangeHour
-    The range in hours (the duration from the specified point in time)
+    Show performance metrics for the specified virtual machine(s) hosted on SimpliVity storage
+.PARAMETER OffsetHour
+    Show performance metrics starting from the specified offset (hours from now, default is now)
+.PARAMETER Hour
+    Show performance metrics for the specifed number of hours (starting from OffsetHour)
 .PARAMETER Resolution
     The resolution in seconds, minutes, hours or days
+.PARAMETER Chart
+    Create a chart instead of showing performance metrics. The chart file is saved to the current folder. One chart is
+    created for each object (e.g. cluster, host or VM)
+.PARAMETER Force
+    If you specify -Chart and there are more than five objects, a warning is displayed. Use -Force to bypass this check
+    and create charts for a larger number of objects.
 .EXAMPLE
     PS C:\>Get-SVTmetric -ClusterName Production
     
-    Shows performance metrics about the specified cluster, using the default range (24 hours) and resolution (1 hour)
+    Shows performance metrics about the specified cluster, using the default hour setting (24 hours) and resolution (every hour)
 .EXAMPLE
-    PS C:\>Get-SVThost | Get-SVTmetric -Resolution Minute -RangeHour 1
+    PS C:\>Get-SVThost | Get-SVTmetric -Hour 1 -Resolution SECOND
 
-    Shows performance metrics for all hosts in the federation, for the last hour every minute.
+    Shows performance metrics for all hosts in the federation, for every second of the last hour
 .EXAMPLE
     PS C:\>Get-SVTvm | Where VMname -match "SQL" | Get-SVTmetric
 
     Show performance metrics for every VM that has "SQL" in its name
 .EXAMPLE
-    PS C:\>Get-SVTCluster -ClusterName DR | Get-SVTmetric
+    PS C:\>Get-SVTcluster -ClusterName DR | Get-SVTmetric -Hour 1440 -Resolution DAY 
 
-    Show performance metrics for the specified cluster
+    Show daily performance metrics for the last two months for the specified cluster
+.EXAMPLE
+    PS C:\>Get-SVThost | Get-Metric -Chart -Force -Verbose
+
+    Create chart(s) instead of showing the metric data. Chart files are created in the current folder.
+    Specify -Force to bypass the check for more than five objects. Use filtering when creating charts for 
+    virtual machines to avoid creating a lot of charts.
+.EXAMPLE
+    PS C:\>Get-SVThost -HostName MyHost | Get-Metric -Chart | Foreach-Object {Invoke-Item $_}
+
+    Create a metrics chart for the specified host and display it. Note that Invoke-Item only works with 
+    image files when the Desktop Experience Feature is installed (may not be installed on some servers)
 .INPUTS
     System.String
     HPE.SimpliVity.Cluster
@@ -414,23 +432,31 @@ function Get-SVTmetric {
         [psobject]$SVTobject,
 
         [Parameter(Mandatory = $false, Position = 1)]
-        [int]$TimeOffsetHour = 0,
+        [int]$OffsetHour = 0,
 
         [Parameter(Mandatory = $false, Position = 2)]
-        [int]$RangeHour = 24,
+        [int]$Hour = 24,
 
         [Parameter(Mandatory = $false, Position = 3)]
         [ValidateSet('SECOND', 'MINUTE', 'HOUR', 'DAY')]
-        [System.String]$Resolution = 'HOUR'
+        [System.String]$Resolution = 'HOUR',
+
+        [Parameter(Mandatory = $false)]
+        [Switch]$Chart,
+
+        [Parameter(Mandatory = $false)]
+        [Switch]$Force
     )
 
     begin {
+        $VerbosePreference = 'Continue'
+
         $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
             'Accept'                = 'application/json'
         }
 
-        $Range = $RangeHour * 3600
-        $TimeOffset = $TimeOffsetHour * 3600
+        $Range = $Hour * 3600
+        $Offset = $OffsetHour * 3600
 
         if ($Resolution -eq 'SECOND' -and $Range -gt 43200 ) {
             throw "Maximum range value for resolution $resolution is 12 hours"
@@ -462,7 +488,6 @@ function Get-SVTmetric {
 
         foreach ($Item in $InputObject) {
             $TypeName = $Item | Get-Member | Select-Object -ExpandProperty TypeName -Unique
-            Write-Verbose $TypeName
             if ($TypeName -eq 'HPE.SimpliVity.Cluster') {
                 $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/' + $Item.ClusterId + '/metrics'
                 $ObjectName = $Item.ClusterName
@@ -505,8 +530,9 @@ function Get-SVTmetric {
                     throw $_.Exception.Message
                 }
             }
+            Write-verbose "Object name is $ObjectName ($TypeName)"
 
-            $Uri = $Uri + "?time_offset=$TimeOffset&range=$Range&resolution=$Resolution"
+            $Uri = $Uri + "?time_offset=$Offset&range=$Range&resolution=$Resolution"
 
             try {
                 $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -535,27 +561,359 @@ function Get-SVTmetric {
             }
 
             #Transpose the custom object to output each date with the value for each metric
-            $CustomObject | Sort-Object -Property Date | Group-Object -Property Date | ForEach-Object {
+            $MetricObject = $CustomObject | Sort-Object -Property Date | Group-Object -Property Date | ForEach-Object {
                 $Property = [ordered]@{ 
                     PStypeName = 'HPE.SimpliVity.Metric' 
                     Date       = $_.Name 
                 }
                 $_.Group | Foreach-object {
-                    $Property += @{
+                    $Property += [ordered]@{
                         "$($_.Name)Read"  = $_.Read 
                         "$($_.Name)Write" = $_.Write
                     }
                 }
-                $Property += @{ ObjectName = $ObjectName }
+                $Property += [ordered]@{
+                    ObjectType = $TypeName
+                    ObjectName = $ObjectName 
+                }
                 New-Object -TypeName PSObject -Property $Property
             }
-            # Graph stuff goes here.
+            
+            if ($Chart) {
+                [array]$ChartObject += $MetricObject
+            }
+            else {
+                $MetricObject
+            }
         }
     }
 
     end {
+        if ($Chart) {
+            if ($Force) {
+                Get-SVTmetricChart -Metric $ChartObject -TypeName $TypeName -Force
+            }
+            else {
+                Get-SVTmetricChart -Metric $ChartObject -TypeName $TypeName
+            }
+        }
     }
 }
+
+# Helper function for Get-SVTmetric
+function Get-SVTmetricChart {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [psobject]$Metric,
+
+        [Parameter(Mandatory = $true, Position = 1)]
+        [System.String]$TypeName,
+
+        [Parameter(Mandatory = $false, Position = 2)]
+        [Switch]$Force
+    )
+
+    if ($PSVersionTable.PSVersion.Major -gt 5) {
+        throw "Microsoft Chart Controls are not currently supported with PowerShell Core, use Windows PowerShell"
+    }
+    
+    $ObjectList = $Metric.ObjectName | Select-Object -Unique
+    $ObjectTotal = $ObjectList | Measure-Object | Select-Object -ExpandProperty Count
+    if ($ObjectTotal -gt 5 -and -not $Force) {
+        Write-Warning "You are attempting to pass in $ObjectTotal objects. Use -Force to create charts for more than 5 objects"
+        Return
+    }
+    $Path = Get-Location
+    $Culture = Get-Culture #$Culture = New-Object System.Globalization.CultureInfo 'en-us'
+    $StartDate = $Metric | Select-Object -First 1 -ExpandProperty Date
+    $EndDate = $Metric | Select-Object -Last 1 -ExpandProperty Date
+    $ChartLabelFont = 'Arial, 8pt'
+    $ChartTitleFont = 'Arial, 12pt'
+    $DateStamp = Get-Date -Format "yyMMddhhmmss"
+
+    Add-Type -AssemblyName System.Windows.Forms.DataVisualization
+    
+    foreach ($Instance in $ObjectList) {
+        $DataSource = $Metric | Where-Object ObjectName -eq $Instance
+        $DataPoint = $DataSource | Measure-Object | Select-Object -ExpandProperty Count
+
+        # chart object
+        $Chart1 = New-object System.Windows.Forms.DataVisualization.Charting.Chart
+        $Chart1.Width = 1200
+        $Chart1.Height = 600
+        $Chart1.BackColor = [System.Drawing.Color]::LightGray
+
+        # title
+        try {
+            $ShortName = ([ipaddress]$Instance).IPAddressToString
+        }
+        catch {
+            $ShortName = $Instance -split '\.' | Select-Object -First 1
+        }
+        [void]$Chart1.Titles.Add("$($TypeName): $ShortName - Metrics from $StartDate to $EndDate")
+        $Chart1.Titles[0].Font = "Arial,16pt"
+        $Chart1.Titles[0].Alignment = "topLeft"
+ 
+        # chart area
+        $AxisEnabled = New-Object System.Windows.Forms.DataVisualization.Charting.AxisEnabled
+        $AxisType = New-Object System.Windows.Forms.DataVisualization.Charting.AxisType
+        $Area1 = New-Object System.Windows.Forms.DataVisualization.Charting.ChartArea
+        $Area1.Name = "ChartArea1"
+        $Area1.AxisX.Title = "Date"
+        $Area1.AxisX.TitleFont = $ChartTitleFont
+        $Area1.AxisX.LabelStyle.Font = $ChartLabelFont
+        
+        $Interval = [math]::Round($DataPoint / 24) #show 24 dates on X axis only
+        if ($Interval -lt 1) {
+            $Area1.AxisX.Interval = 1
+        }
+        else {
+            $Area1.AxisX.Interval = $Interval   
+        }
+        
+        $Area1.AxisY.Title = "IOPS and Latency (milliseconds)"
+        $Area1.AxisY.TitleFont = $ChartTitleFont
+        $Area1.AxisY.LabelStyle.Font = $ChartLabelFont
+        
+        if($Interval -gt 12) {
+            $BorderWidth = 1    #reduce line weight for charts with long time ranges
+        }
+        else {
+            $BorderWidth = 2
+        }
+
+        $MaxArray = @(
+            $DataSource | Measure-Object -Property LatencyRead -Maximum | Select-Object -ExpandProperty Maximum
+            $DataSource | Measure-Object -Property LatencyWrite -Maximum | Select-Object -ExpandProperty Maximum
+            $DataSource | Measure-Object -Property IopsRead -Maximum | Select-Object -ExpandProperty Maximum
+            $DataSource | Measure-Object -Property IopsWrite -Maximum | Select-Object -ExpandProperty Maximum
+        )
+        $Max = 0  #ensure Y axis has appropriate interval
+        $MaxArray | Foreach-Object {
+            if($_ -gt $Max) {
+                $Max = $_
+            }
+        }
+        if ($Max -lt 10000) {
+            $Area1.AxisY.Interval = 200
+        }
+        Elseif ($Max -lt 20000) {
+            $Area1.AxisY.Interval = 1000
+        }
+        Else {
+            $Area1.AxisY.Interval = 2000
+        }
+        $Area1.AxisY2.Title = "Throughput (Mbps)"
+        $Area1.AxisY2.TitleFont = $ChartTitleFont
+        $Area1.AxisY2.LabelStyle.Font = $ChartLabelFont
+        $Area1.AxisY2.LineColor = [System.Drawing.Color]::Transparent
+        $Area1.AxisY2.MajorGrid.Enabled = $false
+        $Area1.AxisY2.Enabled = $AxisEnabled::true
+
+        $Chart1.ChartAreas.Add($Area1)
+        $Chart1.ChartAreas["ChartArea1"].AxisY.LabelStyle.Angle = 0
+        $Chart1.ChartAreas["ChartArea1"].AxisX.LabelStyle.Angle = -45
+
+        # legend
+        $Legend = New-Object system.Windows.Forms.DataVisualization.Charting.Legend
+        $Legend.name = "Legend1"
+        $Chart1.Legends.Add($Legend)
+
+        # data series
+        [void]$Chart1.Series.Add("IopsRead")
+        $Chart1.Series["IopsRead"].YAxisType = $AxisType::Primary
+        $Chart1.Series["IopsRead"].ChartType = "Line"
+        $Chart1.Series["IopsRead"].BorderWidth = $BorderWidth
+        $Chart1.Series["IopsRead"].IsVisibleInLegend = $true
+        $Chart1.Series["IopsRead"].ChartArea = "ChartArea1"
+        $Chart1.Series["IopsRead"].Legend = "Legend1"
+        $Chart1.Series["IopsRead"].Color = [System.Drawing.Color]::RoyalBlue
+        $DataSource | ForEach-Object {
+            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+            [void]$Chart1.Series["IopsRead"].Points.addxy($Date, $_.IopsRead)
+        }
+
+        # data series
+        [void]$Chart1.Series.Add("IopsWrite")
+        $Chart1.Series["IopsWrite"].YAxisType = $AxisType::Primary
+        $Chart1.Series["IopsWrite"].ChartType = "Line"
+        $Chart1.Series["IopsWrite"].BorderWidth = $BorderWidth
+        $Chart1.Series["IopsWrite"].IsVisibleInLegend = $true
+        $Chart1.Series["IopsWrite"].ChartArea = "ChartArea1"
+        $Chart1.Series["IopsWrite"].Legend = "Legend1"
+        $Chart1.Series["IopsWrite"].Color = [System.Drawing.Color]::DarkTurquoise
+        $DataSource | ForEach-Object {
+            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+            [void]$Chart1.Series["IopsWrite"].Points.addxy($Date, $_.IopsWrite)
+        }
+
+        # data series
+        [void]$Chart1.Series.Add("LatencyRead")
+        $Chart1.Series["LatencyRead"].YAxisType = $AxisType::Primary
+        $Chart1.Series["LatencyRead"].ChartType = "Line"
+        $Chart1.Series["LatencyRead"].BorderWidth = $BorderWidth
+        $Chart1.Series["LatencyRead"].IsVisibleInLegend = $true
+        $Chart1.Series["LatencyRead"].ChartArea = "ChartArea1"
+        $Chart1.Series["LatencyRead"].Legend = "Legend1"
+        $Chart1.Series["LatencyRead"].Color = [System.Drawing.Color]::Green
+        $DataSource | ForEach-Object {
+            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+            [void]$Chart1.Series["LatencyRead"].Points.addxy($Date, $_.LatencyRead)
+        }
+
+        # data series
+        [void]$Chart1.Series.Add("LatencyWrite")
+        $Chart1.Series["LatencyWrite"].YAxisType = $AxisType::Primary
+        $Chart1.Series["LatencyWrite"].ChartType = "Line"
+        $Chart1.Series["LatencyWrite"].BorderWidth = $BorderWidth
+        $Chart1.Series["LatencyWrite"].IsVisibleInLegend = $true
+        $Chart1.Series["LatencyWrite"].ChartArea = "ChartArea1"
+        $Chart1.Series["LatencyWrite"].Legend = "Legend1"
+        $Chart1.Series["LatencyWrite"].Color = [System.Drawing.Color]::SpringGreen
+        $DataSource | ForEach-Object {
+            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+            [void]$Chart1.Series["LatencyWrite"].Points.addxy($Date, $_.LatencyWrite)
+        }
+
+        # data series
+        [void]$Chart1.Series.Add("ThroughputRead")
+        $Chart1.Series["ThroughputRead"].YAxisType = $AxisType::Secondary
+        $Chart1.Series["ThroughputRead"].ChartType = "Line"
+        $Chart1.Series["ThroughputRead"].BorderWidth = $BorderWidth
+        $Chart1.Series["ThroughputRead"].IsVisibleInLegend = $true
+        $Chart1.Series["ThroughputRead"].ChartArea = "ChartArea1"
+        $Chart1.Series["ThroughputRead"].Legend = "Legend1"
+        $Chart1.Series["ThroughputRead"].Color = [System.Drawing.Color]::Firebrick
+        $DataSource | ForEach-Object {
+            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+            [void]$Chart1.Series["ThroughputRead"].Points.addxy($Date, ($_.ThroughputRead / 1024 / 1024))
+        }
+
+        # data series
+        [void]$Chart1.Series.Add("ThroughputWrite")
+        $Chart1.Series["ThroughputWrite"].YAxisType = $AxisType::Secondary
+        $Chart1.Series["ThroughputWrite"].ChartType = "Line"
+        $Chart1.Series["ThroughputWrite"].BorderWidth = $BorderWidth
+        $Chart1.Series["ThroughputWrite"].IsVisibleInLegend = $true
+        $Chart1.Series["ThroughputWrite"].ChartArea = "ChartArea1"
+        $Chart1.Series["ThroughputWrite"].Legend = "Legend1"
+        $Chart1.Series["ThroughputWrite"].Color = [System.Drawing.Color]::OrangeRed
+        $DataSource | ForEach-Object {
+            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+            [void]$Chart1.Series["ThroughputWrite"].Points.addxy($Date, ($_.ThroughputWrite / 1024 / 1024))
+        }
+
+        # save chart and send filename to the pipeline
+        try {
+            $Chart1.SaveImage("$Path\SVTmetric-$ShortName-$DateStamp.png", "png")
+            Get-ChildItem "$Path\SVTmetric-$ShortName-$DateStamp.png"
+        }
+        catch {
+            throw "Could not create $Path\SVTmetric-$ShortName-$DateStamp.png"
+        }
+    }
+}
+
+# Helper function for Get-SVTcapacity
+function Get-SVTcapacityChart {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [psobject]$Capacity
+    )
+
+    if ($PSVersionTable.PSVersion.Major -gt 5) {
+        throw "Microsoft Chart Controls are not currently supported with PowerShell Core, use Windows PowerShell"
+    }
+    Add-Type -AssemblyName System.Windows.Forms.DataVisualization
+    
+    $Path = Get-Location
+    $ChartLabelFont = 'Arial, 10pt'
+    $ChartTitleFont = 'Arial, 13pt'
+    $DateStamp = Get-Date -Format "yyMMddhhmmss"
+    
+    $objectlist = $Capacity.HostName | Select-Object -Unique
+    foreach ($Instance in $ObjectList) {
+        $Cap = $Capacity | Where-Object Hostname -eq $Instance | Select-Object -Last 1
+
+        $DataSource = [ordered]@{
+            'Used Logical Capacity'       = $Cap.UsedLogicalCapacity / 1GB
+            'Capacity Savings'            = $Cap.CapacitySavings / 1GB
+            'Remote Backup Capacity'      = $Cap.RemoteBackupCapacity / 1GB
+            'Stored Compressed Data'      = $Cap.StoredCompressedData / 1GB
+            'Allocated Capacity'          = $Cap.AllocatedCapacity / 1GB
+            'Local Backup Capacity'       = $Cap.LocalBackupCapacity / 1GB
+            'Used Capacity'               = $Cap.UsedCapacity / 1GB
+            'Stored Uncompressed Data'    = $Cap.StoredUncompressedData / 1GB
+            'Stored Virtual Machine Data' = $Cap.StoredVirtualMachineData / 1GB
+            'Free Space'                  = $Cap.FreeSpace / 1GB
+        }
+
+        # chart object
+        $Chart1 = New-object System.Windows.Forms.DataVisualization.Charting.Chart
+
+        $Chart1.Width = 1200
+        $Chart1.Height = 600
+
+        # title
+        try {
+            $ShortName = ([ipaddress]$Instance).IPAddressToString
+        }
+        catch {
+            $ShortName = $Instance -split '\.' | Select-Object -First 1
+        }
+        [void]$Chart1.Titles.Add("HPE.SimpliVity.Host: $ShortName - Capacity from $($Cap.Date)")
+        $Chart1.Titles[0].Font = "Arial,16pt"
+        $Chart1.Titles[0].Alignment = "topLeft"
+            
+        # chart area
+        $Area1 = New-Object System.Windows.Forms.DataVisualization.Charting.ChartArea
+        $Area3Dstyle = New-Object System.Windows.Forms.DataVisualization.Charting.ChartArea3DStyle
+        $Area3Dstyle.Enable3D = $true
+        $Area3Dstyle.LightStyle = 1
+        $Area3Dstyle.Inclination = 20
+        $Area3Dstyle.Perspective = 0
+
+        $Area1 = $Chart1.ChartAreas.Add('ChartArea1')
+        $Area1.Area3DStyle = $Area3Dstyle
+        
+        $Area1.AxisY.Title = "Size (GB)"
+        $Area1.AxisY.TitleFont = $ChartTitleFont
+        $Area1.AxisY.LabelStyle.Font = $ChartLabelFont
+        $Area1.AxisX.MajorGrid.Enabled = $false
+        $Area1.AxisX.MajorTickMark.Enabled = $true
+        $Area1.AxisX.LabelStyle.Enabled = $true
+        
+        $Max = $DataSource.Values | Measure-Object -Maximum | Select-Object -ExpandProperty Maximum
+        if ($Max -lt 10000) {
+            $Area1.AxisY.Interval = 500
+        }
+        Elseif ($Max -lt 20000) {
+            $Area1.AxisY.Interval = 1000
+        }
+        Else {
+            $Area1.AxisY.Interval = 5000
+        }
+        $Area1.AxisX.Interval = 1
+        $Chart1.ChartAreas["ChartArea1"].AxisY.LabelStyle.Angle = 0
+        $Chart1.ChartAreas["ChartArea1"].AxisX.LabelStyle.Angle = -45
+
+        # add series
+        [void]$Chart1.Series.Add("Data")
+        $Chart1.Series["Data"].Points.DataBindXY($DataSource.Keys, $DataSource.Values)
+
+        # save chart
+        try {
+            $Chart1.SaveImage("$Path\SVTcapacity-$ShortName-$DateStamp.png", "png")
+            Get-ChildItem "$Path\SVTcapacity-$ShortName-$DateStamp.png"
+        }
+        catch {
+            throw "Could not create $Path\SVTcapacity-$ShortName-$DateStamp.png"
+        }
+    }
+}
+
 
 #endregion Utility
 
@@ -566,34 +924,35 @@ function Get-SVTmetric {
     Display information about HPE SimpliVity backups.
 .DESCRIPTION
     Show backup information from the HPE SimpliVity Federation. By default SimpliVity backups from the last 24 hours are 
-    shown, but this can be overridden by specifying the -Hour parameter. Alternatively, specify either a backup name, the 
-    -All parameter or the -Latest parameter. Further filtering of these three main parameters can be done by specifying 
-    one or more of the additional optional parameters
-.PARAMETER BackupName
-    Show the specified backups. This cannot be used with -Hour, -All or -Latest parameters.
-.PARAMETER All
-    Show all backups. This might take a while depending on the number of backups. This cannot be used with the -Hour,
-    -BackupName or -Latest parameters.
+    shown, but this can be overridden by specifying the -Hour parameter. Alternatively, specify VM name, Cluster name,
+    or Datacenter name (with or without -Hour) to filter backups appropriately.
 
-    There is a known issue where setting the limit above 3000 can result in out of memory errors, so the -Limit parameter can currently 
-    be set between 1 and 3000.
-    3.7.8 Release Notes: OMNI-53190 REST API Limit recommendation for REST GET backup object calls
-    3.7.8 Release Notes: OMNI-46361 REST API GET operations for backup objects and sorting and filtering constraints
-.PARAMETER Latest
-    Show the latest backup for every unique virtual machine. This might take a while depending on the number of backups. 
-.PARAMETER Hour
-    The number of hours preceeding to report on. By default, the last 24 hours of backups are shown. -Hour is ignored if used with
+    You can use the -Latest parameter to display (one of) the latest backups for each VM. (Be careful, a policy may have more than one rule
+    to backup to different detinations - only one of the backups is shown).
 
+    Use the -Limit parameter to limit the number of backups shown. There is a known issue where setting the limit above 3000 can result in out of 
+    memory errors, so the -Limit parameter can currently be set between 1 and 3000. The recommended default of 500 is used. A warning is displayed
+    if the number of backups in the environment exceeds the limit for a specific Get-SVTbackup command.
+
+    Verbose is automatically turned on to show more information about what this command is doing.
 .PARAMETER VMname
     Show backups for the specified virtual machine only.
 .PARAMETER DataStoreName
-    Show backups from the specified datastore only.
+    Show backups from the specified Simplivity datastore only.
 .PARAMETER ClusterName
-    Show backups from the specified HPE SimpliVity Cluster only.
+    Show backups from the specified HPE SimpliVity cluster only.
+.PARAMETER BackupName
+    Show backups from the specified backup name.
+.PARAMETER All
+    Show all backups. The maximum limit of 3000 is assumed, so this command might take a while depending on the number of backups in the environment.   
+.PARAMETER Latest
+    Show (one of) the latest backup for every unique virtual machine.
+.PARAMETER Hour
+    The number of hours preceeding to report on. By default, the last 24 hours of backups are shown.
 .EXAMPLE
     PS C:\> Get-SVTbackup
 
-    Show the last 24 hours of backups from the SimpliVity Federation.
+    Show the last 24 hours of backups from the SimpliVity Federation
 .EXAMPLE
     PS C:\> Get-SVTbackup -Hour 48 | Select-Object VMname, DataStoreName, SentMB, UniqueSizeMB | Format-Table -Autosize
 
@@ -601,29 +960,21 @@ function Get-SVTmetric {
 .EXAMPLE
     PS C:\> Get-SVTbackup -BackupName '2019-05-05T00:00:00-04:00'
 
-    Shows the backup(s) with the specified backup name.
+    Shows the backup(s) with the specified backup name
 .EXAMPLE
     PS C:\> Get-SVTbackup -All
 
-    Shows all backups. This might take a while to complete.
-    
-    Note: By default, the Limit (the maximum number of backups returned) is set to 500.
+    Shows all backups. This might take a while to complete (Limit is set to 3000, overriding a specified Limit)
 .EXAMPLE
     PS C:\> Get-SVTbackup -Latest
 
-    Show the last backup for every VM. This might take a while to complete, because all backups are enumerted before determining 
-    the latest backup for each virtual machine.
-
-    Note: By default, the Limit (the maximum number of backups returned) is set to 500. There is a known issue where setting 
-    the limit above 3000 can result in out of memory errors, so the -Limit parameter can currently be set between 1 and 3000.
-    3.7.8 Release Notes: OMNI-53190 REST API Limit recommendation for REST GET backup object calls
-    3.7.8 Release Notes: OMNI-46361 REST API GET operations for backup objects and sorting and filtering constraints
+    Show the last backup for every VM.
 .EXAMPLE
     PS C:\> Get-SVTbackup -VMname MyVM
 
     Shows backups in the last 24 hours for the specified VM only.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -Datastore MyDatastore -All
+    PS C:\> Get-SVTbackup -Datastore MyDatastore
 
     Shows all backups on the specified datastore.
 .INPUTS
@@ -631,10 +982,22 @@ function Get-SVTmetric {
 .OUTPUTS
     HPE.SimpliVity.Backup
 .NOTES
+Known issues with the REST API Get operations for Backup objects:
+OMNI-53190 REST API Limit recommendation for REST GET backup object calls
+OMNI-46361 REST API GET operations for backup objects and sorting and filtering constraints
 #>
 function Get-SVTbackup {
     [CmdletBinding(DefaultParameterSetName = 'ByHour')]
     param (
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByVMName')]
+        [System.String]$VMName,
+
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByDatastoreName')]
+        [System.String]$DatastoreName,
+
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByClusterName')]
+        [System.String]$ClusterName,
+        
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByBackupName')]
         [Alias("Name")]
         [System.String]$BackupName,
@@ -642,78 +1005,83 @@ function Get-SVTbackup {
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'AllBackup')]
         [switch]$All,
 
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'LatestBackup')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVMName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByHour')]
+        [System.String]$Hour,
+        
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVMName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'AllBackup')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByHour')]
         [switch]$Latest,
 
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByHour')]
-        [System.String]$Hour = 24,
-
-        [Parameter(Mandatory = $false, ParameterSetName = 'AllBackup')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'LatestBackup')]
-        [ValidateRange(1, 3000)]   # 3.7.8 Release Notes recommend 5000 max. records to avoid out of memory errors
-        [Int]$Limit = 500,
-        
-        [System.String]$VMname,
-
-        [System.String]$DatastoreName,
-
-        [System.String]$ClusterName
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 3000)]   # There is a known issue with /backups API. HPE recommends 500 default, 3000 maximum (OMNI-53190)
+        [Int]$Limit = 500
     )
+
+    $VerbosePreference = 'Continue'
    
     $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'                = 'application/json'
     }
 
+    # Just so we can display the date correctly with correct locale display date.
+    $culture = (Get-Culture).DateTimeFormat
+    $LocalFormat = "$($culture.ShortDatePattern) $($culture.LongTimePattern)"
+ 
     $BackupObject = @()
     
-    $Uri = $global:SVTconnection.OVC + '/api/backups?case=insensitive'
-    
-    # If -All or -Latest are specified grab everything, but use -Limit to constrain the number of records.
-    
-    if ($All) {
-        $Uri += "&offset=0&limit=$Limit"
-        if ($Limit -le 500) {
-            Write-Warning "Limiting the number of backup objects to display to $Limit. This improves performance but some backups may not be included"
-        }
-        else {
-            Write-Warning "You have chosen a limit of $Limit backup objects. This command may take a long time to complete"
-        }
-    }
-    elseif ($Latest) {
-        $Uri += "&offset=0&limit=$Limit"
-    }
-    elseif ($BackupName) {
-        Write-Warning "Backup names are currently case sensitive"
-        $BackupName = "$BackupName*" 
-        $Uri += '&name=' + ($BackupName -replace '\+', '%2B')
+    # $Hour is used to filter via API if no other property is specified AND by this function later if another property is specified.
+    # This is why a default is not specified in param block.
+    if ($Hour) {
+        $StartDate = (Get-Date).AddHours(-$Hour)
+        $DisplayHour = $Hour
     }
     else {
-        # Get date for specified hour
-        $StartDate = (Get-Date).AddHours(-$Hour).ToUniversalTime()
-        $CreatedAfter = "$(Get-Date $StartDate -format s)Z"
-        $Uri += '&created_after=' + $CreatedAfter
-        Write-Verbose "Displaying backups from the last $Hour hours, (created after $CreatedAfter)"
+        $StartDate = (Get-Date).AddHours(-24)  # this is the default, if no other property is specified
+        $DisplayHour = 24
     }
 
-    #
-    # There are two known issues in 3.7.8 release notes. 
-    # 1. You can't filter on more than one item. Filtering on Backup Name, DataStore and ClusterName together produces unexpected results.
-    # 2. its case sensitive only (this is opposite to what release notes say). /backups GET RESTAPI ignores the caseinsensitive parameter.
-    #
-    # So at present, don't filter using the API, get all objects and filter in PowerShell. This fixes both issues, but is not efficient 
-    # We are filtering on 'created_after' by default so hopefully there are not too many objects. 
-    #
-    # This is the code to use the REST options when this is fixed in a later release.
-    # 
-    #if ($VMname) {
-    #    $Uri += '&virtual_machine_name=' + $VMname
-    #}
-    #if ($DataStoreName) {
-    #    $Uri += '&datastore_name=' + $DataStoreName
-    #}
-    #if ($ClusterName) {
-    #    $Uri += '&omnistack_cluster_name=' + $ClusterName
-    #}
+    # Offset is problematic with /backups API. Using 0 to avoid inconsistant results - If this is fixed in API, a parameter will be added"
+    # Case sensitivity is promplematic with /backups API. Some properties do not support case insensitive filter, so assuming case sensitive for all - If this is fixed in API, revert to using case=insensitive
+    $Uri = "$($global:SVTconnection.OVC)/api/backups?case=sensitive&offset=0"
+    
+    # Filter backup objects. the /backups API has known issue where you can only filter on 1 property (OMNI-46361). Using limit is ok.
+    if ($VMname) {
+            Write-Verbose "VM names are currently case sensitive"
+            $Uri += "&limit=$Limit&virtual_machine_name=$VMname"
+    }
+    elseif ($DatastoreName) {
+            Write-Verbose "Datastore names are currently case sensitive"
+            $Uri += "&limit=$Limit&datastore_name=$DatastoreName"
+    }
+    elseif ($ClusterName) {
+            Write-Verbose "Cluster names are currently case sensitive"
+            $Uri += "&limit=$Limit&omnistack_cluster_name=$ClusterName"
+    }
+    elseif ($BackupName) {
+            Write-Verbose "Backup names are currently case sensitive"
+            $BackupName = "$BackupName*"
+            $Uri += "&limit=$Limit&name=$($BackupName -replace '\+', '%2B')"
+    }
+    elseif ($All) {
+        # Bypass filtering by $Hour, or by the default 24 hours
+        Write-Verbose "Assuming maximum recommend limit of 3000 with the -All parameter. This command may take a long time to complete"
+        $Limit=3000 
+        $Uri += "&limit=$Limit" 
+    }
+    else {
+        # If no other parameters are specified, show the last 24 hours by default, or by a specified hour range. 
+        $UniversalDate = $StartDate.ToUniversalTime()
+        $CreatedAfter = "$(Get-Date $UniversalDate -format s)Z"
+        $Uri += "&limit=$Limit&created_after=$CreatedAfter"
+        Write-Verbose "Displaying backups from the last $DisplayHour hours, (created after $(Get-date $StartDate -Format $LocalFormat)), limited to $limit backups"
+    }
+
 
     try {
         $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -722,6 +1090,15 @@ function Get-SVTbackup {
         throw $_.Exception.Message
     }
 
+    # API response contains a useful count. Note that this doesn't always reflect the truth (when trying to filter using multiple properties)
+    $BackupCount = $Response.count
+    If ($backupCount -gt $Limit) {
+        Write-Warning "There are $BackupCount matching backups, but limited to displaying only $Limit. Either increase -Limit or use more restrictive parameters"
+    }
+    else {
+        Write-Verbose "There are $BackupCount matching backups"
+    }
+    
     $Response.backups | ForEach-Object {
         if ($_.created_at -as [datetime]) {
             $CreateDate = Get-Date -Date $_.created_at
@@ -774,23 +1151,19 @@ function Get-SVTbackup {
         $BackupObject += $CustomObject
     }
 
-    # Added this block to get around case sensitivity/duplicate filter bugs in the /backups GET RESTAPI. These commands are iterative so you 
-    # could end up with no objects. e.g. the user specifies a datastore where there are no backups for a specified VM
-    if ($VMname) {
-        $BackupObject = $BackupObject | Where-Object VMname -eq $VMname
-    }
-    if ($DataStoreName) {
-        $BackupObject = $BackupObject | Where-Object DatastoreName -eq $DataStoreName
-    }
-    if ($ClusterName) {
-        $BackupObject = $BackupObject | Where-Object ClusterName -match $ClusterName  # allows partial names or FQDN
+    # If $Hour was specified with some other parameter, filter here. If by itself (or no parameters), we've already filtered via the /backups API.
+    If (($VMName -or $DatastoreName -or $ClusterName -or $BackupName) -and $Hour) {
+        
+        Write-Verbose "The -Hour parameter was specified with another parameter, show only the backups newer than $(Get-date $StartDate -Format $LocalFormat)"
+        $BackupObject = $BackupObject | Where-Object {$(Get-Date $_.CreateDate) -gt $StartDate}
     }
 
-    # Finally, if -Latest was specified, just display the lastest backup of each VM
+    # Finally, if -Latest was specified, just display the lastest backup of each VM 
+    # (or more correctly, ONE of the latest - its possible to have 2 rules in a policy to backup a VM to 2 destinations at once).
     if ($Latest) {
+        Write-Verbose "The -Latest parameter was specified, show only (one of) the latest backup of each VM in the pipeline"
         $VMlist = ($BackupObject).VMname | Sort-Object -Unique
         foreach ($VM in $VMlist) {
-            Write-Verbose $VM
             $BackupObject | Where-Object VMname -eq $VM | Sort-Object CreateDate -Descending | Select-Object -First 1
         }
     }
@@ -1452,7 +1825,7 @@ function Set-SVTbackupRetention {
     
     Starts a task to calculate the unique size of the specified backup(s)
 .EXAMPLE
-    PS C:\>Get-SVTbackup -Latest | Update-SVTbackupUniqueSize
+    PS:\> Get-SVTbackup -Latest | Update-SVTbackupUniqueSize
 
     Starts a task per backup object to calculate the unique size of the latest backup for each local VM.
 .INPUTS
@@ -1461,8 +1834,8 @@ function Set-SVTbackupRetention {
 .OUTPUTS
     HPE.SimpliVity.Task
 .NOTES
-    This command only updates the backups in the local cluster. You will need to login to a remote OVC to update the backups in the
-    remote cluster. The UniqueSizeDate property is updated on the backup object(s) when you run this command.
+    This command only updates the backups in the local cluster. Login to an OVC in a remote cluster to update the backups there
+    The UniqueSizeDate property is updated on the backup object(s) when you run this command
 #>
 function Update-SVTbackupUniqueSize {
     [CmdletBinding()]
@@ -1593,7 +1966,7 @@ function Get-SVTdatastore {
 .EXAMPLE
     PS C:\>New-SVTdatastore -DatastoreName ds01 -ClusterName Cluster1 -PolicyName Daily -SizeGB 102400
     
-    Creates a new 100TB datastore called ds01 on Cluster1 and assigns the pre-exiting Daily backup policy to it
+    Creates a new 100TB datastore called ds01 on Cluster1 and assigns the pre-existing Daily backup policy to it
 .INPUTS
     System.String
 .OUTPUTS
@@ -1615,7 +1988,7 @@ function New-SVTdatastore {
         [System.String]$PolicyName,
 
         [Parameter(Mandatory = $true, Position = 3)]
-        [ValidateRange(1, 1048576)]   # Max is 1024TB (matches the SimpliVity plugin)
+        [ValidateRange(1, 1048576)]   # Max is 1024TB (matches the SimpliVity plugin limit)
         [int]$SizeGB
     )
 
@@ -1728,8 +2101,6 @@ function Remove-SVTdatastore {
     Apply to specified datastore
 .PARAMETER SizeGB
     The new total size of the datastore in GB
-.PARAMETER Federation
-    Apply to federation
 .INPUTS
     System.String
 .OUTPUTS
@@ -1848,9 +2219,9 @@ function Set-SVTdatastorePolicy {
 
 <#
 .SYNOPSIS
-    Adds a share to a HPE SimpliVity datastore for a compute node
+    Adds a share to a HPE SimpliVity datastore for a compute node (a standard ESXi host)
 .DESCRIPTION
-    Adds a share to a HPE SimpliVity datastore for a specified compute node (standard ESXi host)
+    Adds a share to a HPE SimpliVity datastore for a specified compute node
 .PARAMETER DatastoreName
     The datastore to add a new share to
 .PARAMETER ComputeNodeName
@@ -1864,7 +2235,7 @@ function Set-SVTdatastorePolicy {
 .OUTPUTS
     HPE.SimpliVity.Task
 .NOTES
-    This only works in VMware environments. Compute nodes are not supported with Hyper-V.
+    This command currently works in VMware environments only. Compute nodes are not supported with Hyper-V
 #>
 function Publish-SVTdatastore {
     [CmdletBinding()]
@@ -1912,9 +2283,9 @@ function Publish-SVTdatastore {
 
 <#
 .SYNOPSIS
-    Removes a share from a HPE SimpliVity datastore for a compute node
+    Removes a share from a HPE SimpliVity datastore for a compute node (a standard ESXi host)
 .DESCRIPTION
-    Removes a share from a HPE SimpliVity datastore for a specified compute node (Standard ESXi host)
+    Removes a share from a HPE SimpliVity datastore for a specified compute node
 .PARAMETER DatastoreName
     The datastore to remove a share from
 .PARAMETER ComputeNodeName
@@ -1928,7 +2299,7 @@ function Publish-SVTdatastore {
 .OUTPUTS
     HPE.SimpliVity.Task
 .NOTES
-    This only works in VMware environments. Compute nodes are not supported with Hyper-V.
+    This command currently works in VMware environments only. Compute nodes are not supported with Hyper-V
 #>
 function Unpublish-SVTdatastore {
     [CmdletBinding()]
@@ -1976,7 +2347,7 @@ function Unpublish-SVTdatastore {
 
 <#
 .SYNOPSIS
-    Displays the ESXi compute (standard ESXi hosts) nodes that have access to the specified datastore(s) 
+    Displays the ESXi compute nodes (standard ESXi hosts) that have access to the specified datastore(s) 
 .DESCRIPTION
     Displays the compute nodes that have been configured to connect to the HPE SimpliVity datastore via NFS
 .PARAMETER DatastoreName
@@ -1995,7 +2366,7 @@ function Unpublish-SVTdatastore {
 .OUTPUTS
     HPE.SimpliVity.ComputeNode
 .NOTES
-    This only works in VMware environments. Compute nodes are not supported with Hyper-V.
+    This command currently works in VMware environments only. Compute nodes are not supported with Hyper-V
 #>
 function Get-SVTdatastoreComputeNode {
     [CmdletBinding()]
@@ -2088,7 +2459,7 @@ function Get-SVThost {
         [Alias("Name")]
         [System.String]$HostName,
 
-        [Parameter(Mandatory = $false, Position = 1)]
+        [Parameter(Mandatory = $false, Position = 1, ValueFromPipelinebyPropertyName = $true)]
         [System.String]$ClusterName
     )
 
@@ -2133,7 +2504,7 @@ function Get-SVThost {
             ClusterName              = $_.compute_cluster_name
             ManagementIP             = $_.management_ip
             FederationIP             = $_.federation_ip
-            OVCName                  = $_.virtual_controller_name
+            VirtualControllerName    = $_.virtual_controller_name
             FederationMask           = $_.federation_mask
             Model                    = $_.model
             DataCenterId             = $_.compute_cluster_parent_hypervisor_object_id
@@ -2184,7 +2555,7 @@ function Get-SVThost {
 
     Shows hardware information for the hosts in the specified cluster
 .EXAMPLE
-    PS C:\> Get-SVThardware -HostName Host01 | Select-Object -ExpandProprty LogicalDrives
+    PS C:\> Get-SVThardware -HostName Host01 | Select-Object -ExpandProperty LogicalDrives
 
     Enumerates all of the logical drives from the specified host
 .EXAMPLE
@@ -2258,20 +2629,24 @@ function Get-SVThardware {
     for a specified SimpliVity node.
 .PARAMETER Hostname
     The SimpliVity node you want to show capacity information for
-.PARAMETER TimeOffsetHour
-    Timeoffset in hours from now.
-.PARAMETER RangeHour
+.PARAMETER OffsetHour
+    Offset in hours from now.
+.PARAMETER Hour
     The range in hours (the duration from the specified point in time)
 .PARAMETER Resolution
     The resolution in seconds, minutes, hours or days
 .EXAMPLE
     PS C:\>Get-SVTcapacity -HostName MyHost
 
-    Shows capacity information for the specified host for the last 24 hours 
+    Shows capacity information for the specified host for the last 24 hours
 .EXAMPLE
-    PS C:\>Get-SVTcapacity -HostName MyHost -RangeHour 1 -resolution MINUTE
+    PS C:\>Get-SVTcapacity -HostName MyHost -Hour 1 -resolution MINUTE
 
-    Shows capacity information for the specififed host showing every minute for the last hour
+    Shows capacity information for the specified host showing every minute for the last hour
+.EXAMPLE
+    PS C:\>Get-SVTcapacity -Chart
+
+    Creates a chart for each host in the SimpliVity federation showing the latest capacity details
 .INPUTS
     system.string
     HPESimpliVity.Host
@@ -2287,23 +2662,27 @@ function Get-SVTcapacity {
         [string[]]$HostName,
 
         [Parameter(Mandatory = $false, Position = 1)]
-        [int]$TimeOffsetHour = 0,
+        [int]$OffsetHour = 0,
 
         [Parameter(Mandatory = $false, Position = 2)]
-        [int]$RangeHour = 24,
+        [int]$Hour = 24,
 
         [Parameter(Mandatory = $false, Position = 3)]
         [ValidateSet('SECOND', 'MINUTE', 'HOUR', 'DAY')]
-        [System.String]$Resolution = 'HOUR'
+        [System.String]$Resolution = 'HOUR',
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Chart
     )
 
     begin {
+        $VerbosePreference = 'Continue'
         $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
             'Accept'                = 'application/json'
         }
 
-        $Range = $RangeHour * 3600
-        $TimeOffset = $TimeOffsetHour * 3600
+        $Range = $Hour * 3600
+        $Offset = $OffsetHour * 3600
 
         if ($Resolution -eq 'SECOND' -and $Range -gt 43200 ) {
             throw "Maximum range value for resolution $resolution is 12 hours"
@@ -2329,7 +2708,7 @@ function Get-SVTcapacity {
             $HostId = ($Allhost | Where-Object HostName -eq $Thishost).HostId
             
             $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $HostId + '/capacity?time_offset=' + 
-            $TimeOffset + '&range=' + $Range + '&resolution=' + $Resolution
+            $Offset + '&range=' + $Range + '&resolution=' + $Resolution
             try {
                 $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
             }
@@ -2356,20 +2735,39 @@ function Get-SVTcapacity {
             }
 
             #Transpose the custom object to output each date with the value for each metric
-            $CustomObject | Sort-Object -Property Date | Group-Object -Property Date | ForEach-Object {
+            $CapacityObject = $CustomObject | Sort-Object -Property Date | Group-Object -Property Date | ForEach-Object {
                 $Property = [ordered]@{ 
                     PStypeName = 'HPE.SimpliVity.Capacity'
                     Date       = $_.Name 
                 }
                 $_.Group | Foreach-object {
-                    $Property += @{ 
-                        "$($_.Name)" = $_.Value
+                    if ($_.Name -match "Ratio") {
+                        $Property += @{ 
+                            "$($_.Name)" = "{0:n2}" -f $_.Value
+                        }
+                    }
+                    Else {
+                        $Property += @{ 
+                            "$($_.Name)" = $_.Value
+                        }
                     }
                 }
                 $Property += @{ HostName = $Thishost }
                 New-Object -TypeName PSObject -Property $Property
             }
-            # Graph stuff goes here.
+
+            if ($Chart) {
+                $ChartObject += $CapacityObject
+            }
+            else {
+                $CapacityObject
+            }
+        }
+    }
+
+    end {
+        if ($Chart) {
+            Get-SVTcapacityChart -Capacity $ChartObject
         }
     }
 }
@@ -2463,25 +2861,25 @@ function Remove-SVThost {
      Note, once executed, you'll need to reconnect back to a surviving OVC, using Connect-SVT to continue
      using the HPE SimpliVity cmdlets.
 .EXAMPLE
-    PS C:\> Stop-SVTovc -HostName <Name of SimpliVity host>
+    PS C:\> Start-SVTshutdown -HostName <Name of SimpliVity host>
 
     This command waits for the affected VMs to be HA compliant, which is ideal.
 .EXAMPLE
-    PS C:\> Get-SVThost -Cluster MyCluster | Stop-SVTovc -Force
+    PS C:\> Get-SVThost -Cluster MyCluster | Start-SVTshutdown -Force
 
-    Stops each OVC in the specified cluster. With the -Force switch, we are NOT waiting for HA. This
+    Shutdown each OVC in the specified cluster. With the -Force switch, we are NOT waiting for HA. This
     command is useful when shutting down the entire SimpliVity cluster. This cmdlet ASSUMES you have ideally 
     shutdown all the VMs in the cluster prior to powering off the OVCs.
 
     HostName is passed in from the pipeline, using the property name 
 .EXAMPLE
-    PS C:\> '10.10.57.59','10.10.57.61' | Stop-SVTovc -Force
+    PS C:\> '10.10.57.59','10.10.57.61' | Start-SVTshutdown -Force
 
-    Stops the specified OVCs one after the other. This cmdlet ASSUMES you have ideally shutdown all the affected VMs 
+    Shutdown the specified OVCs one after the other. This cmdlet assumes you have ideally shutdown all the affected VMs 
     prior to powering off the OVCs.
 
     Hostname is passed in them the pipeline by value. Same as:
-    Stop-SVTovc -Hostname @('10.10.57.59','10.10.57.61') -Force
+    Start-SVTshutdown -Hostname @('10.10.57.59','10.10.57.61') -Force
 .INPUTS
     System.String
     HPE.SimpliVity.Host
@@ -2489,7 +2887,7 @@ function Remove-SVThost {
     System.Management.Automation.PSCustomObject
 .NOTES
 #>
-function Stop-SVTovc {
+function Start-SVTshutdown {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
@@ -2547,8 +2945,8 @@ function Stop-SVTovc {
 
             $Response.Shutdown_Status | ForEach-Object {
                 [PSCustomObject]@{
-                    OVC            = $thisHost.ManagementIP
-                    ShutdownStatus = $_.Status
+                    VirtualController = $thisHost.ManagementIP
+                    ShutdownStatus    = $_.Status
                 }
             }
         }
@@ -2592,7 +2990,7 @@ function Stop-SVTovc {
     System.Management.Automation.PSCustomObject
 .NOTES
 #>
-function Get-SVTovcShutdownStatus {
+function Get-SVTshutdownStatus {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
@@ -2639,9 +3037,9 @@ function Get-SVTovcShutdownStatus {
                 break
             }
 
-            $Response.Shutdown_Status | ForEach-Object {
+            $Response.shutdown_status | ForEach-Object {
                 [PSCustomObject]@{
-                    OVC            = $thisHost.ManagementIP
+                    VirtualController = $thisHost.ManagementIP
                     ShutdownStatus = $_.Status
                 }
             }
@@ -2651,21 +3049,77 @@ function Get-SVTovcShutdownStatus {
 
 <#
 .SYNOPSIS
-    HPE SimpliVity
+    Cancel the previous shutdown command for one or more OmniStack Virtual Controllers
 .DESCRIPTION
-    Long description
+    Cancels a previously executed shutdown request for one or more OmniStack Virtual Controllers
+
+    This RESTAPI call only works if executed on the local OVC. So this cmdlet iterates through the specifed hosts 
+    and connects to each specified host to sequentially shutdown the local OVC.
+
+    Note, once executed, you'll need to reconnect back to a surviving OVC, using Connect-SVT to continue
+    using the HPE SimpliVity cmdlets.
 .EXAMPLE
-    PS C:\> <example usage>
-    Explanation of what the example does
+    PS C:\> Stop-SVTshutdown -Hostname Host01
 .INPUTS
-    Inputs (if any)
+    System.String
+    HPE.SimpliVity.Host
 .OUTPUTS
-    Output (if any)
+    System.Management.Automation.PSCustomObject
 .NOTES
 #>
-function Undo-SVTovcShutdown {
-    #curl -X POST --header "Content-Type: application/json" --header "Accept: application/json" "https://192.168.1.114/api/hosts/232243/cancel_virtual_controller_shutdown"
-    #https://192.168.1.114/api/hosts/232243/cancel_virtual_controller_shutdown
+function Stop-SVTshutdown {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
+        [Alias("Name")]
+        [System.String[]]$HostName
+    )
+    
+    begin {
+        # Get all the hosts in the Federation.
+        # We will be cancelling shutdown for one or more OVC's; grab all host information before we start
+        try {
+            $allHosts = Get-SVThost -ErrorAction Stop
+        }
+        catch {
+            throw $_.Exception.Message
+        }
+    }
+
+    process {
+        foreach ($thisHostName in $Hostname) {
+            # grab this host object from the collection
+            $thisHost = $allHosts | Where-Object Hostname -eq $thisHostName
+            Write-Verbose $($thishost | Select-Object Hostname, HostId)
+            
+            # Now connect to this host, using the existing credentials saved to global variable
+            Connect-SVT -OVC $thisHost.ManagementIP -Credential $SVTconnection.Credential -IgnoreCertReqs | Out-Null
+            Write-Verbose $SVTconnection 
+    
+            # cancel shutdown the OVC on this host
+            $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
+                'Accept'                = 'application/json'
+                'Content-Type'          = 'application/json'
+            }
+            
+
+            $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $thisHost.HostId + '/cancel_virtual_controller_shutdown'
+        
+            try {
+                $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Post -ErrorAction Stop
+            }
+            catch {
+                throw $_.Exception.Message
+            }
+
+            $Response.cancellation_status | ForEach-Object {
+                [PSCustomObject]@{
+                    VirtualController = $thisHost.ManagementIP
+                    CancellationStatus = $_.Status
+                }
+            }
+        }
+    }
 }
 
 #endregion Host
@@ -2762,7 +3216,7 @@ function Get-SVTcluster {
 .SYNOPSIS
     Display information about HPE SimpliVity cluster throughput
 .DESCRIPTION
-    Display information about HPE SimpliVity cluster throughput
+    Calculates the throughput between each pair of omnistack_clusters in the federation
 .EXAMPLE
     PS C:\>Get-SVTthroughput
     
@@ -2794,6 +3248,7 @@ function Get-SVTthroughput {
             $Date = $null
         }
         [PSCustomObject]@{
+            PSTypeName                       = 'HPE.SimpliVity.Throughput'
             Date                             = $Date
             DestinationClusterHypervisorId   = $_.destination_omnistack_cluster_hypervisor_object_parent_id
             DestinationClusterHypervisorName = $_.destination_omnistack_cluster_hypervisor_object_parent_name
@@ -2803,7 +3258,7 @@ function Get-SVTthroughput {
             SourceClusterHypervisorName      = $_.source_omnistack_cluster_hypervisor_object_parent_name
             SourceClusterId                  = $_.source_omnistack_cluster_id
             SourceClusterName                = $_.source_omnistack_cluster_name
-            Throughput                       = $_.throughput
+            ThroughputKBs                    = "{0:n2}" -f ($_.throughput / 1kb)
         }
     }
 }
@@ -2949,22 +3404,23 @@ function Get-SVTclusterConnected {
     $Response.omnistack_clusters | ForEach-Object {
         [PSCustomObject]@{
             PSTypeName          = 'HPE.SimpliVity.ConnectedCluster'
-            AllocatedCapacity   = $_.allocated_capacity
-            ArbiterIP           = $_.arbiter_address
+            Clusterid           = $_.id
+            ClusterName         = $_.name
+            ClusterType         = $_.type
+            ClusterMembers      = $_.members
             ArbiterConnected    = $_.arbiter_connected
-            CapacitySavings     = $_.capacity_savings
-            CompressionRatio    = $_.compression_ratio
-            ConnectedClusters   = $_.connected_clusters
-            DeduplicationRatio  = $_.deduplication_ratio
-            EfficiencyRatio     = $_.efficiency_ratio
-            FreeSpace           = $_.free_space
-            HypervisorIP        = $_.hypervisor_management_system
-            HypervisorName      = $_.hypervisor_management_system_name
+            ArbiterIP           = $_.arbiter_address
             HypervisorClusterId = $_.hypervisor_object_id
             DataCenterId        = $_.hypervisor_object_parent_id
             DataCenterName      = $_.hypervisor_object_parent_name
             HyperVisorType      = $_.hypervisor_type
-            Clusterid           = $_.id
+            HypervisorIP        = $_.hypervisor_management_system
+            HypervisorName      = $_.hypervisor_management_system_name
+            ClusterVersion      = $_.version
+            ConnectedClusters   = $_.connected_clusters
+            InfosightConfiguration = $_.infosight_configuration
+            ClusterGroupIDs        = $_.cluster_group_ids
+            ClusterFeatureLevel    = $_.cluster_feature_level
         }
     }
 }
@@ -3893,9 +4349,10 @@ function Get-SVTpolicyScheduleReport {
 .SYNOPSIS
     Display information about VMs running on HPE SimpliVity hosts/storage
 .DESCRIPTION
-    Display information about all VMs running in the HPE SimpliVity Federation. Optionally
-    you can get a specific host first, using Get-SVThost and pipe the output into this 
-    cmdlet to show just he VMs on this host (or hosts). Or specify the HostId, if you know it.
+    Display information about virtual machines running in the HPE SimpliVity Federation. Accepts
+    parameters to limit the objects returned. Also accepts output from Get-SVThost as input.
+
+    Verbose is automatically turned on to show more information about what this command is doing. 
 .PARAMETER VMname
     Display information for the specified virtual machine
 .PARAMETER DatastoreName
@@ -3907,7 +4364,7 @@ function Get-SVTpolicyScheduleReport {
 .PARAMETER State
     Display information for virtual machines with the specified state
 .PARAMETER Limit
-    The maximum number of records to show
+    The maximum number of virtual machines to display
 .EXAMPLE
     PS C:\> Get-SVTvm
 
@@ -3915,7 +4372,8 @@ function Get-SVTpolicyScheduleReport {
 .EXAMPLE
     PS C:\> Get-SVTvm -State ALL
 
-    Shows all virtual machines in the Federation with ant state. This shows removed and deleted VM's
+    Shows all virtual machines in the Federation with any state. This shows virtual machines with removed
+    and deleted states as well as alive.
 .EXAMPLE
     PS C:\> Get-SVTvm -VMname MyVM | Out-GridView -Passthru | Export-CSV FilteredVMList.CSV
 
@@ -3931,6 +4389,8 @@ function Get-SVTpolicyScheduleReport {
 .OUTPUTS
     HPE.SimpliVity.VirtualMachine
 .NOTES
+Known issues:
+OMNI-69918 - GET calls for virtual machine objects may result in OutOfMemortError when exceeding 8000 objects
 #>
 function Get-SVTvm {
     [CmdletBinding()]
@@ -3953,47 +4413,51 @@ function Get-SVTvm {
         [System.String]$State = "ALIVE",
 
         [Parameter(Mandatory = $false)]
-        [ValidateRange(1, 3000)]   # 3.7.8 Release Notes recommend 5000 max. records to avoid out of memory errors
+        [ValidateRange(1, 5000)]   # HPE recommends 8000 maximum records to avoid out of memory errors (OMNI-69918)
         [Int]$Limit = 500
     )
 
     begin {
+        $VerbosePreference = 'Continue'
+        
         $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
             'Accept'                = 'application/json'
         }
-    
-        # Enumerate hosts to 'lookup' the hostname for each VM, based on host_id
+
+        if ($limit -le 500) {
+            Write-Verbose "Limiting the number of VM objects to display to $Limit. This improves performance but some virtual machines may not be included"
+        }
+        else {
+            Write-Verbose "You have chosen a limit of $Limit VM objects. This command may take a long time to complete"
+        }
+
+        # We want to add hostanme to the custom object, which is not provided by the API, so calaculate it
         $Allhost = Get-SVThost
 
         if ($HostName -and $State -ne "ALIVE") {
-            Write-Warning "If you specify -Hostname, only VMs with 'ALIVE' state are shown. The REST API reports both primary and secondary deletions/removals resulting in potential duplicated objects"
+            Write-Verbose 'The state of ALIVE is assumed when using the -Hostname parameter'
             $State = "ALIVE"
         }
 
-        $Uri = $global:SVTconnection.OVC + '/api/virtual_machines?show_optional_fields=true&case=insensitive&offset=0&limit=' + $limit
-        if (-not $DataStoreName -and -not $HostName -and -not $VMname) {
-            if ($limit -le 500) {
-                Write-Warning "Limiting the number of VM objects to display to $Limit. This improves performance but some virtual machines may not be included"
-            }
-            else {
-                Write-Warning "You have chosen a limit of $Limit VM objects. This command may take a long time to complete"
-            }
-        }
+        $Uri = "$($global:SVTconnection.OVC)/api/virtual_machines?show_optional_fields=true&case=insensitive&offset=0&limit=$Limit"
     }
  
     process {
         if ($VMname) {
-            $Uri += '&name=' + $VMname
+            $Uri += "&name=$VMname"
         }
         if ($DataStoreName) {
-            $Uri += '&datastore_name=' + $DataStoreName
+            $Uri += "&datastore_name=$DataStoreName"
         }
         if ($ClusterName) {
-            $Uri += '&omnistack_cluster_name=' + $ClusterName
+            $Uri += "&omnistack_cluster_name=$ClusterName"
         }
         if ($HostName) {
             $HostId = $Allhost | Where-Object HostName -eq $HostName | Select-Object -ExpandProperty HostId
-            $Uri += '&host_id=' + $HostId
+            $Uri += "&host_id=$HostId"
+        }
+        if ($State -and $State -ne "ALL") {      #No state is specified, so all are returned
+            $Uri += "&state=$State"
         }
 
         try {
@@ -4003,51 +4467,58 @@ function Get-SVTvm {
             throw $_.Exception.Message
         }
 
-        $Response.virtual_machines | ForEach-Object {
-            if ($_.state -eq $State -or $State -eq "ALL") {
-                if ($_.created_at -as [datetime]) {
-                    $CreateDate = Get-Date -Date $_.created_at
-                }
-                else {
-                    $CreateDate = $null
-                }
-                if ($_.deleted_at -as [DateTime]) {
-                    $DeletedDate = Get-Date -Date $_.deleted_at
-                }
-                else {
-                    $DeletedDate = $null
-                }
+        $VMCount = $Response.count
+        If ($VMCount -gt $Limit) {
+            Write-Warning "There are $VMCount matching virtual machines, but limited to displaying only $Limit. Either increase -Limit or use more restrictive parameters"
+        }
+        else {
+            Write-Verbose "There are $VMCount matching virtual machines"
+        }
 
-                $HostName = $Allhost | Where-Object HostID -eq $_.host_id | Select-Object -ExpandProperty Hostname
-
-                [PSCustomObject]@{
-                    PSTypeName               = 'HPE.SimpliVity.VirtualMachine'
-                    PolicyId                 = $_.policy_id
-                    CreateDate               = $CreateDate
-                    PolicyName               = $_.policy_name
-                    DataStoreName            = $_.datastore_name
-                    ClusterName              = $_.omnistack_cluster_name
-                    DeletedDate              = $DeletedDate
-                    AppAwareVmStatus         = $_.app_aware_vm_status
-                    HostName                 = $HostName
-                    HostId                   = $_.host_id
-                    HypervisorId             = $_.hypervisor_object_id
-                    VMname                   = $_.name
-                    DatastoreId              = $_.datastore_id
-                    ReplicaSet               = $_.replica_set
-                    DataCenterId             = $_.compute_cluster_parent_hypervisor_object_id
-                    DataCenterName           = $_.compute_cluster_parent_name
-                    HypervisorType           = $_.hypervisor_type
-                    VmId                     = $_.id
-                    State                    = $_.state
-                    ClusterId                = $_.omnistack_cluster_id
-                    HypervisorManagementIP   = $_.hypervisor_management_system
-                    HypervisorManagementName = $_.hypervisor_management_system_name
-                    HAstatus                 = $_.ha_status
-                    HAresyncProgress         = $_.ha_resynchronization_progress
-                    HypervisorVMpowerState   = $_.hypervisor_virtual_machine_power_state
-                }
+        $Response.virtual_machines | ForEach-Object {   
+            if ($_.created_at -as [datetime]) {
+                $CreateDate = Get-Date -Date $_.created_at
             }
+            else {
+                $CreateDate = $null
+            }
+            if ($_.deleted_at -as [DateTime]) {
+                $DeletedDate = Get-Date -Date $_.deleted_at
+            }
+            else {
+                $DeletedDate = $null
+            }
+
+            $HostName = $Allhost | Where-Object HostID -eq $_.host_id | Select-Object -ExpandProperty Hostname
+
+            [PSCustomObject]@{
+                PSTypeName               = 'HPE.SimpliVity.VirtualMachine'
+                PolicyId                 = $_.policy_id
+                CreateDate               = $CreateDate
+                PolicyName               = $_.policy_name
+                DataStoreName            = $_.datastore_name
+                ClusterName              = $_.omnistack_cluster_name
+                DeletedDate              = $DeletedDate
+                AppAwareVmStatus         = $_.app_aware_vm_status
+                HostName                 = $HostName
+                HostId                   = $_.host_id
+                HypervisorId             = $_.hypervisor_object_id
+                VMname                   = $_.name
+                DatastoreId              = $_.datastore_id
+                ReplicaSet               = $_.replica_set
+                DataCenterId             = $_.compute_cluster_parent_hypervisor_object_id
+                DataCenterName           = $_.compute_cluster_parent_name
+                HypervisorType           = $_.hypervisor_type
+                VmId                     = $_.id
+                State                    = $_.state
+                ClusterId                = $_.omnistack_cluster_id
+                HypervisorManagementIP   = $_.hypervisor_management_system
+                HypervisorManagementName = $_.hypervisor_management_system_name
+                HAstatus                 = $_.ha_status
+                HAresyncProgress         = $_.ha_resynchronization_progress
+                HypervisorVMpowerState   = $_.hypervisor_virtual_machine_power_state
+            }
+            
         } #foreach
     } #process
 }

@@ -166,10 +166,10 @@ $CriticalVM = @()
 Write-Log "Looking for any other powered on VMs on cluster $ClusterName with no/unrecognised tags" 0
 try {
     $vmList = $Cluster | 
-    Get-VM -ErrorAction Stop | 
-    Where-Object Name -NotMatch 'OmniStackVC' | 
-    Where-Object Name -NotIn $CriticalVM |
-    Where-Object PowerState -eq 'PoweredOn'
+        Get-VM -ErrorAction Stop | 
+        Where-Object Name -NotMatch 'OmniStackVC' | 
+        Where-Object Name -NotIn $CriticalVM |
+        Where-Object PowerState -eq 'PoweredOn'
 }
 catch {
     Write-Log "$_.Exception.Message" 2
@@ -216,7 +216,7 @@ if ($Force) {
 
     # Shutdown the HPE OmniStack Virtual Controller(s).
     try {
-        $Response = Get-SVTHost -ClusterName $ClusterName -ErrorAction Stop | Stop-SVTOVC -ErrorAction Stop #-Verbose
+        $Response = Get-SVTHost -ClusterName $ClusterName -ErrorAction Stop | Start-SVTshutdown -ErrorAction Stop #-Verbose
         $Response | ForEach-Object {
             Write-Log "OVC $($_.OVC) has shutdown status of $($_.ShutdownStatus)" 0
         }

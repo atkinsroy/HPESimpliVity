@@ -17,7 +17,7 @@
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>12</Width>
+                        <Width>17</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
@@ -33,7 +33,7 @@
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>25</Width>
+                        <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                 </TableHeaders>

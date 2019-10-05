@@ -2,57 +2,43 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTVMTable</Name>
+            <Name>SVTThroughputTable</Name>
             <ViewSelectedBy>
-                <TypeName>HPE.SimpliVity.ReplicaSet</TypeName>
+                <TypeName>HPE.SimpliVity.Throughput</TypeName>
             </ViewSelectedBy>
             <TableControl>
                 <TableHeaders>
                     <TableColumnHeader>
-                        <Width>40</Width>
+                        <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>12</Width>
+                        <Width>17</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>12</Width>
+                        <Width>22</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>20</Width>
-                        <Alignment>left</Alignment>
-                    </TableColumnHeader>
-                    <TableColumnHeader>
-                        <Width>40</Width>
-                        <Alignment>left</Alignment>
-                    </TableColumnHeader>
-                    <TableColumnHeader>
-                        <Width>40</Width>
-                        <Alignment>left</Alignment>
+                        <Width>14</Width>
+                        <Alignment>right</Alignment>
                     </TableColumnHeader>
                 </TableHeaders>
                 <TableRowEntries>
                     <TableRowEntry>
                         <TableColumnItems>
                             <TableColumnItem>
-                                <PropertyName>VMname</PropertyName>
+                                <PropertyName>Date</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>State</PropertyName>
+                                <PropertyName>SourceClusterName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>HAstatus</PropertyName>
+                                <PropertyName>DestinationClusterName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>ClusterName</PropertyName>
-                            </TableColumnItem>
-                            <TableColumnItem>
-                                <PropertyName>Primary</PropertyName>
-                            </TableColumnItem>
-                            <TableColumnItem>
-                                <PropertyName>Secondary</PropertyName>
+                                <PropertyName>ThroughputKBs</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>
