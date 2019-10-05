@@ -85,7 +85,7 @@ Here's a sample capacity chart:
 
 ![Here is a sample capacity chart](/Media/SVTcapacity-sample.png)
 
-**Note:** Both of these commands require Windows PowerShell (tested with V5.1 only). They do not work with PowerShell Core V6.x 
+**Note:** Both of these commands require Windows PowerShell (tested with V5.1 only). They do not work with PowerShell Core V6.x (.NET Core does not support Microsoft Chart Controls). Hopefully this will change when PowerShell 7.0 is released.
 
 ## Requirements
 
@@ -117,7 +117,7 @@ The module is signed, so it will work with an execution policy set to Remote Sig
     PS C:\> Connect-SVT -OVC <IP or FQDN of an OmniStack Virtual Controller> -Credential $Cred
     PS C:\> Get-SVThost
 ```
-Or, if you need to run commands in batch (non-interactively), save your crednetials to a file first:
+Or, if you need to run commands in batch (non-interactively), save your credentials to a file first:
 
 ```powershell
     PS C:\> $Cred = Get-Credential -Username 'administrator@vsphere.local' | Export-Clixml OVCcred.XML 
