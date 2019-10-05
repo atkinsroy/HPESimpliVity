@@ -10,15 +10,16 @@ Most "Get" commands provide way too many properties to show at once, so ps1xml f
 
 For Example:
 ```powershell
-    PS C:\>Connect-SVT -OVC 192.168.1.11 -Credential $Cred
-    PS C:\>Get-SVThost
+    PS C:\> Connect-SVT -OVC 192.168.1.11 -Credential $Cred
+    PS C:\> Get-SVThost
     
     HostName      DataCenterName    ClusterName   FreeSpaceGB    ManagementIP   StorageIP     FederationIP 
     --------      --------------    -----------   -----------    ------------   ---------     ------------
     192.168.1.1   SunGod            Production1         2,671    192.168.1.11   192.168.2.1   192.168.3.1
     192.168.1.2   SunGod            Production1         2,671    192.168.1.12   192.168.2.2   192.168.3.2
+    192.170.1.1   SunGod            DR1                 2,671    192.170.1.11   192.170.2.1   192.170.3.1
    
-    PS C:\>Get-SVThost -HostName 192.168.1.1 | Format-List
+    PS C:\>Get-SVThost -HostName 192.168.1.1 | Select-Object *
     
     PolicyEnabled            : True
     ClusterId                : 3baba7ec-6d02-4fb6-b510-5ce19cd9c1d0
@@ -50,9 +51,9 @@ Update-SVTbackupUniqueSize | Remove-SVTpolicyRule | Get-SVTdatastoreComputeNode
 New-SVTclone | Get-SVThardware | Connect-SVT
 Get-SVTvm | Get-SVThost | Get-SVTcapacity
 Start-SVTvm | Remove-SVThost | Get-SVTmetric
-Move-SVTvm | Stop-SVTovc | Get-SVTtask
-Restore-SVTvm | Undo-SVTovcShutdown | Get-SVTtimezone
-Stop-SVTvm | Get-SVTovcShutdownStatus | Set-SVTtimezone
+Move-SVTvm | Start-SVTshutdown | Get-SVTtask
+Restore-SVTvm | Stop-SVTshutdown | Get-SVTtimezone
+Stop-SVTvm | Get-SVTshutdownStatus | Set-SVTtimezone
 Set-SVTvmPolicy | Get-SVTthroughput | Get-SVTversion
 Get-SVTvmReplicaSet
 
@@ -66,29 +67,28 @@ Get-SVTvmReplicaSet
 
 * Install the HPESimplivity module from the PowerShell Gallery, using the following command:
 ```powershell
-    PS C:\>Install-Module -Name HPESimpliVity
+    PS C:\> Install-Module -Name HPESimpliVity -RequiredVersion 1.1.4
 ```
 The module is signed, so it will work with an execution policy set to Remote Signed.
 
 * Restart Powershell to load the module, or type:
 ```powershell
-    PS C:\>Import-Module HPESimpliVity -Force
+    PS C:\> Import-Module HPESimpliVity -Force
 ```
 * After this, the module will automatically load in new PowerShell sessions. Issue the following commands to confirm:
 ```powershell
-    PS C:\>Get-Command -Module HPESimpliVity
-    PS C:\>Get-Help Get-SVTBackup
-    PS C:\>Get-Help Connect-SVT
+    PS C:\> Get-Command -Module HPESimpliVity
+    PS C:\> Get-Help Connect-SVT
+    PS C:\> Get-Help Get-SVTbackup
 ```
 * Once installed, you're ready to connect to the OmniStack virtual controller, as follows:
 ```powershell
-    PS C:\>$Cred = Get-Credential -Message 'Enter OVC Credentials'
-    PS C:\>Connect-SVT -OVC <IP or FQDN of OVC> -Credential $Cred
-    PS C:\>Get-SVThost
+    PS C:\> $Cred = Get-Credential -Message 'Enter OVC Credentials'
+    PS C:\> Connect-SVT -OVC <IP or FQDN of an OmniStack Virtual Controller> -Credential $Cred
+    PS C:\> Get-SVThost
 ```
-**Note:** You must login with an admin account (an account with the vCenter Admin Role for VMware environments).
+**Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
 ## Things To Do
 * Test using PowerShell Core 6.0 (Windows and Linux)
 
-* Provide a -Graph parameter on Get-SVTmetric and on Get-SVTcapacity to output a web chart or an Excel chart, or both.
