@@ -109,13 +109,13 @@ catch {
 }
 
 # Shutdown the VMs in the cluster in a specific order. To do this, assign tags to critical VMs, as follows:
-# Tag name = Level1 - shutdown first (e.g. application servers)
+# Tag name = Level3 - shutdown first (e.g. application servers)
 # Level2 - shutdown second (e.g. database servers)
-# Level3 - shutdown third (e.g. critical infrastructure servers, like Active Directory Domain Controllers).
+# Level1 - shutdown third (e.g. critical infrastructure servers, like Active Directory Domain Controllers).
 # You can add more tags if more granularity is required. Use a tag category such as 'ShutDownOrder' to distinguish
 # them from other tags. That may be used in the environment
 $CriticalVM = @()
-1..3 | Foreach-Object {
+3..1 | Foreach-Object {
     $tag = "Level$_"
     Write-Log "Looking for VMs on cluster $ClusterName with a shutdown order tag set to $tag"
     try {
