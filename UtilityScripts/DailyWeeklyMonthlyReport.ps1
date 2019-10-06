@@ -1,28 +1,37 @@
-# This script creates a report for Daily, weekly, monthly, Old and Latest backups, based on the Expiry date of the backups
-# Using -All might be slow. Limited to 500 backups by default; you can increase this to a max of 3000 records using -Limit parameter.
+# This script creates a report for daily, weekly, monthly and failed backups based on the create date of the backups
 
-$Daily = (Get-Date).AddDays(1)
-$Weekly = (Get-Date).AddDays(7)
-$Monthly = (Get-Date).AddDays(28)
+# It is assumed you have previously created a credential file using something similar to:
+#Get-Credential -Message 'Enter a password at prompt' -UserName 'administrator@vsphere.local' | Export-Clixml OVCcred.xml
 
-$AllBackup = Get-SVTbackup -All
-Write-Output 'Daily Backups'
-$AllBackup | Where-Object ExpiryDate -le $Daily
+# It is assumed you have previously installed the HPESimpliVity module from PS Gallery, using:
+#Install-Module -Name HPESimpliVity -RequiredVersion 1.1.4
 
-Write-Output 'Weekly Backups'
-$AllBackup | Where-Object { $_.ExpiryDate -le $Weekly -and $_.ExpiryDate -gt $Daily }
+# Connect is an OmniStack Virtual Controller in your environment:
+$IP = 192.168.1.1   # change this to match one of your virtual controllers
+$Cred = Import-Clixml .\OVCcred.xml
+Connect-SVT -OVC $IP -Credential $Cred
 
-Write-Output 'Monthly Backups'
-$AllBackup | Where-Object { $_.ExpiryDate -le $Monthly -and $_.ExpiryDate -gt $Weekly }
+$TimeStamp = Get-Date -Format 'yyMMddhhmm'
 
-Write-Output 'Older Backups'
-$AllBackup | Where-Object ExpiryDate -gt $Monthly
+Write-Output 'Daily Backups...'
+Get-SVTbackup -Hour 24 -Limit 3000 | Export-Csv -Path DailyBackup-$TimeStamp.csv -NoTypeInformation
+#Invoke-Item DailyBackup-$TimeStamp.csv
 
-Write-Output 'Latest Backup for each VM'
-Get-SVTBackup -Latest
+Write-Output 'Weekly Backups...'
+Get-SVTbackup -Hour (24 * 7) -Limit 3000 | Export-Csv -Path WeeklyBackup-$TimeStamp.csv -NoTypeInformation
 
-# Less sexy method. Report based on the policy name
-#Get-SVTBackup -PolicyName "DailyBackup"
-# Or
-#$AllBackup | Where-Object PolicyName -eq "DailyBackup"
+Write-Output 'Monthly Backups...'
+Get-SVTbackup -Hour (24 * 28) -Limit 3000 | Export-Csv -Path MonthlyBackup-$TimeStamp.csv -NoTypeInformation
+
+Write-Output 'Failed Backups...'
+$Failed = Get-SVTbackup -All | Where-Object BackupState -ne 'PROTECTED'
+$FailedCount = ($Failed | Measure-Object).Count
+if ($FailedCount -gt 0) {
+    Write-Warning "$FailedCount failed backups found"
+    $Failed | Export-Csv -Path FailedBackup-$TimeStamp.csv -NoTypeInformation
+}
+else {
+    Write-Output "No failed backups found"
+}
+
 
