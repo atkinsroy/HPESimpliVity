@@ -8,7 +8,7 @@ This script creates/displays reports for daily, weekly, monthly and failed backu
 
 This script displays VMs that have different backup policies to the backup policy assigned to the datastore on which they reside. You may want to track this and change the VMs' backup policy to match the current datastore policy.
 
-Policies are assigned to VMs using the default policy associated with the datastore when the VM is created. If you then move the VM to a different datastore, the VM retains its original backup policy, unless you exlicitely change it.  
+Policies are assigned to VMs using the default policy associated with the datastore when the VM is created. If you then move the VM to a different datastore, the VM retains its original backup policy, unless you explicitely change it.  
 
 ## ShutdownHPESimplivityCluster.ps1
 
