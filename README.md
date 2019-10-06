@@ -67,9 +67,9 @@ how it works:
 ```
 
 This will create a single chart for the first host in the Federation using the specified range. The cmdlet has a new -Force 
-parameter. By default, up to five charts are created, one for each object passed in. If there are more objects than this in the 
-pipeline, the cmdlet issues a warning. You can override this limit with the -Force switch. Be careful when using Get-SVTvm though,
-you may create many, many charts!
+parameter. By default, up to five charts are created, one for each object passed in. If there are more objects than this in
+the pipeline, the cmdlet issues a warning. You can override this limit with the -Force switch. There is potential to create a
+lot of charts with Get-SVTvm. 
 
 Here's a sample metric chart:
 
@@ -120,11 +120,11 @@ The module is signed, so it will work with an execution policy set to Remote Sig
 Or, if you need to run commands in batch (non-interactively), save your credentials to a file first:
 
 ```powershell
-    PS C:\> $Cred = Get-Credential -Username 'administrator@vsphere.local' | Export-Clixml OVCcred.XML 
+    PS C:\> $Cred = Get-Credential -Username 'administrator@vsphere.local' | Export-Clixml .\OVCcred.XML 
 ```
 and then in your script, import the credential:
 ```powershell
-    PS C:\> $Cred = Import-CLIXML C:\<folder>\OVCcred.XML
+    PS C:\> $Cred = Import-CLIXML .\OVCcred.XML
     PS C:\> Connect-SVT -OVC <IP or FQDN of an OmniStack Virtual Controller> -Credential $Cred
     PS C:\> Get-SVThost
 ```
