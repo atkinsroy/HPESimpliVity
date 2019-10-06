@@ -2,11 +2,13 @@ This folder contains PowerShell scripts that utilise the HPESimpliVity module to
 
 ## DailyWeeklyMonthlyReport.ps1
 
-This script displays reports for daily, weekly, monthly and older backups, based on the backup expiry date. It will also display the latest backup for each virtual machine.
+This script creates/displays reports for daily, weekly, monthly and failed backups, based on the backup create date.
 
 ## MismatchedVMpolicy.ps1
 
-This script displays VMs that have different backup policies to the backup policy assigned to the datastore on which they reside.
+This script displays VMs that have different backup policies to the backup policy assigned to the datastore on which they reside. You may want to track this and change the VMs' backup policy to match the current datastore policy.
+
+Policies are assigned to VMs using the default policy associated with the datastore when the VM is created. If you then move the VM to a different datastore, the VM retains its original backup policy, unless you explicitely change it.  
 
 ## ShutdownHPESimplivityCluster.ps1
 
