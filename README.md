@@ -134,4 +134,4 @@ and then in your script, import the credential:
 ## Things to do
 * Test using PowerShell Core 6.0 (Windows and Linux)
 
-If you would like to keep up to date with changes, please visit the project website and subscribe to receive notifications. Updates are published to the Powershell gallery at the same time.
+If you would like to keep up to date with changes, please subscribe to receive notifications.
