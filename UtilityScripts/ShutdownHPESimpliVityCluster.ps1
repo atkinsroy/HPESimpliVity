@@ -101,7 +101,7 @@ else {
 # Connect to vCenter
 try {
     Connect-VIServer -Server $vCenterName -Credential $Cred -ErrorAction Stop | Out-Null
-    Write-Log "Connected to vCenter Server: $vCenterName" 0
+    Write-Log "Connected to vCenter Server: $vCenterName"
 }
 catch {
     Write-Log "Error connecting to vCenter server: $($_.Exception.Message)" 2
@@ -163,7 +163,7 @@ $CriticalVM = @()
 }
 
 # Now we've shutdown critical VMs (those with tags), shutdown any other VMs left running, ignoring critical VMs and the OVC(s), of course.
-Write-Log "Looking for any other powered on VMs on cluster $ClusterName with no/unrecognised tags" 0
+Write-Log "Looking for any other powered on VMs on cluster $ClusterName with no/unrecognised tags"
 try {
     $vmList = $Cluster | 
         Get-VM -ErrorAction Stop | 
@@ -198,7 +198,7 @@ foreach ($vm in $vmList) {
 
 # Connect to the OVC
 try {
-    Connect-SVT -OVC $OVC -Credential $Cred -IgnoreCertReqs -ErrorAction Stop | Out-Null
+    Connect-SVT -OVC $OVC -Credential $Cred -ErrorAction Stop | Out-Null
     Write-Log "Connected to Omnistack Virtual Controller: $OVC"
 }
 catch {
@@ -211,14 +211,17 @@ if ($Force) {
     do {
         Write-Log "Waiting 10 seconds to allow VMs to shutdown"
         Start-Sleep -Seconds 10
-        $vmName = $Cluster | Get-VM -ErrorAction Stop | Where-Object Name -NotMatch 'OmniStackVC' | Where-Object PowerState -eq 'PoweredOn'
+        $vmName = $Cluster | 
+            Get-VM -ErrorAction Stop | 
+            Where-Object Name -NotMatch 'OmniStackVC' | 
+            Where-Object PowerState -eq 'PoweredOn'
     } while ($vmName)
 
-    # Shutdown the HPE OmniStack Virtual Controller(s).
+    # Shutdown the HPE OmniStack Virtual Controller(s)
     try {
         $Response = Get-SVTHost -ClusterName $ClusterName -ErrorAction Stop | Start-SVTshutdown -ErrorAction Stop #-Verbose
         $Response | ForEach-Object {
-            Write-Log "OVC $($_.OVC) has shutdown status of $($_.ShutdownStatus)" 0
+            Write-Log "OVC $($_.OVC) has shutdown status of $($_.ShutdownStatus)"
         }
     }
     catch {
@@ -245,11 +248,11 @@ if ($Force) {
     try {
         $Response = $VMHost | Set-VMHost -State Maintenance -Confirm:$false -ErrorAction Stop
         $Response | Foreach-object {
-            Write-Log "$_ is in connection state of $($_.ConnectionState)" 0
+            Write-Log "$_ is in connection state of $($_.ConnectionState)"
         }
         $Response = $VMHost | Stop-VMHost -Confirm:$false -ErrorAction Stop
         $Response | Foreach-object {
-            Write-Log "$_ is in connection state of $($_.ConnectionState) and a power state of $($_.PowerState)" 0
+            Write-Log "$_ is in connection state of $($_.ConnectionState) and a power state of $($_.PowerState)"
         }
     }
     catch {
@@ -261,4 +264,4 @@ else {
     $VMHost | Set-VMHost -State Maintenance -Whatif
     $VMHost | Stop-VMHost -Whatif
 }
-Write-Log "Done" 0
+Write-Log "Done"
