@@ -1,14 +1,14 @@
  # HPE SimpliVity PowerShell Module
 
-This PowerShell module utilises the HPE SimpliVity REST API to display information and manage a SimpliVity federation and works by connecting to any OmniStack Virtual Controller in your environment.
+This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage a HPE SimpliVity federation. It works by connecting to any HPE OmniStack Virtual Controller in your environment.
 
-The module was written using V1.11 of the Rest API, which comes with HPE OmniStack 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters. The module has been tested and works with HPE OmniStack 3.7.7 and above. 
+The module was written using V1.11 of the Rest API, which is shipped with HPE OmniStack 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters. The module has been tested and works with HPE OmniStack 3.7.7 and later. 
 
-All cmdlets are written as advanced cmdlets, with extensive comment based help and most have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API, for example limiting the number of records to 500 when returning virtual machines and backup objects.
+All cmdlets are written as advanced cmdlets, with extensive comment based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records to 500 when returning virtual machines and backup objects.
 
-Most "Get" commands provide way too many properties to show at once, so ps1xml files are used to provide default display properties. All properties are still accessible, by piping to Format-List or Select-Object -property *
+Most "Get" commands provide too many properties to show at once, so default display properties are shown. All properties are still accessible, by piping to Format-List or Select-Object -property *
 
-For Example:
+For example:
 ```powershell
     PS C:\> Connect-SVT -OVC 192.168.1.11 -Credential $Cred
     PS C:\> Get-SVThost
@@ -31,7 +31,7 @@ For Example:
 ```
 
 
-The module contains 51 exported cmdlets, in the following feature categories:
+The module contains 51 exported cmdlets, divided into the following feature categories:
 
 Backups | Backup Policy | Datastore & Cluster
 --- | --- | ---
@@ -66,12 +66,12 @@ how it works:
     PS C:\> Get-SVThost | Select-Object -First 1 | Get-SVTmetric -Hour 48 -Chart
 ```
 
-This will create a single chart for the first host in the Federation using the specified range. The cmdlet has a new -Force 
+This will create a single chart for the first host in the Federation using the specified hourly range. The cmdlet also has a new -Force 
 parameter. By default, up to five charts are created, one for each object passed in. If there are more objects than this in
-the pipeline, the cmdlet issues a warning. You can override this limit with the -Force switch. There is potential to create a
+the pipeline, the cmdlet will issue a warning. You can override this limit with the -Force switch. There is potential to create a
 lot of charts with Get-SVTvm. 
 
-Here's a sample metric chart:
+Here is a sample metric chart:
 
 ![Here is a sample metric chart](/Media/SVTmetric-sample.png)
 
@@ -81,7 +81,7 @@ Similarly, Get-SVTcapacity also has a new -Chart switch. Use the following comma
     PS C:\> Get-SVTcapacity -Chart
 ```
 
-Here's a sample capacity chart:
+This is a sample capacity chart:
 
 ![Here is a sample capacity chart](/Media/SVTcapacity-sample.png)
 
@@ -90,8 +90,8 @@ Here's a sample capacity chart:
 ## Requirements
 
 * PowerShell V5.1 and above. This module was created and tested using PowerShell V5.1.
-* The IP address and the credentials of an authorised OmniStack user account.
-* Tested with OmniStack 3.7.7 and above. Both VMware and Hyper-V versions have been tested.
+* The IP address and the credentials of an authorized OmniStack user account.
+* Tested with HPE OmniStack 3.7.7 and above. Both VMware and Hyper-V versions have been tested.
 
 ## Installation
 
@@ -131,6 +131,7 @@ and then in your script, import the credential:
 
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
-## Things To Do
+## Things to do
 * Test using PowerShell Core 6.0 (Windows and Linux)
 
+If you would like to keep up to date with changes, please subscribe to receive notifications.
