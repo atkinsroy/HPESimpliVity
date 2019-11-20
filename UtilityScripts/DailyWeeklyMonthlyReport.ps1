@@ -13,15 +13,15 @@ Connect-SVT -OVC $IP -Credential $Cred
 
 $TimeStamp = Get-Date -Format 'yyMMddhhmm'
 
-Write-Output 'Daily Backups...'
-Get-SVTbackup -Hour 24 -Limit 3000 | Export-Csv -Path DailyBackup-$TimeStamp.csv -NoTypeInformation
+Write-Output 'Day old Backups...'
+Get-SVTbackup -Hour 24 -Limit 3000 | Export-Csv -Path DayOldBackup-$TimeStamp.csv -NoTypeInformation
 #Invoke-Item DailyBackup-$TimeStamp.csv
 
-Write-Output 'Weekly Backups...'
-Get-SVTbackup -Hour (24 * 7) -Limit 3000 | Export-Csv -Path WeeklyBackup-$TimeStamp.csv -NoTypeInformation
+Write-Output 'Week old Backups...'
+Get-SVTbackup -Hour (24 * 7) -Limit 3000 | Export-Csv -Path WeekOldBackup-$TimeStamp.csv -NoTypeInformation
 
-Write-Output 'Monthly Backups...'
-Get-SVTbackup -Hour (24 * 28) -Limit 3000 | Export-Csv -Path MonthlyBackup-$TimeStamp.csv -NoTypeInformation
+Write-Output 'Month old Backups...'
+Get-SVTbackup -Hour (24 * 28) -Limit 3000 | Export-Csv -Path MonthOldBackup-$TimeStamp.csv -NoTypeInformation
 
 Write-Output 'Failed Backups...'
 $Failed = Get-SVTbackup -All | Where-Object BackupState -ne 'PROTECTED'
@@ -33,5 +33,3 @@ if ($FailedCount -gt 0) {
 else {
     Write-Output "No failed backups found"
 }
-
-
