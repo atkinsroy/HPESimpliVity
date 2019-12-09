@@ -2,9 +2,9 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTVMTable</Name>
+            <Name>SVTHostTable</Name>
             <ViewSelectedBy>
-                <TypeName>HPE.SimpliVity.VirtualMachine</TypeName>
+                <TypeName>HPE.SimpliVity.Disk</TypeName>
             </ViewSelectedBy>
             <TableControl>
                 <TableHeaders>
@@ -13,27 +13,35 @@
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>40</Width>
+                        <Width>13</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>18</Width>
+                        <Width>12</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>18</Width>
+                        <Width>13</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>18</Width>
+                        <Width>8</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>6</Width>
+                        <Width>8</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>20</Width>
+                        <Width>7</Width>
+                        <Alignment>left</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>13</Width>
+                        <Alignment>right</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>50</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                 </TableHeaders>
@@ -41,25 +49,31 @@
                     <TableRowEntry>
                         <TableColumnItems>
                             <TableColumnItem>
-                                <PropertyName>VMname</PropertyName>
-                            </TableColumnItem>
-                            <TableColumnItem>
                                 <PropertyName>HostName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>DataCenterName</PropertyName>
+                                <PropertyName>SerialNumber</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>ClusterName</PropertyName>
+                                <PropertyName>Manufacturer</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>DataStoreName</PropertyName>
+                                <PropertyName>ModelNumber</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>State</PropertyName>
+                                <PropertyName>Firmware</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>PolicyName</PropertyName>
+                                <PropertyName>Status</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Health</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>CapacityTB</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>HostStorageKit</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>
