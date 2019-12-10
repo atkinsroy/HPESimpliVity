@@ -8,8 +8,9 @@ Get-SVThost -cluster <target cluster> | Start-SVTshutdown -Confirm:$True
 In addition, the  command now has -Confirm and -Whatif paramaters.
 
 * Added an automatic reconnect feature so that the session is reestablished and the token is updated following the inactive timeout of the session 
-* Fixed dates everywhere to support locale on the local computer.
-* Fixed a bug with the Get-SVTBackup -Latest parameter. This command will now correctly show the latest backup per VM from the list of backups requested. 
+* Fixed dates for all cmdlets to support locale on the local computer.
+* Fixed a bug with the Get-SVTBackup -Latest parameter. This command will now correctly show the latest backup per VM from the list of backups requested.
+* Updated the appearance of charts
 
 # Version 1.1.4
 
