@@ -5,7 +5,7 @@
 
 ```powershell
     PS C:\> Get-SVThost -cluster <target cluster> | Start-SVTshutdown -Confirm:$True
-
+```
   In addition, the  command now has -Confirm and -Whatif paramaters.
 
 * Added an automatic reconnect feature so that the session is reestablished and the token is updated following the inactive timeout of the session 
