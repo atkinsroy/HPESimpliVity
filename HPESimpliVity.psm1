@@ -8,10 +8,10 @@
 # Website:
 #   https://github.com/atkinsroy/HPESimpliVity
 #
-#   VERSION 1.1.4
+#   VERSION 1.1.5
 #
 #   AUTHOR
-#   Roy Atkins    HPE Pointnext, Advisory & Professional Services
+#   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
 
@@ -58,43 +58,70 @@ function Invoke-SVTrestMethod {
         [Parameter(Mandatory = $false, Position = 3)]
         [System.Object]$Body
     )
-    try {
-        if ($Body) {
-            $Response = Invoke-RestMethod -Uri $Uri -Headers $Header -Body $Body -Method $Method -ErrorAction Stop
+    
+    [int]$Retrycount = 0
+    [bool]$Stoploop = $false
+    do {
+        try {
+            if ($Body) {
+                $Response = Invoke-RestMethod -Uri $Uri -Headers $Header -Body $Body -Method $Method -ErrorAction Stop
+            }
+            else {
+                $Response = Invoke-RestMethod -Uri $Uri -Headers $Header -Method $Method -ErrorAction Stop
+            }
+            $Stoploop = $true
         }
-        else {
-            $Response = Invoke-RestMethod -Uri $Uri -Headers $Header -Method $Method -ErrorAction Stop
+        catch [System.Management.Automation.RuntimeException] {
+            if ($_.Exception.Message -match "Unauthorized") {
+                if ($Retrycount -ge 3) {
+                    # Exit after 3 retries
+                    throw "Runtime error: Session expired and could not reconnect"
+                }
+                else {
+                    $Retrycount += 1
+                    Write-Verbose "Session expired, reconnecting..."
+                    $OVC = $SVTconnection.OVC -replace 'https://',''
+                    $Retry = Connect-SVT -OVC $OVC -Credential $SVTconnection.Credential
+
+                    # Update the json header with the new token for the retry
+                    $Header = @{'Authorization' = "Bearer $($Retry.Token)"
+                        'Accept'                = 'application/json' 
+                    }
+                }
+            }
+            elseif ($_.Exception.Message -match "The hostname could not be parsed") {
+                throw "Runtime error: You must first log in using Connect-SVT"
+            }
+            else {
+                throw "Runtime error: $($_.Exception.Message)"
+            }
+        }
+        catch {
+            # Catch any other error - API might provide a message
+            throw "An unexpected error occured: $($_.Exception.Message)"
         }
     }
-    catch [System.Management.Automation.RuntimeException] {
-        if ($_.Exception.Message -match "Unauthorized") {
-            throw "Runtime error: Session expired, log in using Connect-SVT"
-        }
-        elseif ($_.Exception.Message -match "The hostname could not be parsed") {
-            throw "Runtime error: You must first log in using Connect-SVT"
-        }
-        else {
-            throw "Runtime error: $($_.Exception.Message)"
-        }
-    }
-    catch {
-        # Catch any other error - SimpliVity might provide a nice little message
-        throw "An unexpected error occured: $($_.Exception.Message)"
-    }
+    until ($Stoploop -eq $true)
 
     # If the JSON output is a task, convert it to a custom object of type 'HPE.SimpliVity.Task' and pass this back to the
     # calling cmdlet. A lot of cmdlets produce task object types, so this cuts out repetition in the module.
     # Note: $Response.task is incorrectly true with /api/omnistack_clusters/throughput, so added a check for this.
     if ($Response.task -and $URI -notmatch '/api/omnistack_clusters/throughput') {
+        
+        $culture = (Get-Culture).DateTimeFormat
+        $LocalDate = "$($culture.ShortDatePattern)" -creplace '^d/','dd/' -creplace '^M/','MM/' -creplace '/d/','/dd/'
+        $LocalTime = "$($culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm','HH:mm'
+        $LocalFormat = "$LocalDate $LocalTime"
+        
         $Response.task | ForEach-Object {
             if ($_.start_time -as [datetime]) {
-                $StartTime = Get-Date -Date $_.start_time
+                $StartTime = Get-Date -Date $_.start_time -Format $LocalFormat
             }
             else {
                 $StartTime = $null
             }
             if ($_.end_time -as [datetime]) {
-                $EndTime = Get-Date -Date $_.end_time
+                $EndTime = Get-Date -Date $_.end_time -Format $LocalFormat
             }
             else {
                 $EndTime = $null
@@ -290,7 +317,6 @@ function Connect-SVT {
         'password'       = $OVCcred.GetNetworkCredential().Password
         'grant_type'     = 'password'
     }
-    Write-Verbose $Body
 
     try {
         $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -375,9 +401,6 @@ Function Get-SVTversion {
 .PARAMETER Chart
     Create a chart instead of showing performance metrics. The chart file is saved to the current folder. One chart is
     created for each object (e.g. cluster, host or VM)
-.PARAMETER Force
-    If you specify -Chart and there are more than five objects, a warning is displayed. Use -Force to bypass this check
-    and create charts for a larger number of objects.
 .EXAMPLE
     PS C:\>Get-SVTmetric -ClusterName Production
 
@@ -395,11 +418,10 @@ Function Get-SVTversion {
 
     Show daily performance metrics for the last two months for the specified cluster
 .EXAMPLE
-    PS C:\>Get-SVThost | Get-Metric -Chart -Force -Verbose
+    PS C:\>Get-SVThost | Get-Metric -Chart -Verbose
 
     Create chart(s) instead of showing the metric data. Chart files are created in the current folder.
-    Specify -Force to bypass the check for more than five objects. Use filtering when creating charts for
-    virtual machines to avoid creating a lot of charts.
+    Use filtering when creating charts for virtual machines to avoid creating a lot of charts.
 .EXAMPLE
     PS C:\>Get-SVThost -HostName MyHost | Get-Metric -Chart | Foreach-Object {Invoke-Item $_}
 
@@ -441,10 +463,7 @@ function Get-SVTmetric {
         [System.String]$Resolution = 'HOUR',
 
         [Parameter(Mandatory = $false)]
-        [Switch]$Chart,
-
-        [Parameter(Mandatory = $false)]
-        [Switch]$Force
+        [Switch]$Chart
     )
 
     begin {
@@ -469,6 +488,17 @@ function Get-SVTmetric {
         elseif ($Resolution -eq 'DAY' -and $Range -gt 94608000 ) {
             throw "Maximum range value for resolution $resolution is 26,280 hours (3 years)"
         }
+
+        if ($Resolution -eq 'SECOND' -and $range -gt 7200 ) {
+            Write-Warning 'Using the resolution of SECOND beyond a range of 2 hours can take a long time to complete'
+        }
+        if ($Resolution -eq 'MINUTE' -and $range -gt 86400 ) {
+            Write-Warning 'Using the resolution of MINUTE beyond a range of 24 hours can take a long time to complete'
+        }
+        $culture = (Get-Culture).DateTimeFormat
+        $LocalDate = "$($culture.ShortDatePattern)" -creplace '^d/','dd/' -creplace '^M/','MM/' -creplace '/d/','/dd/'
+        $LocalTime = "$($culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm','HH:mm'
+        $LocalFormat = "$LocalDate $LocalTime"
     }
 
     process {
@@ -545,7 +575,7 @@ function Get-SVTmetric {
                 $MetricName = (Get-Culture).TextInfo.ToTitleCase($_.name)
                 $_.data_points | ForEach-Object {
                     if ($_.date -as [DateTime]) {
-                        $Date = Get-Date -Date $_.date
+                        $Date = Get-Date -Date $_.date -Format $LocalFormat
                     }
                     else {
                         $Date = $null
@@ -557,20 +587,28 @@ function Get-SVTmetric {
                         Write = $_.writes
                     }
                 }
-            }
+            } 
 
-            #Transpose the custom object to output each date with the value for each metric
-            $MetricObject = $CustomObject | Sort-Object -Property Date | Group-Object -Property Date | ForEach-Object {
+            #Transpose the custom object to return each date with read and write for each metric
+            $MetricObject = $CustomObject | Sort-Object -Property Date,Name | Group-Object -Property Date | ForEach-Object {
                 $Property = [ordered]@{
                     PStypeName = 'HPE.SimpliVity.Metric'
                     Date       = $_.Name
                 }
+
+                [string]$prevname=''
                 $_.Group | Foreach-object {
-                    $Property += [ordered]@{
-                        "$($_.Name)Read"  = $_.Read
-                        "$($_.Name)Write" = $_.Write
+                    # We expect to see just 3 records per date. However, sometimes there are 6. 
+                    # So check for duplicates before creating the key.
+                    If ($_.name -ne $prevname) {    
+                        $Property += [ordered]@{
+                            "$($_.Name)Read"  = $_.Read
+                            "$($_.Name)Write" = $_.Write
+                        }
                     }
+                    $prevname = $_.Name
                 }
+               
                 $Property += [ordered]@{
                     ObjectType = $TypeName
                     ObjectName = $ObjectName
@@ -578,23 +616,18 @@ function Get-SVTmetric {
                 New-Object -TypeName PSObject -Property $Property
             }
 
-            if ($Chart) {
+            if ($chart) {
                 [array]$ChartObject += $MetricObject
             }
             else {
                 $MetricObject
-            }
-        }
-    }
+            }   
+        } #end for
+    } #end process
 
     end {
         if ($Chart) {
-            if ($Force) {
-                Get-SVTmetricChart -Metric $ChartObject -TypeName $TypeName -Force
-            }
-            else {
-                Get-SVTmetricChart -Metric $ChartObject -TypeName $TypeName
-            }
+            Get-SVTmetricChart -Metric $ChartObject -TypeName $TypeName 
         }
     }
 }
@@ -607,10 +640,7 @@ function Get-SVTmetricChart {
         [psobject]$Metric,
 
         [Parameter(Mandatory = $true, Position = 1)]
-        [System.String]$TypeName,
-
-        [Parameter(Mandatory = $false, Position = 2)]
-        [Switch]$Force
+        [System.String]$TypeName
     )
 
     if ($PSVersionTable.PSVersion.Major -gt 5) {
@@ -618,18 +648,25 @@ function Get-SVTmetricChart {
     }
 
     $ObjectList = $Metric.ObjectName | Select-Object -Unique
-    $ObjectTotal = $ObjectList | Measure-Object | Select-Object -ExpandProperty Count
-    if ($ObjectTotal -gt 5 -and -not $Force) {
-        Write-Warning "You are attempting to pass in $ObjectTotal objects. Use -Force to create charts for more than 5 objects"
-        Return
-    }
+    #$ObjectTotal = $ObjectList | Measure-Object | Select-Object -ExpandProperty Count
+    
     $Path = Get-Location
-    $Culture = Get-Culture #$Culture = New-Object System.Globalization.CultureInfo 'en-us'
+    $Culture = Get-Culture
     $StartDate = $Metric | Select-Object -First 1 -ExpandProperty Date
     $EndDate = $Metric | Select-Object -Last 1 -ExpandProperty Date
     $ChartLabelFont = 'Arial, 8pt'
     $ChartTitleFont = 'Arial, 12pt'
     $DateStamp = Get-Date -Format "yyMMddhhmmss"
+
+    # define an object to determine the best inverval on the Y axis, given a maximum value
+    $Ylimit = (0,10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000,10240000,20480000)
+    $Yinterval = (200,500,1000,5000,10000,15000,20000,50000,75000,100000,250000,400000,1000000)
+    $Yaxis = 0..11 | foreach-object {
+        [PSCustomObject]@{
+            Limit = $Ylimit[$_]
+            Interval = $YInterval[$_]
+        }
+    }
 
     Add-Type -AssemblyName System.Windows.Forms.DataVisualization
 
@@ -663,7 +700,9 @@ function Get-SVTmetricChart {
         $Area1.AxisX.TitleFont = $ChartTitleFont
         $Area1.AxisX.LabelStyle.Font = $ChartLabelFont
 
+        # to determine an appropriate X axis interval, find the number of data points in the data
         $Interval = [math]::Round($DataPoint / 24) #show 24 dates on X axis only
+       
         if ($Interval -lt 1) {
             $Area1.AxisX.Interval = 1
         }
@@ -682,6 +721,7 @@ function Get-SVTmetricChart {
             $BorderWidth = 2
         }
 
+        # To determine an appropriate interval on Y axis, find the maximum value in the data.
         $MaxArray = @(
             $DataSource | Measure-Object -Property LatencyRead -Maximum | Select-Object -ExpandProperty Maximum
             $DataSource | Measure-Object -Property LatencyWrite -Maximum | Select-Object -ExpandProperty Maximum
@@ -694,15 +734,16 @@ function Get-SVTmetricChart {
                 $Max = $_
             }
         }
-        if ($Max -lt 10000) {
-            $Area1.AxisY.Interval = 200
+
+        # determine an appropriate Yaxis Inverval.
+        $Yaxis | ForEach-Object {
+            if ($Max -gt $_.Limit) {
+                $Yint = $_.Interval
+            }
         }
-        Elseif ($Max -lt 20000) {
-            $Area1.AxisY.Interval = 1000
-        }
-        Else {
-            $Area1.AxisY.Interval = 2000
-        }
+        $Area1.AxisY.Interval = $Yint
+
+        # title for second Y axis
         $Area1.AxisY2.Title = "Throughput (Mbps)"
         $Area1.AxisY2.TitleFont = $ChartTitleFont
         $Area1.AxisY2.LabelStyle.Font = $ChartLabelFont
@@ -710,11 +751,12 @@ function Get-SVTmetricChart {
         $Area1.AxisY2.MajorGrid.Enabled = $false
         $Area1.AxisY2.Enabled = $AxisEnabled::true
 
+        # Add Area to chart
         $Chart1.ChartAreas.Add($Area1)
         $Chart1.ChartAreas["ChartArea1"].AxisY.LabelStyle.Angle = 0
         $Chart1.ChartAreas["ChartArea1"].AxisX.LabelStyle.Angle = -45
 
-        # legend
+        # legend to chart
         $Legend = New-Object system.Windows.Forms.DataVisualization.Charting.Legend
         $Legend.name = "Legend1"
         $Chart1.Legends.Add($Legend)
@@ -837,16 +879,16 @@ function Get-SVTcapacityChart {
         $Cap = $Capacity | Where-Object Hostname -eq $Instance | Select-Object -Last 1
 
         $DataSource = [ordered]@{
+            'Allocated Capacity'          = $Cap.AllocatedCapacity / 1GB
+            'Used Capacity'               = $Cap.UsedCapacity / 1GB
             'Used Logical Capacity'       = $Cap.UsedLogicalCapacity / 1GB
+            'Free Space'                  = $Cap.FreeSpace / 1GB
             'Capacity Savings'            = $Cap.CapacitySavings / 1GB
+            'Local Backup Capacity'       = $Cap.LocalBackupCapacity / 1GB
             'Remote Backup Capacity'      = $Cap.RemoteBackupCapacity / 1GB
             'Stored Compressed Data'      = $Cap.StoredCompressedData / 1GB
-            'Allocated Capacity'          = $Cap.AllocatedCapacity / 1GB
-            'Local Backup Capacity'       = $Cap.LocalBackupCapacity / 1GB
-            'Used Capacity'               = $Cap.UsedCapacity / 1GB
             'Stored Uncompressed Data'    = $Cap.StoredUncompressedData / 1GB
             'Stored Virtual Machine Data' = $Cap.StoredVirtualMachineData / 1GB
-            'Free Space'                  = $Cap.FreeSpace / 1GB
         }
 
         # chart object
@@ -913,6 +955,31 @@ function Get-SVTcapacityChart {
     }
 }
 
+# Helper function for Get-SVTdisk
+function Get-SVTmodel {
+    #Not supporting 380 Gen10 H yet - 4X1.192TB SSD and 8X4TB HDD. Need to see hardware 
+    $ModelNumer = ('325','325','2600','380','380','380','380','380')
+    $DiskCount = (4,6,6,5,5,9,12,12)
+    $DiskCapacity = (2,2,2,1,2,2,2,4)
+    $Kit = ('4-8TB - SVT325 Extra Small',
+        '7-15TB - SVT325 Small',
+        '7-15TB - SVT2600',
+        '3-6TB - SVT380Gen10 Extra Small',
+        '6-12TB - SVT380Gen10 Small',
+        '12-25TB - SVT380Gen10 Medium',
+        '20-40TB - SVT380Gen10 Large',
+        '40-80TB - SVT380Gen10 Extra Large'
+    )
+    
+    0..7 | foreach-object {
+        [PSCustomObject]@{
+            ModelNumber = $ModelNumer[$_]
+            DiskCount = $DiskCount[$_]
+            DiskCapacity = $DiskCapacity[$_]
+            StorageKit = $Kit[$_]
+        }
+    }
+}
 
 #endregion Utility
 
@@ -1018,7 +1085,7 @@ function Get-SVTbackup {
         [switch]$Latest,
 
         [Parameter(Mandatory = $false)]
-        [ValidateRange(1, 3000)]   # There is a known issue with /backups API. HPE recommends 500 default, 3000 maximum (OMNI-53190)
+        [ValidateRange(1, 3000)]   # There is a known performance issue with /backups API. HPE recommends 500 default, 3000 maximum (OMNI-53190)
         [Int]$Limit = 500
     )
 
@@ -1028,14 +1095,16 @@ function Get-SVTbackup {
         'Accept'                = 'application/json'
     }
 
-    # Just so we can display the date correctly with correct locale display date.
+    # Display the date with the correct locale display date.
+    # However, we want 2 digits with day, month and hour for date alignment - these adjustments don't fix all locales, but they don't break any either.
     $culture = (Get-Culture).DateTimeFormat
-    $LocalFormat = "$($culture.ShortDatePattern) $($culture.LongTimePattern)"
+    $LocalDate = "$($culture.ShortDatePattern)" -creplace '^d/','dd/' -creplace '^M/','MM/' -creplace '/d/','/dd/'
+    $LocalTime = "$($culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm','HH:mm'
+    $LocalFormat = "$LocalDate $LocalTime"
 
     $BackupObject = @()
 
-    # $Hour is used to filter via API if no other property is specified AND by this function later if another property is specified.
-    # This is why a default is not specified in param block.
+    # $Hour is used to filter via API if no other property is specified.
     if ($Hour) {
         $StartDate = (Get-Date).AddHours(-$Hour)
         $DisplayHour = $Hour
@@ -1100,20 +1169,20 @@ function Get-SVTbackup {
 
     $Response.backups | ForEach-Object {
         if ($_.created_at -as [datetime]) {
-            $CreateDate = Get-Date -Date $_.created_at
+            $CreateDate = Get-Date -Date $_.created_at -Format $LocalFormat
         }
         else {
             $CreateDate = $null
         }
         if ($_.unique_size_timestamp -as [DateTime]) {
-            $UniqueSizeDate = Get-Date -Date $_.unique_size_timestamp
+            $UniqueSizeDate = Get-Date -Date $_.unique_size_timestamp -Format $LocalFormat
         }
         else {
             $UniqueSizeDate = $null
         }
 
         if ($_.expiration_time -as [Datetime]) {
-            $ExpirationDate = Get-Date -Date $_.expiration_time
+            $ExpirationDate = Get-Date -Date $_.expiration_time -Format $LocalFormat
         }
         else {
             $ExpirationDate = $null
@@ -1160,11 +1229,11 @@ function Get-SVTbackup {
     # Finally, if -Latest was specified, just display the lastest backup of each VM
     # (or more correctly, ONE of the latest - its possible to have 2 rules in a policy to backup a VM to 2 destinations at once).
     if ($Latest) {
-        Write-Verbose "The -Latest parameter was specified, show only (one of) the latest backup of each VM in the pipeline"
-        $VMlist = ($BackupObject).VMname | Sort-Object -Unique
-        foreach ($VM in $VMlist) {
-            $BackupObject | Where-Object VMname -eq $VM | Sort-Object CreateDate -Descending | Select-Object -First 1
-        }
+        Write-Verbose "The -Latest parameter was specified, show only the latest backup of each VM from the requested backups"
+        $BackupObject | 
+            ForEach-Object { $_.CreateDate = [datetime]::ParseExact($_.CreateDate, $LocalFormat, $null); $_} |
+            Group-Object VMname |
+            ForEach-Object {$_.Group | Sort-Object CreateDate | Select-Object -Last 1}
     }
     else {
         $BackupObject
@@ -1923,10 +1992,14 @@ function Get-SVTdatastore {
         throw $_.Exception.Message
     }
 
+    $culture = (Get-Culture).DateTimeFormat
+    $LocalDate = "$($culture.ShortDatePattern)" -creplace '^d/','dd/' -creplace '^M/','MM/' -creplace '/d/','/dd/'
+    $LocalTime = "$($culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm','HH:mm'
+    $LocalFormat = "$LocalDate $LocalTime"
 
     $Response.datastores | ForEach-Object {
         if ($_.created_at -as [datetime]) {
-            $CreateDate = Get-Date -Date $_.created_at
+            $CreateDate = Get-Date -Date $_.created_at -Format $LocalFormat
         }
         else {
             $CreateDate = $null
@@ -2484,9 +2557,14 @@ function Get-SVThost {
         throw $_.Exception.Message
     }
 
+    $culture = (Get-Culture).DateTimeFormat
+    $LocalDate = "$($culture.ShortDatePattern)" -creplace '^d/','dd/' -creplace '^M/','MM/' -creplace '/d/','/dd/'
+    $LocalTime = "$($culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm','HH:mm'
+    $LocalFormat = "$LocalDate $LocalTime"
+    
     $Response.hosts | Foreach-Object {
         if ($_.date -as [datetime]) {
-            $Date = Get-Date -Date $_.date
+            $Date = Get-Date -Date $_.date -Format $LocalFormat
         }
         else {
             $Date = $null
@@ -2580,7 +2658,7 @@ function Get-SVThardware {
             'Accept'                = 'application/json'
         }
 
-        $Allhost = Get-SVThost  # Rest call once, outside loop
+        $Allhost = Get-SVThost
         if (-not $HostName) {
             $HostName = $AllHost | Select-Object -ExpandProperty HostName
         }
@@ -2614,9 +2692,65 @@ function Get-SVThardware {
                     AcceleratorCard  = $_.accelerator_card
                     LogicalDrives    = $_.logical_drives
                 }
-            }
+            } #end foreach-object
+        } # end foreach
+    } # end process
+}
+
+function Get-SVTdisk {
+[CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
+        [System.String[]]$HostName
+    )
+
+    begin {
+        $Hardware = Get-SVThardware
+        if (-not $HostName) {
+            $HostName = $Hardware.Hostname
         }
     }
+
+    process {
+        foreach ($Thishost in $HostName) {
+            $HostHardware = $Hardware | Where-Object HostName -eq $Thishost
+            
+            $Disk = ($HostHardware.logicaldrives | Select-Object -First 1).drive_sets.physical_drives
+            $DiskCapacity = [math]::Round(($Disk | Select-Object -First 1).capacity / 1TB)
+            $DiskCount = ($Disk | Measure-Object).Count
+            
+            $SVTmodel = Get-SVTmodel | Where-Object {
+                $HostHardware.ModelNumber -match $_.ModelNumber -and
+                $DiskCount -eq $_.DiskCount -and
+                $DiskCapacity -eq $_.DiskCapacity
+            }
+
+            if ($SVTmodel) {
+                $Kit = $SVTmodel.StorageKit
+            }
+            else {
+                $Kit = 'Unknown Storage Kit'
+            }
+
+            $Disk | ForEach-Object {
+                [pscustomobject]@{
+                    PSTypeName       = 'HPE.SimpliVity.Disk'
+                    Hostname         = $ThisHost
+                    SerialNumber     = $_.serial_number
+                    Manufacturer     = $_.manufacturer
+                    ModelNumber      = $_.model_number
+                    Firmware         = $_.firmware_revision
+                    Status           = $_.status
+                    Health           = $_.health
+                    Enclosure        = $_.enclosure
+                    Slot             = $_.slot
+                    CapacityTB       = "{0:n2}" -f ($_.capacity / 1000000000000)
+                    WWN              = $_.wwn
+                    HostStorageKit   = $Kit
+                }
+            } 
+        } #end foreach
+    } #end process
 }
 
 <#
@@ -2699,11 +2833,15 @@ function Get-SVTcapacity {
         if (-not $HostName) {
             $HostName = $Allhost | Select-Object -ExpandProperty HostName
         }
+
+        $culture = (Get-Culture).DateTimeFormat
+        $LocalDate = "$($culture.ShortDatePattern)" -creplace '^d/','dd/' -creplace '^M/','MM/' -creplace '/d/','/dd/'
+        $LocalTime = "$($culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm','HH:mm'
+        $LocalFormat = "$LocalDate $LocalTime"
     }
 
     process {
         foreach ($Thishost in $Hostname) {
-            # Get the HostId for this host
             $HostId = ($Allhost | Where-Object HostName -eq $Thishost).HostId
 
             $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $HostId + '/capacity?time_offset=' +
@@ -2715,12 +2853,12 @@ function Get-SVTcapacity {
                 throw $_.Exception.Message
             }
 
-            # Unpack the Json into a Custom object. This outputs each Metric with a date and value
+            # Unpack the Json into a Custom object. This returns each Metric with a date and value
             $CustomObject = $Response.metrics | foreach-object {
                 $MetricName = ($_.name -split '_' | ForEach-Object { (Get-Culture).TextInfo.ToTitleCase($_) }) -join ''
                 $_.data_points | ForEach-Object {
                     if ($_.date -as [DateTime]) {
-                        $Date = Get-Date -Date $_.date
+                        $Date = Get-Date -Date $_.date -Format $LocalFormat
                     }
                     else {
                         $Date = $null
@@ -2733,7 +2871,7 @@ function Get-SVTcapacity {
                 }
             }
 
-            #Transpose the custom object to output each date with the value for each metric
+            # Transpose the custom object to return each date with the value for each metric
             $CapacityObject = $CustomObject | Sort-Object -Property Date | Group-Object -Property Date | ForEach-Object {
                 $Property = [ordered]@{
                     PStypeName = 'HPE.SimpliVity.Capacity'
@@ -2848,90 +2986,118 @@ function Remove-SVThost {
 
 <#
 .SYNOPSIS
-    Shutdown one or more Omnistack Virtual Controllers
+    Shutdown a HPE Omnistack Virtual Controller
 .DESCRIPTION
      Ideally, you should only run this command when all the VMs in the cluster
-     have been shutdown, or if you intend to leave OVC's running in the cluster.
+     have been shutdown, or if you intend to leave virtual controllers running in the cluster.
 
-     This RESTAPI call only works if executed on the local host to the OVC. So this cmdlet
-     iterates through the specifed hosts and connects to each specified host to sequentially shutdown
-     the local OVC.
+     This RESTAPI call only works if executed on the local host to the virtual controller. So this command
+     connects to the virtual controller on the specifed host to shut it down.
 
-     Note, once executed, you'll need to reconnect back to a surviving OVC, using Connect-SVT to continue
-     using the HPE SimpliVity cmdlets.
+     Note: Once the shutdown is executed on the specified host, this command will reconnect to another operational
+     virtual controller in the Federation, using the same credentials, if there is one.
 .EXAMPLE
     PS C:\> Start-SVTshutdown -HostName <Name of SimpliVity host>
 
-    This command waits for the affected VMs to be HA compliant, which is ideal.
+    if not the last operational virtual controller, this command waits for the affected VMs to be HA compliant. If it
+    is the last virtual controller, the shutdown does not wait for HA compliance.
+
+    You will be prompted before the shutdown. If this is the last virtual controller, ensure all virtual machines are powered off,
+    otherwise there may be loss of data.
 .EXAMPLE
-    PS C:\> Get-SVThost -Cluster MyCluster | Start-SVTshutdown -Force
+    PS C:\> Start-SVTshutdown -HostName Host01 -Confirm:$false
 
-    Shutdown each OVC in the specified cluster. With the -Force switch, we are NOT waiting for HA. This
-    command is useful when shutting down the entire SimpliVity cluster. This cmdlet ASSUMES you have ideally
-    shutdown all the VMs in the cluster prior to powering off the OVCs.
-
-    HostName is passed in from the pipeline, using the property name
+    Shutdown the specified virtual controller without confirmation. If this is the last virtual controller, ensure all virtual
+    machines are powered off, otherwise there may be loss of data.
 .EXAMPLE
-    PS C:\> '10.10.57.59','10.10.57.61' | Start-SVTshutdown -Force
+    PS C:\> Start-SVTshutdown -HostName Host01 -Whatif -Verbose
 
-    Shutdown the specified OVCs one after the other. This cmdlet assumes you have ideally shutdown all the affected VMs
-    prior to powering off the OVCs.
-
-    Hostname is passed in them the pipeline by value. Same as:
-    Start-SVTshutdown -Hostname @('10.10.57.59','10.10.57.61') -Force
+    Reports on the shutdown operation, including connecting to the virtual controller, without actually performing the shutdown.
 .INPUTS
     System.String
-    HPE.SimpliVity.Host
 .OUTPUTS
     System.Management.Automation.PSCustomObject
 .NOTES
 #>
 function Start-SVTshutdown {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess=$true,ConfirmImpact='High')]
     param (
-        [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
-        [Alias("Name")]
-        [System.String[]]$HostName,
-
-        [Switch]$Force
+        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'ByHostName')]
+        [System.String]$HostName
     )
 
-    begin {
+    $VerbosePreference = 'Continue'
+    try {
+        $AllHost = Get-SVThost -ErrorAction Stop
+        $ThisHost = $AllHost | Where-Object HostName -eq $HostName
+        $NextHost = $AllHost | Where-Object {$_.HostName -ne $HostName -and $_.State -eq 'ALIVE'} | Select-Object -First 1 # so we can reconnect afterwards
+        $ThisCluster = $ThisHost | Select-Object -First 1 -ExpandProperty Clustername
+
+        $LiveHost = $Allhost | Where-Object {$_.ClusterName -eq $ThisCluster -and $_.State -eq 'ALIVE'} | Measure-Object | Select-Object -ExpandProperty Count
+
+        $AllHost | Where-Object ClusterName -eq $ThisCluster | ForEach-Object {
+            Write-Verbose "Current state of host $($_.Hostname) in cluster $ThisCluster is $($_.State)" 
+        }
+    }
+    catch {
+        throw $_.Exception.Message
+    }
+
+    # Exit if the virtual controller is already off
+    if($ThisHost.State -ne 'ALIVE') {
+        throw "The HPE Omnistack Virtual Controller on $($ThisHost.Hostname) is not running"
+    } 
+
+
+    if ($nexthost) {
+        Write-Verbose "This command will reconnect to $($nexthost.Hostname) following the shutdown of the virtual controller on $($ThisHost.Hostname)"
+    }
+    else {
+        Write-Verbose "This is the last operational HPE Omnistack Virtual Controller in the federation, reconnect not possible"
+    }
+
+ 
+    # Connect to the target virtual controller, using the existing credentials saved to $SVTconnection
+    try {
+        Write-Verbose "Connecting to $($ThisHost.VirtualControllerName) on host $($ThisHost.Hostname)..."
+        Connect-SVT -OVC $ThisHost.ManagementIP -Credential $SVTconnection.Credential | Out-Null
+        Write-Verbose "Successfully connected to $($ThisHost.VirtualControllerName) on host $($ThisHost.Hostname)"
+    }
+    catch {
+        throw $_.Exception.Message
+    }
+
+    $Body = @{'ha_wait' = $true } | ConvertTo-Json      
+    $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
+        'Accept'                = 'application/json'
+        'Content-Type'          = 'application/json'
+    }
+    $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $ThisHost.HostId + '/shutdown_virtual_controller'
+    Write-Verbose $Body
+
+    # Confirm if this is the last running virtual controller in this cluster
+    Write-Verbose "$LiveHost operational HPE Omnistack virtual controller(s) in the $ThisCluster cluster"
+    If ($LiveHost -lt 2) {
+        Write-Warning "This is the last Omnistack virtual controller running in the $ThisCluster cluster"
+        Write-Warning "Using this command with confirm turned off could result in loss of data if you have not already powered off all virtual machines"
+    }
+
+    # Only execute the command if confirmed. Using -Whatif will report only
+    if ($PSCmdlet.ShouldProcess("$($ThisHost.Hostname)","Shutdown virtual controller in cluster $ThisCluster")) {
         try {
-            $allHosts = Get-SVThost -ErrorAction Stop
+            $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
         }
         catch {
             throw $_.Exception.Message
         }
-    }
 
-    process {
-        foreach ($thisHostName in $Hostname) {
-            $thisHost = $allHosts | Where-Object Hostname -eq $thisHostName
-            Write-Verbose $($thishost | Select-Object Hostname, HostId)
+        if ($LiveHost -lt 2) {
+            Write-Verbose 'Sleeping 10 seconds before issuing final shutdown...'
+            Start-Sleep -Seconds 10
 
-            # connect to this host, using the existing credentials saved to global variable
-            Connect-SVT -OVC $thisHost.ManagementIP -Credential $SVTconnection.Credential | Out-Null
-            Write-Verbose $SVTconnection
-
-            # Now shutdown the OVC on this host
-            $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
-                'Accept'                = 'application/json'
-                'Content-Type'          = 'application/json'
-            }
-
-            if ($Force) {
-                # Don't wait for HA, powerdown the OVC without waiting
-                $Body = @{'ha_wait' = $false } | ConvertTo-Json
-            }
-            else {
-                # Wait for all affected VMs to be HA compliant.
-                $Body = @{'ha_wait' = $true } | ConvertTo-Json
-            }
+            # Instruct the shutdown task running on the last virtual controller in the cluster not to wait for HA compliance
+            $Body = @{'ha_wait' = $false } | ConvertTo-Json
             Write-Verbose $Body
-
-            $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $thisHost.HostId + '/shutdown_virtual_controller'
-
             try {
                 $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
             }
@@ -2939,17 +3105,35 @@ function Start-SVTshutdown {
                 throw $_.Exception.Message
             }
 
-            $Response.Shutdown_Status | ForEach-Object {
-                [PSCustomObject]@{
-                    VirtualControllerIP = $thisHost.ManagementIP
-                    ShutdownStatus    = $_.Status
-                }
+            Write-Output "Shutting down the last virtual controller in the $ThisCluster cluster now ($($ThisHost.Hostname))"  
+        }
+        
+
+        if ($nexthost) {
+            try {
+                Write-Verbose "Reconnecting to $($nexthost.VirtualControllerName) on $($nexthost.Hostname)..."
+                Connect-SVT -OVC $nextHost.ManagementIP -Credential $SVTconnection.Credential | Out-Null
+                Write-Verbose "Successfully reconnected to $($nexthost.VirtualControllerName) on $($nexthost.Hostname)"
+                $OVCrunning=$true
+                Write-Verbose "Wait to allow the storage IP to failover to an operational virtual controller. This may take a long time if the host is running virtual machines."
+                do {
+                    Write-verbose "Waiting 30 seconds, do not issue additional shutdown commands until this operation completes..."
+                    Start-Sleep -Seconds 30
+                    $OVCstate = Get-SVThost -HostName $($ThisHost.Hostname) | Select-Object -ExpandProperty State
+                    if($OVCstate -eq "FAULTY") {
+                        $OVCrunning=$false
+                    }
+                } while ($OVCrunning)
+
+                Write-Output "Successfully shutdown the virtual controller on $($ThisHost.Hostname)"
+            }
+            catch {
+                throw $_.Exception.Message
             }
         }
-    }
-
-    end {
-        #should test for and reconnect to a survivng OVC if one exists.
+        else {
+            Write-Verbose "This was the last operational HPE Omnistack Virtual Controller in the Federation, reconnect not possible"
+        }   
     }
 }
 
@@ -3010,15 +3194,15 @@ function Get-SVTshutdownStatus {
     }
 
     process {
-        foreach ($thisHostName in $Hostname) {
-            $thisHost = $allHosts | Where-Object Hostname -eq $thisHostName
+        foreach ($ThisHostName in $Hostname) {
+            $ThisHost = $allHosts | Where-Object Hostname -eq $ThisHostName
 
             try {
-                Connect-SVT -OVC $thisHost.ManagementIP -Credential $SVTconnection.Credential -ErrorAction Stop | Out-Null
+                Connect-SVT -OVC $ThisHost.ManagementIP -Credential $SVTconnection.Credential -ErrorAction Stop | Out-Null
                 Write-Verbose $SVTconnection
             }
             catch {
-                Write-Error "Error connecting to $($thisHost.ManagementIP) (host $thisHostName). Check that it is running"
+                Write-Error "Error connecting to $($ThisHost.ManagementIP) (host $ThisHostName). Check that it is running"
                 break
             }
 
@@ -3027,21 +3211,21 @@ function Get-SVTshutdownStatus {
                 'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
             }
 
-            $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $thisHost.HostId + '/virtual_controller_shutdown_status'
+            $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $ThisHost.HostId + '/virtual_controller_shutdown_status'
 
             try {
                 $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
             }
             catch {
-                Write-Error "Error connecting to $($thisHost.ManagementIP) (host $thisHostName). Check that it is running"
+                Write-Error "Error connecting to $($ThisHost.ManagementIP) (host $ThisHostName). Check that it is running"
                 break
             }
 
             $Response.shutdown_status | ForEach-Object {
                 [PSCustomObject]@{
-                    HostName = $thisHostName
-                    VirtualControllerName = $thisHost.ManagementName
-                    VirtualControllerIP   = $thisHost.ManagementIP
+                    HostName = $ThisHostName
+                    VirtualControllerName = $ThisHost.ManagementName
+                    VirtualControllerIP   = $ThisHost.ManagementIP
                     ShutdownStatus        = $_.Status
                 }
             }
@@ -3089,13 +3273,13 @@ function Stop-SVTshutdown {
     }
 
     process {
-        foreach ($thisHostName in $Hostname) {
+        foreach ($ThisHostName in $Hostname) {
             # grab this host object from the collection
-            $thisHost = $allHosts | Where-Object Hostname -eq $thisHostName
-            Write-Verbose $($thishost | Select-Object Hostname, HostId)
+            $ThisHost = $allHosts | Where-Object Hostname -eq $ThisHostName
+            Write-Verbose $($ThisHost | Select-Object Hostname, HostId)
 
             # Now connect to this host, using the existing credentials saved to global variable
-            Connect-SVT -OVC $thisHost.ManagementIP -Credential $SVTconnection.Credential | Out-Null
+            Connect-SVT -OVC $ThisHost.ManagementIP -Credential $SVTconnection.Credential | Out-Null
             Write-Verbose $SVTconnection
 
             # cancel shutdown the OVC on this host
@@ -3105,7 +3289,7 @@ function Stop-SVTshutdown {
             }
 
 
-            $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $thisHost.HostId + '/cancel_virtual_controller_shutdown'
+            $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $ThisHost.HostId + '/cancel_virtual_controller_shutdown'
 
             try {
                 $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Post -ErrorAction Stop
@@ -3116,7 +3300,7 @@ function Stop-SVTshutdown {
 
             $Response.cancellation_status | ForEach-Object {
                 [PSCustomObject]@{
-                    VirtualController = $thisHost.ManagementIP
+                    VirtualController = $ThisHost.ManagementIP
                     CancellationStatus = $_.Status
                 }
             }
@@ -3242,9 +3426,14 @@ function Get-SVTthroughput {
         throw $_.Exception.Message
     }
 
+    $culture = (Get-Culture).DateTimeFormat
+    $LocalDate = "$($culture.ShortDatePattern)" -creplace '^d/','dd/' -creplace '^M/','MM/' -creplace '/d/','/dd/'
+    $LocalTime = "$($culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm','HH:mm'
+    $LocalFormat = "$LocalDate $LocalTime"
+
     $Response | ForEach-Object {
         if ($_.date -as [DateTime]) {
-            $Date = Get-Date -Date $_.date
+            $Date = Get-Date -Date $_.date -Format $LocalFormat
         }
         else {
             $Date = $null
@@ -4395,11 +4584,14 @@ Known issues:
 OMNI-69918 - GET calls for virtual machine objects may result in OutOfMemortError when exceeding 8000 objects
 #>
 function Get-SVTvm {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'ByVMname')]
     param (
-        [Parameter(Mandatory = $false, Position = 0)]
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByVMName')]
         [Alias("Name")]
         [System.String]$VMname,
+
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ById')]
+        [System.String]$Id,
 
         [Parameter(Mandatory = $false, Position = 1)]
         [System.String]$DataStoreName,
@@ -4420,7 +4612,7 @@ function Get-SVTvm {
     )
 
     begin {
-        $VerbosePreference = 'Continue'
+        # $VerbosePreference = 'Continue'
 
         $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
             'Accept'                = 'application/json'
@@ -4448,6 +4640,9 @@ function Get-SVTvm {
         if ($VMname) {
             $Uri += "&name=$VMname"
         }
+        if ($Id) {
+            $Uri += "&id=$Id"
+        }
         if ($DataStoreName) {
             $Uri += "&datastore_name=$DataStoreName"
         }
@@ -4474,18 +4669,23 @@ function Get-SVTvm {
             Write-Warning "There are $VMCount matching virtual machines, but limited to displaying only $Limit. Either increase -Limit or use more restrictive parameters"
         }
         else {
-            Write-Verbose "There are $VMCount matching virtual machines"
+            # Write-Verbose "There are $VMCount matching virtual machines"
         }
+
+        $culture = (Get-Culture).DateTimeFormat
+        $LocalDate = "$($culture.ShortDatePattern)" -creplace '^d/','dd/' -creplace '^M/','MM/' -creplace '/d/','/dd/'
+        $LocalTime = "$($culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm','HH:mm'
+        $LocalFormat = "$LocalDate $LocalTime"
 
         $Response.virtual_machines | ForEach-Object {
             if ($_.created_at -as [datetime]) {
-                $CreateDate = Get-Date -Date $_.created_at
+                $CreateDate = Get-Date -Date $_.created_at -Format $LocalFormat
             }
             else {
                 $CreateDate = $null
             }
             if ($_.deleted_at -as [DateTime]) {
-                $DeletedDate = Get-Date -Date $_.deleted_at
+                $DeletedDate = Get-Date -Date $_.deleted_at -format $LocalFormat
             }
             else {
                 $DeletedDate = $null
@@ -4608,17 +4808,13 @@ function Get-SVTvmReplicaSet {
 .SYNOPSIS
     Clone one or more Virtual Machines hosted on SimpliVity storage/hosts
 .DESCRIPTION
-     This cmdlet will clone a given VM or VMs up to five times. It accepts multiple
-     SimpliVity Virtual Machine objects and will execute four clone operations
-     simultaneously. If there are multiple clones, the cmdlet waits so that only a
-     maximum of four clones are executing at once.
-
-     If executing multiple clone operations, it is recommended to specify the -verbose
-     parameter so you can monitor what is going on.
+     This cmdlet will clone a given VM or VMs up to 20 times. It accepts multiple
+     SimpliVity Virtual Machine objects and will execute 4 clone operations
+     simultaneously, waiting so that only maximum of 4 clones are executing at once.
 .PARAMETER VMname
     Specify one or more VMs to clone
 .PARAMETER NumberOfClones
-    Specify the number of clones - 1 to 5.
+    Specify the number of clones, 1 to 20.
 .PARAMETER AppConsistent
     An indicator to show if the backup represents a snapshot of a virtual machine with data that
     was first flushed to disk
@@ -4665,16 +4861,18 @@ function New-SVTclone {
     )
 
     begin {
+        $VerbosePreference = 'Continue'
+
         $Header = @{'Authorization' = "Bearer $($global:SVTconnection.Token)"
             'Accept'                = 'application/json'
             'Content-Type'          = 'application/vnd.simplivity.v1.1+json'
         }
 
         if ($NumberOfClones -gt 1) {
-            Write-Warning "When cloning the same VM(s) multiple times using -NumberOfClones, clones are performed one at a time"
+            Write-Verbose "When cloning the same VM(s) multiple times using -NumberOfClones, clones are performed one at a time"
         }
         else {
-            Write-Warning "When cloning multiple VMs, a maximum of four clones can run at a time"
+            Write-Verbose "When cloning multiple VMs, a maximum of four clone tasks can run at a time"
         }
 
         try {
@@ -4709,6 +4907,7 @@ function New-SVTclone {
                     $CloneName = "$CloneName-clone-$(Get-Date -Format 'yyMMddhhmmss')"
                 }
 
+                Write-Verbose "Creating clone $CloneName from $VM"
                 $VmId = ($allVm | Where-Object VMname -eq $VM).VmId
 
                 $Body = @{'virtual_machine_name' = $CloneName
@@ -4730,17 +4929,17 @@ function New-SVTclone {
                 $Task
 
                 # Rules are:
-                # 1. If cloning the same VM, we can only do 1 at a time
-                # 2. If cloning different VMs, we can only do 4 at a time
+                # 1. If cloning the same VM, we will only do 1 at a time
+                # 2. If cloning different VMs, we can only do 4 at a time, as per current recommendations
                 while ($true) {
                     $ActiveTask = Get-SVTtask -Task $AllTask |
-                    Where-Object State -eq "IN_PROGRESS" |
-                    Measure-Object |
-                    Select-Object -ExpandProperty Count
-                    Write-Output "There are $ActiveTask active cloning tasks"
+                        Where-Object State -eq "IN_PROGRESS" |
+                        Measure-Object |
+                        Select-Object -ExpandProperty Count
+                    Write-Verbose "There are $ActiveTask active cloning tasks"
 
                     if ($ActiveTask -ge $AllowedTask) {
-                        Write-Output "Sleeping 5 seconds, only cloning $AllowedTask at a time"
+                        Write-Verbose "Sleeping 5 seconds, only cloning $AllowedTask at a time"
                         Start-Sleep -Seconds 5
                     }
                     else {

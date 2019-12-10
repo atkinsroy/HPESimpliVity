@@ -21,12 +21,12 @@
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>25</Width>
-                        <Alignment>left</Alignment>
-                    </TableColumnHeader>
-                    <TableColumnHeader>
                         <Width>10</Width>
                         <Alignment>right</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>25</Width>
+                        <Alignment>left</Alignment>
                     </TableColumnHeader>
                 </TableHeaders>
                 <TableRowEntries>
@@ -42,10 +42,10 @@
                                 <PropertyName>ClusterName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>PolicyName</PropertyName>
+                                <PropertyName>SizeGB</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>SizeGB</PropertyName>
+                                <PropertyName>PolicyName</PropertyName>
                                 <FormatString>{0:N0}</FormatString>
                             </TableColumnItem>
                         </TableColumnItems>

@@ -16,7 +16,7 @@ This script is used to shutdown an entire HPE SimpliVity cluster. The script use
 
 For the purposes of illustration, the script has a concept of VM shutdown order, using VMware tags on the VMs. The idea here would be to shutdown application servers first, then databases and finally, critical infrastructure servers, like Active Directory and DNS.
 
-The prerequisite for this to work is that, obviously, vCenter cannot be running on a VM in the cluster you're shutting down. The main pupose of this script is to gracefully shutdown the specified cluster in a power failure to ensure there is no data loss. It could be executed from UPS software that supports running external commands (again, the UPS software must be running outside of the cluster). 
+The prerequisite for this to work is that vCenter cannot be running on a VM in the cluster you're shutting down. The main purpose of this script is to gracefully shutdown the specified cluster following a power failure to ensure there is no data loss. It could be executed from UPS software that supports running external commands (again, the UPS software must be running outside of the cluster). 
 
 Here's an example of what it does:
 ![This is what the script looks like](/Media/Image%20037.png)

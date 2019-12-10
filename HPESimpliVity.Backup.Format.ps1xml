@@ -17,12 +17,12 @@
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>22</Width>
-                        <Alignment>right</Alignment>
+                        <Width>23</Width>
+                        <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>22</Width>
-                        <Alignment>right</Alignment>
+                        <Width>23</Width>
+                        <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
                         <Width>12</Width>

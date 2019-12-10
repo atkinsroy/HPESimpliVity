@@ -2,8 +2,6 @@
 
 This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage a HPE SimpliVity federation. It works by connecting to any HPE OmniStack Virtual Controller in your environment.
 
-The module was written using V1.11 of the Rest API, which is shipped with HPE OmniStack 3.7.8 and includes the latest support for displaying Infosight information on SimpliVity clusters. The module has been tested and works with HPE OmniStack 3.7.7 and later. 
-
 All cmdlets are written as advanced cmdlets, with extensive comment based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records to 500 when returning virtual machines and backup objects.
 
 Most "Get" commands provide too many properties to show at once, so default display properties are shown. All properties are still accessible, by piping to Format-List or Select-Object -property *
@@ -55,9 +53,15 @@ Move-SVTvm | Start-SVTshutdown | Get-SVTtask
 Restore-SVTvm | Stop-SVTshutdown | Get-SVTtimezone
 Stop-SVTvm | Get-SVTshutdownStatus | Set-SVTtimezone
 Set-SVTvmPolicy | Get-SVTthroughput | Get-SVTversion
-Get-SVTvmReplicaSet
+Get-SVTvmReplicaSet | Get-SVTdisk
 
-## Latest update (V1.1.4)
+## Update V1.1.5 new features
+
+Show physical disk and storage kit information with the new Get-SVTdisk command.
+
+Properly shutdown a host, cluster or the entire federation, with the updated Start-SVTshutdown command. This function is accompanied with the utility script called ShutdownHPESimpliVityCluster.ps1 in the UtilityScripts folder, which will shutdown virtual machines in a specific order, then shuts down the virtual controllers and finally places the hosts into maintenance mode before shutting them down.
+
+## Update V1.1.4 features
 
 With V1.1.4, the Get-SVTmetric cmdlet now produces charts. You can create charts for clusters, hosts and virtual machines. Here's
 how it works:
@@ -85,11 +89,11 @@ This is a sample capacity chart:
 
 ![Here is a sample capacity chart](/Media/SVTcapacity-sample.png)
 
-**Note:** Both of these commands require Windows PowerShell (tested with V5.1 only). They do not work with PowerShell Core V6.x (.NET Core does not support Microsoft Chart Controls). Hopefully this will change when PowerShell 7.0 is released.
+**Note:** Both of these commands require Windows PowerShell (tested with V5.1 only). They will not work with PowerShell Core V6.x / V7.0 (.NET Core does not support Microsoft Chart Controls).
 
 ## Requirements
 
-* PowerShell V5.1 and above. This module was created and tested using PowerShell V5.1.
+* PowerShell V5.1 and above. (note that the chart features do not work with PowerShell Core 6.0/7.0)
 * The IP address and the credentials of an authorized OmniStack user account.
 * Tested with HPE OmniStack 3.7.7 and above. Both VMware and Hyper-V versions have been tested.
 
@@ -97,7 +101,7 @@ This is a sample capacity chart:
 
 * Install the HPESimplivity module from the PowerShell Gallery, using the following command:
 ```powershell
-    PS C:\> Install-Module -Name HPESimpliVity -RequiredVersion 1.1.4
+    PS C:\> Install-Module -Name HPESimpliVity -RequiredVersion 1.1.5
 ```
 The module is signed, so it will work with an execution policy set to Remote Signed.
 
