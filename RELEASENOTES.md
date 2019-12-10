@@ -3,9 +3,10 @@
 * Added Get-SVTdisk command. The information here was mostly already available from Get-SVThardware, but this command makes it much more readily available. It includes a list of physical disks with health, serial number, firmware and capacity. In addition, the storage kit installed is shown, derived from the host model, as well as number and capacity of the disks.
 * Updates to the Start-SVTshutdown command. This command now automatically reconnects to another operational virtual controller in the federation, if one exists, following the shutdown of the target virtual controller. It also automatically detects if the target virtual controller is the last one operational in the cluster and correctly handles shutting it down. Finally, the command waits for virtual controller to completly shutdown (allowing the storage IP to failover), which ensures proper sequential shutdown. This allows you to pass in multiple hosts at once. For example, to shutdown an entire cluster, enter the following:
 
-Get-SVThost -cluster <target cluster> | Start-SVTshutdown -Confirm:$True
+```powershell
+    PS C:\> Get-SVThost -cluster <target cluster> | Start-SVTshutdown -Confirm:$True
 
-In addition, the  command now has -Confirm and -Whatif paramaters.
+  In addition, the  command now has -Confirm and -Whatif paramaters.
 
 * Added an automatic reconnect feature so that the session is reestablished and the token is updated following the inactive timeout of the session 
 * Fixed dates for all cmdlets to support locale on the local computer.
