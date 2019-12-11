@@ -29,7 +29,7 @@ For example:
 ```
 
 
-The module contains 51 exported cmdlets, divided into the following feature categories:
+The module contains 52 exported cmdlets, divided into the following feature categories:
 
 Backups | Backup Policy | Datastore & Cluster
 --- | --- | ---
