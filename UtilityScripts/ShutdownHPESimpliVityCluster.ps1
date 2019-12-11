@@ -64,7 +64,7 @@ OTHER DEALINGS IN THE SOFTWARE.
             New-tag -Name ShutdownOrder2 -Category shutdown -Description "Backend servers - Shutdown after application servers"
             New-tag -Name ShutdownOrder3 -Category shutdown -Description "Application servers - Shutdown first"
        You can implement as many tags as you need, as long as you follow a standard naming convention. This can be altered using variables at the beginning
-       of the script. Using VM tags is optional, but highly recommended to unsure VMs are shutdown in a desired sequence.
+       of the script. Using VM tags is optional, but highly recommended to ensure VMs are shutdown in a desired sequence.
 
        Then assign these tags to your VMs using New-TagAssignment. For example:
             get-vm | where name -match "^RHEL8-0[1|2|3]" | New-TagAssignment -Tag ShutdownOrder1
@@ -89,10 +89,6 @@ OTHER DEALINGS IN THE SOFTWARE.
     An optional parameter which is required to actually perform the cluster shutdown. Without this, the script just reports about what it would do, 
     including what order it would power off VMs, shutdown virtual controllers and finally turn off the ESXi hosts. In either case, the script writes
     output to a log file.
-.INPUTS
-    System.String
-.OUTPUTS
-    System.String
 .EXAMPLE
     PS C:\> .\ShutdownHPESimpliVityCluster.ps1 -OVC 192.168.1.21 -ClusterName Cluster01
 
@@ -115,20 +111,19 @@ OTHER DEALINGS IN THE SOFTWARE.
     report mode, for example), no other prompts are made, so be sure this is what you want to do.
 .INPUTS
     System.String
-    HPE.SimpliVity.Host
 .OUTPUTS
-    System.Management.Automation.PSCustomObject
+    System.String
 .NOTES
 #>
 [cmdletBinding()]
 Param (
-    [Parameter(Mandatory=$true, Position=1, HelpMessage="A HPE OmniStack Virtual Controller in the Federation")]
+    [Parameter(Mandatory = $true, Position = 1, HelpMessage = "A HPE OmniStack Virtual Controller in the Federation")]
     [System.String]$OVC,
 
-    [Parameter(Mandatory=$true, Position=2)]
+    [Parameter(Mandatory = $true, Position = 2)]
     [System.String]$ClusterName,
 
-    [Parameter(Mandatory=$false, Position=3, HelpMessage="Without -Force, the script just reports without doing anything")]
+    [Parameter(Mandatory = $false, Position = 3, HelpMessage = "Without -Force, the script just reports without doing anything")]
     [Switch]$Force
 )
 
@@ -148,7 +143,7 @@ Param (
 
 # Prior to shutting down the virtual controllers, check one last time that all
 # VMs are statefully powered off. If this time is exceeded, power off the VM rather 
-# than shutting down the guest. Default is 2 minutes:
+# than shutting down the guest. The default is 2 minutes:
 
 [int]$TotalWaitSec = 180
 ####################################################################################
@@ -222,8 +217,8 @@ $NumberOfTags..1 | Foreach-Object {
         $VMcluster = Get-Cluster -Name $ClusterName -ErrorAction Stop
         $VMhost = $VMcluster | Get-VMhost -ErrorAction Stop # used later to shutdown hosts
         $VMlist = $VMcluster | Get-VM -Tag $Tag -ErrorAction Stop | 
-            Where-Object Name -notmatch 'OmniStackVC' | 
-            Where-Object PowerState -eq 'PoweredOn'
+        Where-Object Name -notmatch 'OmniStackVC' | 
+        Where-Object PowerState -eq 'PoweredOn'
         $VMcount = $VMlist | Measure-Object | Select-Object -ExpandProperty Count
         Write-Log "Found $VMcount powered on VMs on cluster $ClusterName with a shutdown order tag set to $Tag"
     }
@@ -274,10 +269,10 @@ $NumberOfTags..1 | Foreach-Object {
 Write-Log "Looking for any other powered on VMs on cluster $ClusterName with no/unrecognised tags"
 try {
     $VMlist = $VMcluster | 
-        Get-VM -ErrorAction Stop | 
-        Where-Object Name -NotMatch 'OmniStackVC' | 
-        Where-Object Name -NotIn $TaggedVM |
-        Where-Object PowerState -eq 'PoweredOn'
+    Get-VM -ErrorAction Stop | 
+    Where-Object Name -NotMatch 'OmniStackVC' | 
+    Where-Object Name -NotIn $TaggedVM |
+    Where-Object PowerState -eq 'PoweredOn'
 }
 catch {
     Write-Log "$_.Exception.Message" 2
@@ -307,23 +302,23 @@ foreach ($VM in $VMlist) {
 
 
 # Shutdown the virtual controllers, but wait until all other VMs are shutdown first
-[int]$WaitSec=0
+[int]$WaitSec = 0
 if ($Force) {
     do {
         try {
             $VMpoweredOn = $VMcluster | 
-                Get-VM -ErrorAction Stop | 
-                Where-Object Name -NotMatch 'OmniStackVC' | 
-                Where-Object PowerState -eq 'PoweredOn' | 
-                Measure-Object | 
-                Select-Object -ExpandProperty Count
+            Get-VM -ErrorAction Stop | 
+            Where-Object Name -NotMatch 'OmniStackVC' | 
+            Where-Object PowerState -eq 'PoweredOn' | 
+            Measure-Object | 
+            Select-Object -ExpandProperty Count
             if ($VMpoweredOn) {
                 if ($WaitSec -ge $TotalWaitSec) {
                     $VMname = $VMcluster | 
-                        Get-VM -ErrorAction Stop | 
-                        Where-Object Name -NotMatch 'OmniStackVC' | 
-                        Where-Object PowerState -eq 'PoweredOn' |
-                        Select-Object -ExpandProperty Name
+                    Get-VM -ErrorAction Stop | 
+                    Where-Object Name -NotMatch 'OmniStackVC' | 
+                    Where-Object PowerState -eq 'PoweredOn' |
+                    Select-Object -ExpandProperty Name
                     $VMname | ForEach-Object {
                         Write-Log "Could not shutdown the guest OS on VM $_ within the assigned time ($TotalWaitSec seconds); powering off $_" 1
                         Stop-VM -VM $_ -Confirm:$false | Out-Null
