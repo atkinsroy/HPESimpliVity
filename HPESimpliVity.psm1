@@ -2703,6 +2703,38 @@ function Get-SVThardware {
     } # end process
 }
 
+<#
+.SYNOPSIS
+    Display HPE SimpliVity physical disk information
+.DESCRIPTION
+    Shows physical disk information for the specifed host(s). This includes the
+    installed storage kit, which is not provided by the API, but it derived from
+    the host model, the number of disks and the disk capacities.
+.PARAMETER HostName
+    Show information for the specified host only
+.EXAMPLE
+    PS C:\> Get-SVTdisk
+
+    Shows physical disk information for all SimpliVity hosts in the federation.
+.EXAMPLE
+    PS C:\> Get-SVTdisk -HostName Host01
+
+    Shows physical disk information for the specified SimpliVity host.
+.EXAMPLE
+    PS C:\> Get-Svtdisk -HostName Host01 | Select-Object -First 1 | Format-List
+
+    Show all of the available information about the first disk on the specified host.
+.EXAMPLE
+    PC C:\> Get-SVThost -Cluster PROD | Get-SVTdisk
+
+    Shows physical disk information for all hosts in the specified cluster.
+.INPUTS
+    System.String
+    HPE.SimpliVity.Host
+.OUTPUTS
+    HPE.SimpliVity.Hardware
+.NOTES
+#>
 function Get-SVTdisk {
 [CmdletBinding()]
     param (
@@ -2721,11 +2753,14 @@ function Get-SVTdisk {
         foreach ($Thishost in $HostName) {
             $HostHardware = $Hardware | Where-Object HostName -eq $Thishost
             
-            # We MUST sort by slot, to ensure SSDs are at the top (380 H)
+            # We MUST sort by slot number to ensure SSDs are at the top to properly support 380 H
+            # This command removes duplicates - all models have at least two logical disks where physical
+            # disks would otherwise appear twice in the collection.
             $Disk = $HostHardware.logicaldrives.drive_sets.physical_drives | 
                 Sort-Object {[int]($_.Slot -replace '(\d+).*', '$1')} |
                 Get-Unique -AsString
             
+            # Check capacity of first disk in collection (works ok all most models - 380 H included, for now)
             $DiskCapacity = [math]::Round(($Disk | Select-Object -First 1).capacity / 1TB)
             $DiskCount = ($Disk | Measure-Object).Count
             
