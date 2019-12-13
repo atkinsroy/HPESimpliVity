@@ -956,11 +956,14 @@ function Get-SVTcapacityChart {
 }
 
 # Helper function for Get-SVTdisk
-function Get-SVTmodel {
-    #Not supporting 380 Gen10 H yet - 4X1.192TB SSD and 8X4TB HDD. Need to see hardware 
-    $ModelNumer = ('325','325','2600','380','380','380','380','380')
-    $DiskCount = (4,6,6,5,5,9,12,12)
-    $DiskCapacity = (2,2,2,1,2,2,2,4)
+# Notes: This method works quite well when all the disks are the same capacity. The 380 H introduces a bit
+# of a problem. As long as the disks are sorted by slot number (i.e. the first disk will always be an SSD), 
+# then the 380H disk capacity will be 1.92TB - the first disk is used to confirm. This method may break if 
+# additional models continue to be added.
+function Get-SVTmodel { 
+    $ModelNumer = ('325','325','2600','380','380','380','380','380','380 Gen10 H','380','380')
+    $DiskCount = (4,6,6,5,5,9,12,12,12,4,6)
+    $DiskCapacity = (2,2,2,1,2,2,2,4,2,2,2)
     $Kit = ('4-8TB - SVT325 Extra Small',
         '7-15TB - SVT325 Small',
         '7-15TB - SVT2600',
@@ -968,7 +971,10 @@ function Get-SVTmodel {
         '6-12TB - SVT380Gen10 Small',
         '12-25TB - SVT380Gen10 Medium',
         '20-40TB - SVT380Gen10 Large',
-        '40-80TB - SVT380Gen10 Extra Large'
+        '40-80TB - SVT380Gen10 Extra Large',
+        '20-50TB - SVT380Gen10H',           #4X1.92 SSD + 8X4TB HDD
+        '8-16TB - SVT380Gen10G 4X1.92TB',
+        '7-15TB - SVT380Gen10G 6X.192TB'
     )
     
     0..7 | foreach-object {
@@ -2715,7 +2721,11 @@ function Get-SVTdisk {
         foreach ($Thishost in $HostName) {
             $HostHardware = $Hardware | Where-Object HostName -eq $Thishost
             
-            $Disk = ($HostHardware.logicaldrives | Select-Object -First 1).drive_sets.physical_drives
+            # We MUST sort by slot, to ensure SSDs are at the top (380 H)
+            $Disk = $HostHardware.logicaldrives.drive_sets.physical_drives | 
+                Sort-Object {[int]($_.Slot -replace '(\d+).*', '$1')} |
+                Get-Unique -AsString
+            
             $DiskCapacity = [math]::Round(($Disk | Select-Object -First 1).capacity / 1TB)
             $DiskCount = ($Disk | Measure-Object).Count
             
@@ -2735,7 +2745,6 @@ function Get-SVTdisk {
             $Disk | ForEach-Object {
                 [pscustomobject]@{
                     PSTypeName       = 'HPE.SimpliVity.Disk'
-                    Hostname         = $ThisHost
                     SerialNumber     = $_.serial_number
                     Manufacturer     = $_.manufacturer
                     ModelNumber      = $_.model_number
@@ -2746,7 +2755,12 @@ function Get-SVTdisk {
                     Slot             = $_.slot
                     CapacityTB       = "{0:n2}" -f ($_.capacity / 1000000000000)
                     WWN              = $_.wwn
+                    PercentRebuilt   = $_.percent_rebuilt
+                    AddtionalStatus  = $_.additional_status
+                    MediaType        = $_.media_type
+                    DrivePosition    = $_.drive_position
                     HostStorageKit   = $Kit
+                    Hostname         = $ThisHost
                 }
             } 
         } #end foreach

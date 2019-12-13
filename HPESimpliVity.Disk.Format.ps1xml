@@ -9,10 +9,6 @@
             <TableControl>
                 <TableHeaders>
                     <TableColumnHeader>
-                        <Width>40</Width>
-                        <Alignment>left</Alignment>
-                    </TableColumnHeader>
-                    <TableColumnHeader>
                         <Width>13</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
@@ -37,20 +33,25 @@
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>13</Width>
+                        <Width>11</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>50</Width>
+                        <Width>4</Width>
+                        <Alignment>right</Alignment>
+                    </TableColumnHeader>
+		    <TableColumnHeader>
+                        <Width>33</Width>
+                        <Alignment>left</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                 </TableHeaders>
                 <TableRowEntries>
                     <TableRowEntry>
                         <TableColumnItems>
-                            <TableColumnItem>
-                                <PropertyName>HostName</PropertyName>
-                            </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>SerialNumber</PropertyName>
                             </TableColumnItem>
@@ -73,7 +74,13 @@
                                 <PropertyName>CapacityTB</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
+                                <PropertyName>Slot</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
                                 <PropertyName>HostStorageKit</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>HostName</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>
