@@ -1,35 +1,135 @@
-# This script creates a report for daily, weekly, monthly and failed backups based on the create date of the backups
+###############################################################################################################
+# DailyWeeklyMonthlyReport.ps1
+#
+# Description:
+#   This script creates a report for daily, weekly, monthly, long term and failed backups, based on the Expiry 
+#   date of the backups. Using -All might be slow. The API will show a maximum of 3000 records, so you might 
+#   need to filter if you have a larger environment. Some examples are provided at the bottom of the file.
+#
+# Requirements:
+#   HPEsimpliVity V1.1.5 and above
+#
+# Website:
+#   https://github.com/atkinsroy/HPESimpliVity
+#
+#   VERSION 1.2
+#
+#   AUTHOR
+#   Roy Atkins    HPE Pointnext Services
+#
+##############################################################################################################
 
-# It is assumed you have previously created a credential file using something similar to:
+<#
+(C) Copyright 2019 Hewlett Packard Enterprise Development LP
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+#>
+
+# Change IP address to match one of your virtual controllers
+$IP = 192.168.1.1
+
+# It is assumed you have previously created a credential file using, for example:
 #Get-Credential -Message 'Enter a password at prompt' -UserName 'administrator@vsphere.local' | Export-Clixml OVCcred.xml
-
-# It is assumed you have previously installed the HPESimpliVity module from PS Gallery, using:
-#Install-Module -Name HPESimpliVity -RequiredVersion 1.1.4
+$Cred = Import-Clixml .\OVCcred.xml
 
 # Connect is an OmniStack Virtual Controller in your environment:
-$IP = 192.168.1.1   # change this to match one of your virtual controllers
-$Cred = Import-Clixml .\OVCcred.xml
 Connect-SVT -OVC $IP -Credential $Cred
 
+# For a report suffix
 $TimeStamp = Get-Date -Format 'yyMMddhhmm'
 
-Write-Output 'Day old Backups...'
-Get-SVTbackup -Hour 24 -Limit 3000 | Export-Csv -Path DayOldBackup-$TimeStamp.csv -NoTypeInformation
-#Invoke-Item DailyBackup-$TimeStamp.csv
+# Initialize variables
+$DailyBackup = @()
+$WeeklyBackup = @()
+$MonthlyBackup = @()
+$OldBackup = @()
 
-Write-Output 'Week old Backups...'
-Get-SVTbackup -Hour (24 * 7) -Limit 3000 | Export-Csv -Path WeekOldBackup-$TimeStamp.csv -NoTypeInformation
+# Get the dates we want to report on - days in advance of today, because we're interested in the future expiry of backups
+$Daily = (Get-Date).AddDays(1)
+$Weekly = (Get-Date).AddDays(7) 
+$Monthly = (Get-Date).AddDays(28)
 
-Write-Output 'Month old Backups...'
-Get-SVTbackup -Hour (24 * 28) -Limit 3000 | Export-Csv -Path MonthOldBackup-$TimeStamp.csv -NoTypeInformation
+# Get 'all' backups. This example will be limited to 3000 backup objects. So, if you have more than 3000 backup 
+# objects in the federation, you'll need to filter on a property (by backupName, datastore, cluster or VM, see below) 
+# and then iterate, ensuring that each call returns less than 3000 backup objects)
+$AllBackup = Get-SVTbackup -All
 
-Write-Output 'Failed Backups...'
-$Failed = Get-SVTbackup -All | Where-Object BackupState -ne 'PROTECTED'
-$FailedCount = ($Failed | Measure-Object).Count
-if ($FailedCount -gt 0) {
-    Write-Warning "$FailedCount failed backups found"
-    $Failed | Export-Csv -Path FailedBackup-$TimeStamp.csv -NoTypeInformation
+# For comparison, dates in PowerShell must be "region-neutral", meaning US format.
+# But Get-SVTbackup stores dates as strings honouring the local culture. So to compare with Get-Date, the expiry 
+# date must be parsed to convert it to a "region-neutral" date.
+$AllBackup | ForEach-Object {
+    $ExpiryDate = [datetime]::parse($_.ExpiryDate)
+    if ($ExpiryDate -le $Daily) {
+        #"$ExpiryDate is less than $Daily (Daily)"
+        $DailyBackup += $_
+    }
+    Elseif ($ExpiryDate -gt $Daily -and $ExpiryDate -le $Weekly) {
+        #"$ExpiryDate is greater than $Daily and less than $Weekly (Weekly)"
+        $WeeklyBackup += $_
+    }
+    Elseif ($ExpiryDate -gt $Weekly -and $ExpiryDate -le $Monthly) {
+        #"$ExpiryDate is greater than $Weekly and less than $Monthly (Monthly)"
+        $MonthlyBackup += $_
+    }
+    Else {
+        #"$ExpiryDate is greater $Monthly (Old)"
+        $OldBackup += $_
+    }
 }
-else {
-    Write-Output "No failed backups found"
+# Report on Failed backups
+$Failed = $AllBackup | Where-Object BackupState -ne 'PROTECTED'
+
+# Write each collection out to a CSV
+$DailyBackup | Sort-Object { $_.ExpiryDate -as [datetime] } -Descending | Export-Csv -NoTypeInformation -Path BackupDailyReport-$TimeStamp.CSV
+$WeeklyBackup | Sort-Object { $_.ExpiryDate -as [datetime] } -Descending | Export-Csv -NoTypeInformation -Path BackupWeeklyReport-$TimeStamp.CSV
+$MonthlyBackup | Sort-Object { $_.ExpiryDate -as [datetime] } -Descending | Export-Csv -NoTypeInformation -Path BackupMonthlyReport-$TimeStamp.CSV
+$OldBackup | Sort-Object { $_.ExpiryDate -as [datetime] } -Descending | Export-Csv -NoTypeInformation -Path BackupLongTermReport-$TimeStamp.CSV
+If ($Failed) {
+    $Failed | Sort-Object { $_.ExpiryDate -as [datetime] } -Descending | Export-Csv -NoTypeInformation -Path BackupFailedReport-$TimeStamp.CSV
 }
+
+# Write a summary report to the console, with report names for reference.
+"-" * 60 + "`n  Summary Report:"
+"Daily backups, (Expiry date less than 1 day): $($DailyBackup.Count)"
+"Weekly backups, (Expiry date between 1 and 7 days): $($WeeklyBackup.Count)"
+"Monthly backups, (Expiry date between 7 and 28 days): $($MonthlyBackup.Count)"
+"Long Term backups, (Expiry date older than 28 days): $($OldBackup.Count)"
+"Failed backups: $($Failed.Count)"
+"-" * 60
+Get-ChildItem Backup*Report-$TimeStamp.CSV
+
+# Some examples when you have more than 3000 backups in the federation. In each case, you should end up with
+# a full list of backups providing each filtered call to Get-SVTbackup returns less than 3000 backup objects.
+ 
+# Without "hardcoding" the filter property, for example, by each datastore:
+#  Get-SVTdatastore | Foreach-Object {
+#   [array]$AllBackup += Get-SVTBackup -DatastoreName $_ -Limit 3000
+#  }
+
+# by hardcoded data store, for example:
+#  $AllBackup = Get-SVTBackup -DataStoreName "DataStore01" -Limit 3000
+#  $AllBackup += Get-SVTBackup -DataStoreName "DataStore02" -Limit 3000
+
+# by hardcoded VM, for example:
+#  $AllBackup = Get-SVTBackup -VMname "VM01" -Limit 3000
+#  $AllBackup += Get-SVTBackup -VMname "VM02" -Limit 3000
+
+# by hardcoded cluster, for example:
+#  $AllBackup = Get-SVTBackup -ClusterName "Production01" -Limit 3000
+#  $AllBackup += Get-SVTBackup -ClusterName "DR01" -Limit 3000
