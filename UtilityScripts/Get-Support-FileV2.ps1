@@ -12,7 +12,7 @@
 #
 # You need to install Posh-SSH
 #
-## Install-Module Posh-SSH
+## Install-Module Posh-SSH 
 #
 # It is assumed you have previously created a credential file using, for example:
 ## Get-Credential -Message 'Enter a password at prompt' -UserName 'administrator@vsphere.local' | Export-Clixml cred.xml
