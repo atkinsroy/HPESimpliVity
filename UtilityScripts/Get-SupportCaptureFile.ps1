@@ -1,17 +1,21 @@
 ###########################################################################
-# Get-Support-FileV2.ps1
+# Get-SupportCaptureFile.ps1
 # 
 # Utility script that automates creation and download of the support file
 # from one or more SimpliVity virtual controllers.
 #
-# This version depends on a third party module called Posh-SSH, but with
-# this you can login using credentials, rather than having to upload ssh 
-# keys to each OVC.
+# This script depends on a third party module called Posh-SSH which
+# allows you to enter username and password via a credential. This has
+# the advantage of not having to upload an ssh public key to every OVC, but
+# it is less secure.
+# 
+# I have a version that uses OpenSSH (available on Window 10 1809 and above)
+# if a more secure approach is required.
 #
 # Roy Atkins, HPE Pointnext Services
 ###########################################################################
 #
-# You need to install Posh-SSH
+# Requirements - You need to install Posh-SSH
 # PS:\> Install-Module Posh-SSH
 #
 # Get a list of OVCs to connect to. By default, an existing CSV file with 
