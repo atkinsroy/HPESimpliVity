@@ -7,6 +7,7 @@
                 <TypeName>HPE.SimpliVity.Disk</TypeName>
             </ViewSelectedBy>
             <TableControl>
+                <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
                         <Width>13</Width>

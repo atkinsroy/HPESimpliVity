@@ -7,9 +7,10 @@
                 <TypeName>HPE.SimpliVity.Backup</TypeName>
             </ViewSelectedBy>
             <TableControl>
+                <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
-                        <Width>26</Width>
+                        <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
@@ -17,11 +18,11 @@
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>23</Width>
+                        <Width>22</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>23</Width>
+                        <Width>22</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
@@ -41,7 +42,7 @@
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>10</Width>
+                        <Width>6</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
