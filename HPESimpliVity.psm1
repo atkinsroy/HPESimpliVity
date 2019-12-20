@@ -4600,7 +4600,7 @@ function Get-SVTpolicyScheduleReport {
 
 <#
 .SYNOPSIS
-    Display information about VMs running on HPE SimpliVity hosts/storage
+    Display information about VMs running on HPE SimpliVity storage
 .DESCRIPTION
     Display information about virtual machines running in the HPE SimpliVity Federation. Accepts
     parameters to limit the objects returned. Also accepts output from Get-SVThost as input.
