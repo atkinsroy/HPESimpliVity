@@ -14,7 +14,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.7'
+$HPESimplivityVersion = '2.0.9'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -2255,13 +2255,6 @@ function New-SVTdatastore {
         
         $PolicyID = Get-SVTpolicy -PolicyName $PolicyName -ErrorAction Stop | 
         Select-Object -ExpandProperty PolicyId -Unique
-        
-        $DatastoreExists = Get-SVTdatastore -DatastoreName $DatastoreName -ErrorAction Stop | 
-        Select-Object -ExcludeProperty DataStoreName
-        
-        if ($DatastoreExists) {
-            throw "Specified datastore $DatastoreName already exists"
-        }
     }
     catch {
         throw $_.Exception.Message
@@ -4141,7 +4134,9 @@ function Get-SVTpolicy {
         $PolicyId = $_.id
         if ($_.rules) {
             $_.rules | ForEach-Object {
-                if (-not $RuleNumber -or $RuleNumber -eq $_.number) {
+                # Note: Cannot check for parameter $RuleNumber using 'if (-not $Rulenumber)'
+                # This matches $RuleNumber=0, which is a valid value; '0' would return all rules.
+                if (-not $PSBoundParameters.ContainsKey('RuleNumber') -or $RuleNumber -eq $_.number) {
                     [PSCustomObject]@{
                         PSTypeName            = 'HPE.SimpliVity.Policy'
                         PolicyName            = $PolicyName
@@ -4210,16 +4205,6 @@ function New-SVTpolicy {
     }
 
     $Uri = $global:SVTconnection.OVC + '/api/policies/'
-
-    try {
-        if ($PolicyName -in (Get-SVTpolicy).PolicyName) {
-            throw "Specified policy $PolicyName already exists"
-        }
-    }
-    catch {
-        throw $_.Exception.Message
-    }
-
     $Body = @{ 'name' = $PolicyName } | ConvertTo-Json
     Write-Verbose $Body
 
@@ -4465,16 +4450,32 @@ function New-SVTpolicyRule {
 
 <#
 .SYNOPSIS
-    Edits an existing HPE SimpliVity backup policy
+    Updates an existing HPE SimpliVity backup policy rule
 .DESCRIPTION
-    Edits an existing HPE SimpliVity backup policy. You must specify the policy name and the rule number
-    to be replaced. This cmdlet is very similar to New-SVTpolicyRule, except it replaces a rule rather than adding one.
+    Updates an existing HPE SimpliVity backup policy. You must specify the:
+    
+    - policy name
+    - existing rule number
+    - day (via -All, -Weekday, -Monthday or -Lastday)
+    - backup destination (via -ClusterName or -ExternalStoreName)
+    
+    for the backup policy rule to be replaced. All other paramters are optional; the new policy rule will 
+    inherit the current policy rule settings. 
+    
+    This cmdlet is very similar to New-SVTpolicyRule, except that it replaces an existing backup policy rule 
+    rather than adding a new one to the specified backup policy.
 
     Rule numbers start from 0 and increment by 1. Use Get-SVTpolicy to identify the rule you want to replace
 .EXAMPLE
-    PS C:\>Update-SVTPolicyRule -Policy Gold -RuleNumber 2 -Weekday Mon,tue,wed,thu,fri -ClusterName Prod -StartTime 20:00 -EndTime 23:00
+    PS C:\>Update-SVTPolicyRule -Policy Gold -RuleNumber 2 -Weekday Sun,Fri -ClusterName Prod -StartTime 20:00 -EndTime 23:00
 
-    Replaces rule number 2 in the specified policy with a new weekday policy. Uses default retention and frequency, both 1 day
+    Replaces rule number 2 in the specified policy with a new weekday policy. Uses the existing retention, frequency, and
+    application consistancy settings.
+.EXAMPLE
+    PS C:\>Update-SVTPolicyRule -Policy Bronze -RuleNumber 1 -Last -ExternalStoreName StoreOnce-Data03
+    
+    Replaces rule 1 in the specified policy with a new day and destiniation. All other settings are inherited from
+    the current backup policy rule.
 .INPUTS
     System.String
 .OUTPUTS
@@ -4521,24 +4522,24 @@ function Update-SVTpolicyRule {
         [System.String]$ExternalStoreName,
 
         [Parameter(Mandatory = $false)]
-        [System.String]$StartTime = '00:00',
+        [System.String]$StartTime, #Default will be whatever the rule is currently set to
 
         [Parameter(Mandatory = $false)]
-        [System.String]$EndTime = '00:00',
+        [System.String]$EndTime, #Default will be whatever the rule is currently set to
 
         [Parameter(Mandatory = $false)]
         [ValidateRange(1, 1440)]
-        [System.String]$FrequencyMin = 1440, # Default is once per day
+        [System.String]$FrequencyMin, #Default will be whatever the rule is currently set to
 
         [Parameter(Mandatory = $false)]
-        [System.Int32]$RetentionDay = 1,
+        [System.Int32]$RetentionDay, #Default will be whatever the rule is currently set to
 
         [Parameter(Mandatory = $false)]
-        [switch]$AppConsistent,
+        [switch]$AppConsistent, #Default will be whatever the rule is currently set to
 
         [Parameter(Mandatory = $false)]
         [ValidateSet('NONE', 'DEFAULT', 'VSS', 'FAILEDVSS', 'NOT_APPLICABLE')]
-        [System.String]$ConsistencyType = 'NONE'
+        [System.String]$ConsistencyType #Default will be whatever the rule is currently set to
     )
 
     $Header = @{
@@ -4549,8 +4550,8 @@ function Update-SVTpolicyRule {
     try {
         $Policy = Get-SVTpolicy -PolicyName $PolicyName -RuleNumber $RuleNumber -ErrorAction Stop 
         
-        $PolicyId = $Policy | Select-Object -ExpandProperty PolicyId -Unique
-        $RuleId = $Policy | Select-Object -ExpandProperty RuleId -Unique
+        $PolicyId = $Policy | Select-Object -ExpandProperty PolicyId
+        $RuleId = $Policy | Select-Object -ExpandProperty RuleId
         $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/rules/' + $RuleId
         
         if ($ExternalStoreName) {
@@ -4571,6 +4572,32 @@ function Update-SVTpolicyRule {
     }
     catch {
         throw $_.Exception.Message
+    }
+
+    # Inherit the existing policy rule properties, if not specified
+    If ( -not $StartTime) {
+        $StartTime = $Policy | Select-Object -ExpandProperty StartTime
+        Write-Verbose "Inheriting existing start time $StartTime"
+    }
+    If ( -not $EndTime) {
+        $EndTime = $Policy | Select-Object -ExpandProperty EndTime
+        Write-Verbose "Inheriting existing end time $EndTime"
+    }
+    If ( -not $FrequencyMin) {
+        $FrequencyMin = ($Policy | Select-Object -ExpandProperty FrequencyHour) * 60
+        Write-Verbose "Inheriting existing backup frequency of $FrequencyMin minutes"
+    }
+    If ( -not $RetentionDay) {
+        $RetentionDay = $Policy | Select-Object -ExpandProperty RetentionDay
+        Write-Verbose "Inheriting existing retention of $RetentionDay days"
+    }
+    If ( -not $AppConsistent) {
+        $AppConsistent = $Policy | Select-Object -ExpandProperty ApplicationConsistent
+        Write-Verbose "Inheriting existing application consistency setting of $AppConsistent"
+    }
+    If ( -not $ConsistencyType) {
+        $ConsistencyType = ($Policy | Select-Object -ExpandProperty ConsistencyType).ToUpper()
+        Write-Verbose "Inheriting existing consistency type $ConsistencyType"
     }
 
     if ($WeekDay) {
@@ -4798,7 +4825,6 @@ function Remove-SVTpolicy {
 
     try {
         $PolicyId = Get-SVTpolicy -PolicyName $PolicyName -ErrorAction Stop | Select-Object -ExpandProperty PolicyId -Unique
-        $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId
     }
     catch {
         throw $_.Exception.Message
@@ -4834,6 +4860,7 @@ function Remove-SVTpolicy {
     }
 
     try {
+        $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Delete -ErrorAction Stop
     }
     catch {
@@ -5416,10 +5443,10 @@ function New-SVTclone {
         throw $_.Exception.Message
     }
     
-    if ($CloneName -in ($Allvm | Select-Object -ExpandProperty VMname)) {
-        throw "Specified virtual machine name $CloneName already exists"
-    }
-    else {
+    #if ($CloneName -in ($Allvm | Select-Object -ExpandProperty VMname)) {
+    #    throw "Specified virtual machine name $CloneName already exists"
+    #}
+    #else {
         Write-Verbose "Creating clone $CloneName from $VMname"
         $VmId = $AllVm | Where-Object VMname -eq $VMname | Select-Object -ExpandProperty VmId
         $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/clone'
@@ -5440,7 +5467,7 @@ function New-SVTclone {
             'consistency_type'     = $ConsistencyType.ToUpper()
         } | ConvertTo-Json
         Write-Verbose $Body
-    }
+    #}
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -5652,7 +5679,7 @@ function Start-SVTvm {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, 
-        ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelinebyPropertyName = $true)]
         [System.String]$VMname
     )
 
