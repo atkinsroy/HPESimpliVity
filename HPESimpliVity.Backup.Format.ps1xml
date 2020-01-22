@@ -69,10 +69,10 @@
                                 <PropertyName>BackupState</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>ClusterName</PropertyName>
+                                <PropertyName>DataStoreName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>DataStoreName</PropertyName>
+                                <PropertyName>DestinationName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>SizeGB</PropertyName>
