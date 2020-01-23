@@ -14,7 +14,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.9'
+$HPESimplivityVersion = '2.0.10'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -135,7 +135,7 @@ function Invoke-SVTrestMethod {
     [bool]$Stoploop = $false
     do {
         try {
-            if ($Body) {
+            if ($PSBoundParameters.ContainsKey('Body')) {
                 $Response = Invoke-RestMethod -Uri $Uri -Headers $Header -Body $Body -Method $Method -ErrorAction Stop
             }
             else {
@@ -582,13 +582,13 @@ function Get-SVTmetric {
     }
 
     process {
-        if ($SVTobject) {
+        if ($PSBoundParameters.ContainsKey('SVTobject')) {
             $InputObject = $SVTObject
         }
-        elseif ($ClusterName) {
+        elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
             $InputObject = $ClusterName
         }
-        elseif ($HostName) {
+        elseif ($PSBoundParameters.ContainsKey('HostName')) {
             $InputObject = $HostName
         }
         else {
@@ -609,7 +609,7 @@ function Get-SVTmetric {
                 $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $Item.VmId + '/metrics'
                 $ObjectName = $Item.VMname
             }
-            elseif ($ClusterName) {
+            elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
                 try {
                     $ClusterId = Get-SVTcluster -ClusterName $Item -ErrorAction Stop | 
                     Select-Object -ExpandProperty ClusterId
@@ -621,7 +621,7 @@ function Get-SVTmetric {
                     throw $_.Exception.Message
                 }
             }
-            elseif ($HostName) {
+            elseif ($PSBoundParameters.ContainsKey('HostName')) {
                 try {
                     $HostId = Get-SVThost -HostName $Item -ErrorAction Stop | 
                     Select-Object -ExpandProperty HostId
@@ -704,7 +704,7 @@ function Get-SVTmetric {
                 New-Object -TypeName PSObject -Property $Property
             }
 
-            if ($chart) {
+            if ($PSBoundParameters.ContainsKey('Chart')) {
                 [array]$ChartObject += $MetricObject
             }
             else {
@@ -714,7 +714,7 @@ function Get-SVTmetric {
     } #end process
 
     end {
-        if ($Chart) {
+        if ($PSBoundParameters.ContainsKey('Chart')) {
             Get-SVTmetricChart -Metric $ChartObject -TypeName $TypeName 
         }
     }
@@ -1215,7 +1215,7 @@ function Get-SVTbackup {
     # revert to using case=insensitive
     $Uri = "$($global:SVTconnection.OVC)/api/backups?case=sensitive&offset=0"
 
-    if ($Hour) {
+    if ($PSBoundParameters.ContainsKey('Hour')) {
         $StartDate = (Get-Date).AddHours(-$Hour)
         $DisplayHour = $Hour
     }
@@ -1227,28 +1227,28 @@ function Get-SVTbackup {
 
     # Filter backup objects. the /backups API has known issue where you can only filter on 1 property 
     # (OMNI-46361). Using limit is ok.
-    if ($VMname) {
+    if ($PSBoundParameters.ContainsKey('VMname')) {
         Write-Verbose "VM names are currently case sensitive"
         $Uri += "&limit=$Limit&virtual_machine_name=$VMname"
     }
-    elseif ($DatastoreName) {
+    elseif ($PSBoundParameters.ContainsKey('DatastoreName')) {
         Write-Verbose "Datastore names are currently case sensitive"
         $Uri += "&limit=$Limit&datastore_name=$DatastoreName"
     }
-    elseif ($ExternalStoreName) {
+    elseif ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
         Write-Verbose "External store names are currently case sensitive"
         $Uri += "&limit=$Limit&external_store_name=$ExternalStoreName"
     }
-    elseif ($ClusterName) {
+    elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
         Write-Verbose "Cluster names are currently case sensitive"
         $Uri += "&limit=$Limit&omnistack_cluster_name=$ClusterName"
     }
-    elseif ($BackupName) {
+    elseif ($PSBoundParameters.ContainsKey('BackupName')) {
         Write-Verbose "Backup names are currently case sensitive. Incomplete backup names are matched"
         $BackupName = "$BackupName*"  # Note the asterix
         $Uri += "&limit=$Limit&name=$($BackupName -replace '\+', '%2B')"
     }
-    elseif ($All) {
+    elseif ($PSBoundParameters.ContainsKey('All')) {
         # Bypass filtering by $Hour, or by the default 24 hours
         Write-Verbose "Assuming maximum recommended limit of 3000 with the -All parameter. This command may take a long time to complete"
         $Limit = 3000
@@ -1278,13 +1278,14 @@ function Get-SVTbackup {
         Write-Verbose "There are $BackupCount matching backups"
     }
 
-    If (($BackupName) -and -not $Response.Backups.Name) {
+    If ($PSBoundParameters.ContainsKey('BackupName') -and -not $Response.Backups.Name) {
         throw "Specified backup name $BackupName not found"
     }
 
-    If (($VMName) -and -not $Response.Backups.Name) {
+    If ($PSBoundParameters.ContainsKey('VMname') -and -not $Response.Backups.Name) {
         throw "Backups for specified virtual machine $VMName (last $DisplayHour hours) not found"
     }
+
 
     $Response.backups | ForEach-Object {
         if ($_.created_at -as [datetime]) {
@@ -1349,16 +1350,16 @@ function Get-SVTbackup {
 
     # If $Hour was specified with some other parameter, filter here. If by itself (or no parameters), 
     # we've already filtered on hour via the /backups API.
-    If (($VMName -or $DatastoreName -or $ExternalStoreName -or $ClusterName -or $BackupName) -and $Hour) {
-
-        Write-Verbose "The -Hour parameter was specified with another parameter, show only the backups taken after $(Get-date $StartDate -Format $LocalFormat)"
+    If (($PSboundParameters).Count -gt 1 -and $PSBoundParameters.ContainsKey('Hour')) {
+        $params = ($PSboundParameters.Keys | Where-Object { $_ -ne 'Hour' }) -join ' -'
+        Write-Verbose "The -Hour parameter was specified with -$params, show only the backups taken after $(Get-date $StartDate -Format $LocalFormat)"
         $BackupObject = $BackupObject | Where-Object { $(Get-Date $_.CreateDate) -gt $StartDate }
     }
 
     # Finally, if -Latest was specified, just display the lastest backup of each VM (or more correctly, 
     # ONE of the latest - its possible to have more than 1 rule in a policy to backup a VM to multiple 
     # destinations at once).
-    if ($Latest) {
+    if ($PSBoundParameters.ContainsKey('Latest')) {
         Write-Verbose 'The -Latest parameter was specified, show only the latest backup of each VM from the requested backups'
         $BackupObject | 
         ForEach-Object { $_.CreateDate = [datetime]::ParseExact($_.CreateDate, $LocalFormat, $null); $_ } |
@@ -1465,7 +1466,7 @@ function New-SVTbackup {
                 throw $_.Exception.Message
             }
 
-            if ($ClusterName) {
+            if ($PSBoundParameters.ContainsKey('ClusterName')) {
                 try {
                     $DestId = Get-SVTcluster -ClusterName $ClusterName | Select-Object -ExpandProperty ClusterId
                 }
@@ -1473,7 +1474,7 @@ function New-SVTbackup {
                     throw $_.Exception.Message
                 }
             }
-            elseif ($ExternalStoreName) {
+            elseif ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
                 try {
                     $DestExternal = Get-SVTexternalStore -ExternalstoreName $ExternalStoreName |
                     Select-Object -ExpandProperty ExternalStoreName 
@@ -1487,11 +1488,9 @@ function New-SVTbackup {
                 $DestId = $VMobj.ClusterId
             }
 
-            if ($AppConsistent) {
+            $ApplicationConsistant = $False
+            if ($PSBoundParameters.ContainsKey('AppConsistent')) {
                 $ApplicationConsistant = $True
-            }
-            else {
-                $ApplicationConsistant = $False
             }
 
             $Body = @{
@@ -1499,7 +1498,8 @@ function New-SVTbackup {
                 'app_consistent'   = $ApplicationConsistant
                 'consistency_type' = $ConsistencyType
                 'retention'        = $RetentionDay * 1440  # must be specified in minutes
-            } 
+            }
+
             if ($DestId) {
                 $Body += @{'destination_id' = $DestId }
             }
@@ -1590,7 +1590,7 @@ function Restore-SVTvm {
             'Content-Type'  = 'application/vnd.simplivity.v1.5+json'
         }
 
-        if (-not $RestoreToOriginal) {
+        if (-not $PSBoundParameters.ContainsKey('RestoreToOriginal')) {
             try {
                 $AllDataStore = Get-SVTdatastore -ErrorAction Stop
             }
@@ -1601,7 +1601,7 @@ function Restore-SVTvm {
     }
     process {
         foreach ($BkpId in $BackupId) {
-            if ($RestoreToOriginal) {
+            if ($PSBoundParameters.ContainsKey('RestoreToOriginal')) {
                 $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/restore?restore_original=true'
             }
             else {
@@ -2033,12 +2033,10 @@ function Set-SVTbackupRetention {
 
         $Uri = $global:SVTconnection.OVC + '/api/backups/set_retention'
 
-        if ($Force) {
+        $ForceRetention = $false
+        if ($PSBoundParameters.ContainsKey('Force')) {
             Write-Warning 'Possible deletion of some backups, depending on age and retention set'
             $ForceRetention = $true
-        }
-        else {
-            $ForceRetention = $false
         }
     }
 
@@ -2177,7 +2175,7 @@ function Get-SVTdatastore {
     $Uri = $global:SVTconnection.OVC + '/api/datastores?show_optional_fields=true&case=insensitive'
     $LocalFormat = Get-SVTLocalDateFormat
 
-    if ($DatastoreName) {
+    if ($PSBoundParameters.ContainsKey('DatastoreName')) {
         $Uri += '&name=' + $DatastoreName
     }
 
@@ -2188,7 +2186,7 @@ function Get-SVTdatastore {
         throw $_.Exception.Message
     }
 
-    if ($DatastoreName -and -not $response.datastores.name) {
+    if ($PSBoundParameters.ContainsKey('DatastoreName') -and -not $response.datastores.name) {
         throw "Specified datastore $DatastoreName not found"
     }
 
@@ -2707,7 +2705,7 @@ function Get-SVTexternalStore {
     }
 
     $Uri = $global:SVTconnection.OVC + '/api/external_stores?case=insensitive'
-    if ($ExternalstoreName) {
+    if ($PSBoundParameters.ContainsKey('ExternalstoreName')) {
         $Uri += '&name=' + $ExternalstoreName
     }
 
@@ -2718,7 +2716,7 @@ function Get-SVTexternalStore {
         throw $_.Exception.Message
     }
 
-    if ($ExternalStoreName -and -not $response.external_stores.name) {
+    if ($PSBoundParameters.ContainsKey('ExternalStoreName') -and -not $response.external_stores.name) {
         throw "Specified external datastore $ExternalStoreName not found"
     }
 
@@ -2893,10 +2891,10 @@ function Get-SVThost {
     $Uri = $global:SVTconnection.OVC + '/api/hosts?show_optional_fields=true&case=insensitive'
     $LocalFormat = Get-SVTLocalDateFormat
     
-    if ($HostName) {
+    if ($PSBoundParameters.ContainsKey('HostName')) {
         $Uri += '&name=' + $HostName
     }
-    if ($ClusterName) {
+    if ($PSBoundParameters.ContainsKey('ClusterName')) {
         $Uri += '&compute_cluster_name=' + $ClusterName
     }
 
@@ -2907,11 +2905,11 @@ function Get-SVThost {
         throw $_.Exception.Message
     }
 
-    if ($ClusterName -and -not $Response.hosts.name) {
+    if ($PSBoundParameters.ContainsKey('ClusterName') -and -not $Response.hosts.name) {
         throw "Specified cluster $ClusterName not found"
     }
 
-    if ($HostName -and -not $Response.hosts.name) {
+    if ($PSBoundParameters.ContainsKey('HostName') -and -not $Response.hosts.name) {
         try {
             Write-Verbose "Specified host $HostName not found, attempting to match hostname without domain suffix"
             $Uri = $global:SVTconnection.OVC + '/api/hosts?show_optional_fields=true&case=insensitive'
@@ -3033,7 +3031,7 @@ function Get-SVThardware {
         }
 
         $Allhost = Get-SVThost
-        if ($HostName) {
+        if ($PSBoundParameters.ContainsKey('HostName')) {
             try {
                 $FullHostName = Resolve-SVTFullHostname $HostName $Allhost -ErrorAction Stop
             }
@@ -3121,7 +3119,7 @@ function Get-SVTdisk {
 
     begin {
         $Hardware = Get-SVThardware
-        if ($HostName) {
+        if ($PSBoundParameters.ContainsKey('HostName')) {
             try {
                 $HostName = Resolve-SVTFullHostname $HostName $Hardware -ErrorAction Stop
             }
@@ -3255,7 +3253,7 @@ function Get-SVTcapacity {
         $Offset = $OffsetHour * 3600
 
         $Allhost = Get-SVThost
-        if ($HostName) {
+        if ($PSBoundParameters.ContainsKey('HostName')) {
             try {
                 $HostName = Resolve-SVTFullHostname $HostName $Allhost -ErrorAction Stop
             }
@@ -3348,7 +3346,7 @@ function Get-SVTcapacity {
                 New-Object -TypeName PSObject -Property $Property
             }
 
-            if ($Chart) {
+            if ($PSBoundParameters.ContainsKey('Chart')) {
                 $ChartObject += $CapacityObject
             }
             else {
@@ -3358,7 +3356,7 @@ function Get-SVTcapacity {
     }
 
     end {
-        if ($Chart) {
+        if ($PSBoundParameters.ContainsKey('Chart')) {
             Get-SVTcapacityChart -Capacity $ChartObject
         }
     }
@@ -3415,12 +3413,11 @@ function Remove-SVThost {
         throw $_.Exception.Message
     }
 
-    if ($force) {
+    $ForceHostRemoval = $false
+    if ($PSBoundParameters.ContainsKey('Force')) {
         $ForceHostRemoval = $true
     }
-    else {
-        $ForceHostRemoval = $false
-    }
+
     $Body = @{ 'force' = $ForceHostRemoval } | ConvertTo-Json
     Write-Verbose $Body
 
@@ -3509,8 +3506,8 @@ function Start-SVTshutdown {
         throw "The HPE Omnistack Virtual Controller on $($ThisHost.Hostname) is not running"
     } 
 
-    if ($nexthost) {
-        Write-Verbose "This command will reconnect to $($nexthost.Hostname) following the shutdown of the virtual controller on $($ThisHost.Hostname)"
+    if ($NextHost) {
+        Write-Verbose "This command will reconnect to $($NextHost.Hostname) following the shutdown of the virtual controller on $($ThisHost.Hostname)"
     }
     else {
         Write-Verbose "This is the last operational HPE Omnistack Virtual Controller in the federation, reconnect not possible"
@@ -3565,11 +3562,11 @@ function Start-SVTshutdown {
             "now ($($ThisHost.Hostname))"  
         }
 
-        if ($nexthost) {
+        if ($NextHost) {
             try {
-                Write-Verbose "Reconnecting to $($nexthost.VirtualControllerName) on $($nexthost.Hostname)..."
-                Connect-SVT -OVC $nextHost.ManagementIP -Credential $SVTconnection.Credential | Out-Null
-                Write-Verbose "Successfully reconnected to $($nexthost.VirtualControllerName) on $($nexthost.Hostname)"
+                Write-Verbose "Reconnecting to $($NextHost.VirtualControllerName) on $($NextHost.Hostname)..."
+                Connect-SVT -OVC $NextHost.ManagementIP -Credential $SVTconnection.Credential | Out-Null
+                Write-Verbose "Successfully reconnected to $($NextHost.VirtualControllerName) on $($NextHost.Hostname)"
 
                 $OVCrunning = $true
                 Write-Verbose "Wait to allow the storage IP to failover to an operational virtual controller. This may take a long time if the host is running virtual machines."
@@ -3650,7 +3647,7 @@ function Get-SVTshutdownStatus {
         }
 
         $Allhost = Get-SVThost
-        if ($HostName) {
+        if ($PSBoundParameters.ContainsKey('HostName')) {
             try {
                 $HostName = Resolve-SVTFullHostname $HostName $Allhost -ErrorAction Stop
             }
@@ -3818,7 +3815,7 @@ function Get-SVTcluster {
 
     $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters?show_optional_fields=true&case=insensitive'
 
-    if ($ClusterName) {
+    if ($PSBoundParameters.ContainsKey('ClusterName')) {
         $Uri += '&name=' + $ClusterName
     }
 
@@ -3829,7 +3826,7 @@ function Get-SVTcluster {
         throw $_.Exception.Message
     }
 
-    if ($ClusterName -and -not $response.omnistack_clusters.name) {
+    if ($PSBoundParameters.ContainsKey('ClusterName') -and -not $response.omnistack_clusters.name) {
         throw "Specified cluster $ClusterName not found"
     }
 
@@ -4139,7 +4136,7 @@ function Get-SVTpolicy {
     }
 
     $Uri = $global:SVTconnection.OVC + '/api/policies?case=insensitive'
-    if ($PolicyName) {
+    if ($PSBoundParameters.ContainsKey('PolicyName')) {
         $Uri += '&name=' + $PolicyName
     }
 
@@ -4150,7 +4147,7 @@ function Get-SVTpolicy {
         throw $_.Exception.Message
     } 
 
-    If ($PolicyName -and -not $Response.policies.Name) {
+    If ($PSBoundParameters.ContainsKey('PolicyName') -and -not $Response.policies.Name) {
         throw "Specified policy $PolicyName not found"
     }
 
@@ -4380,11 +4377,11 @@ function New-SVTpolicyRule {
 
         # external store name is not case sensitive with Get, but it is with Post, 
         # so get the name here to ensure correct case
-        if ($ExternalStoreName) {
+        if ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
             $ExternalStore = Get-SVTexternalStore -ExternalstoreName $ExternalStoreName | 
             Select-Object -ExpandProperty ExternalStoreName
         }
-        elseif ($ClusterName) {
+        elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
             $ClusterId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | 
             Select-Object -ExpandProperty ClusterId
         }
@@ -4398,7 +4395,7 @@ function New-SVTpolicyRule {
         throw $_.Exception.Message
     }
 
-    if ($WeekDay) {
+    if ($PSBoundParameters.ContainsKey('WeekDay')) {
         foreach ($day in $WeekDay) {
             if ($day -notmatch '^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$') {
                 throw 'Invalid day entered, you must enter weekday in the form "Mon", "Mon,Fri" or "Mon,Thu,Sat"'
@@ -4406,7 +4403,7 @@ function New-SVTpolicyRule {
         }
         $TargetDay = $WeekDay -join ','
     }
-    elseif ($MonthDay) {
+    elseif ($PSBoundParameters.ContainsKey('MonthDay')) {
         foreach ($day in $MonthDay) {
             if ($day -notmatch '^([1-9]|[12]\d|3[01])$') {
                 throw 'Invalid day entered, you must enter month day(s) in the form "1", "1,15" or "1,12,24"'
@@ -4414,7 +4411,7 @@ function New-SVTpolicyRule {
         }
         $TargetDay = $MonthDay -join ','
     }
-    elseif ($LastDay) {
+    elseif ($PSBoundParameters.ContainsKey('LastDay')) {
         $TargetDay = 'last'
     }
     else {
@@ -4428,11 +4425,9 @@ function New-SVTpolicyRule {
         throw "End time invalid. It must be in the form 00:00 (24 hour time). e.g. -EndTime 23:30"
     }
 
-    if ($AppConsistent) {
-        $BoolConsistant = $true
-    }
-    else {
-        $BoolConsistant = $false
+    $ApplicationConsistant = $false
+    if ($PSBoundParameters.ContainsKey('AppConsistent')) {
+        $ApplicationConsistant = $true
     }
 
     $Body = @{
@@ -4441,12 +4436,12 @@ function New-SVTpolicyRule {
         'days'                   = $TargetDay
         'start_time'             = $StartTime
         'end_time'               = $EndTime
-        'application_consistent' = $BoolConsistant
+        'application_consistent' = $ApplicationConsistant
         'consistency_type'       = $ConsistencyType
     } 
     
     # Must test $ExternalStoreName because $ClusterName / $ClusterId = '' is valid
-    if ($ExternalStore) {
+    if ($PSBoundParameters.ContainsKey('ExternalStore')) {
         $Body += @{ 'external_store_name' = $ExternalStore }
     } 
     else {
@@ -4456,7 +4451,7 @@ function New-SVTpolicyRule {
     $Body = '[' + $($Body | ConvertTo-Json) + ']'
     Write-Verbose $Body
 
-    if ($ReplaceRules) {
+    if ($PSBoundParameters.ContainsKey('ReplaceRules')) {
         $Uri += "?replace_all_rules=$true"
     }
     else {
@@ -4580,13 +4575,13 @@ function Update-SVTpolicyRule {
         $RuleId = $Policy | Select-Object -ExpandProperty RuleId
         $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/rules/' + $RuleId
         
-        if ($ExternalStoreName) {
+        if ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
             # external store name is not case sensitive with Get, but it is with Post, so get the 
             # name here to ensure correct case
             $ExternalStore = Get-SVTexternalStore -ExternalstoreName $ExternalStoreName | 
             Select-Object -ExpandProperty ExternalStoreName
         }
-        elseif ($ClusterName) {
+        elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
             $ClusterId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | 
             Select-Object -ExpandProperty ClusterId
         }
@@ -4601,32 +4596,32 @@ function Update-SVTpolicyRule {
     }
 
     # Inherit the existing policy rule properties, if not specified
-    If ( -not $StartTime) {
+    If ( -not $PSBoundParameters.ContainsKey('StartTime')) {
         $StartTime = $Policy | Select-Object -ExpandProperty StartTime
         Write-Verbose "Inheriting existing start time $StartTime"
     }
-    If ( -not $EndTime) {
+    If ( -not $PSBoundParameters.ContainsKey('EndTime')) {
         $EndTime = $Policy | Select-Object -ExpandProperty EndTime
         Write-Verbose "Inheriting existing end time $EndTime"
     }
-    If ( -not $FrequencyMin) {
+    If ( -not $PSBoundParameters.ContainsKey('FrequencyMin')) {
         $FrequencyMin = ($Policy | Select-Object -ExpandProperty FrequencyHour) * 60
         Write-Verbose "Inheriting existing backup frequency of $FrequencyMin minutes"
     }
-    If ( -not $RetentionDay) {
+    If ( -not $PSBoundParameters.ContainsKey('RetentionDay')) {
         $RetentionDay = $Policy | Select-Object -ExpandProperty RetentionDay
         Write-Verbose "Inheriting existing retention of $RetentionDay days"
     }
-    If ( -not $AppConsistent) {
+    If ( -not $PSBoundParameters.ContainsKey('AppConsistent')) {
         $AppConsistent = $Policy | Select-Object -ExpandProperty ApplicationConsistent
         Write-Verbose "Inheriting existing application consistency setting of $AppConsistent"
     }
-    If ( -not $ConsistencyType) {
+    If ( -not $PSBoundParameters.ContainsKey('ConsistencyType')) {
         $ConsistencyType = ($Policy | Select-Object -ExpandProperty ConsistencyType).ToUpper()
         Write-Verbose "Inheriting existing consistency type $ConsistencyType"
     }
 
-    if ($WeekDay) {
+    if ($PSBoundParameters.ContainsKey('WeekDay')) {
         foreach ($day in $WeekDay) {
             if ($day -notmatch '^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$') {
                 throw 'Invalid day entered, you must enter weekday in the form "Mon", "Mon,Fri" or "Mon,Thu,Sat"'
@@ -4634,7 +4629,7 @@ function Update-SVTpolicyRule {
         }
         $TargetDay = $WeekDay -join ','
     }
-    elseif ($MonthDay) {
+    elseif ($PSBoundParameters.ContainsKey('MonthDay')) {
         foreach ($day in $MonthDay) {
             if ($day -notmatch '^([1-9]|[12]\d|3[01])$') {
                 throw 'Invalid day entered, you must enter month day(s) in the form "1", "1,15" or "1,12,24"'
@@ -4642,7 +4637,7 @@ function Update-SVTpolicyRule {
         }
         $TargetDay = $MonthDay -join ','
     }
-    elseif ($LastDay) {
+    elseif ($PSBoundParameters.ContainsKey('LastDay')) {
         $TargetDay = 'last'
     }
     else {
@@ -4656,11 +4651,9 @@ function Update-SVTpolicyRule {
         throw "End time invalid. It must be in the form 00:00 (24 hour time). e.g. -EndTime 23:30"
     }
 
-    if ($AppConsistent) {
+    $ApplicationConsistant = $false
+    if ($PSBoundParameters.ContainsKey('AppConsistent')) {
         $ApplicationConsistant = $true
-    }
-    else {
-        $ApplicationConsistant = $false
     }
 
     $Body = @{
@@ -4673,8 +4666,8 @@ function Update-SVTpolicyRule {
         'consistency_type'       = $ConsistencyType
     } 
     
-    # Must test $ExternalStoreName because $ClusterName / $ClusterId = '' is valid
-    if ($ExternalStore) {
+    # Must test $ExternalStoreName because $ClusterId = '' is valid (<local>)
+    if ($PSBoundParameters.ContainsKey('ExternalStore')) {
         $Body += @{ 'external_store_name' = $ExternalStore }
     } 
     else {
@@ -4947,7 +4940,7 @@ function Suspend-SVTpolicy {
     }
     $Uri = $global:SVTconnection.OVC + '/api/policies/suspend'
 
-    if ($ClusterName) {
+    if ($PSBoundParameters.ContainsKey('ClusterName')) {
         try {
             $TargetId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | 
             Select-Object -ExpandProperty ClusterId
@@ -4958,7 +4951,7 @@ function Suspend-SVTpolicy {
             throw $_.Exception.Message
         }
     }
-    elseif ($HostName) {
+    elseif ($PSBoundParameters.ContainsKey('HostName')) {
         try {
             $TargetId = Get-SVThost -HostName $HostName -ErrorAction Stop | 
             Select-Object -ExpandProperty HostId
@@ -5041,7 +5034,7 @@ function Resume-SVTpolicy {
 
     $Uri = $global:SVTconnection.OVC + '/api/policies/resume'
 
-    if ($ClusterName) {
+    if ($PSBoundParameters.ContainsKey('ClusterName')) {
         try {
             $TargetId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | 
             Select-Object -ExpandProperty ClusterId
@@ -5052,7 +5045,7 @@ function Resume-SVTpolicy {
             throw $_.Exception.Message
         }
     }
-    elseif ($HostName) {
+    elseif ($PSBoundParameters.ContainsKey('HostName')) {
         try {
             $TargetId = Get-SVThost -HostName $HostName -ErrorAction Stop | 
             Select-Object -ExpandProperty HostId
@@ -5222,7 +5215,7 @@ function Get-SVTvm {
 
     # Get hosts so we can convert HostId to the more useful HostName in the virtual machine object
     $Allhost = Get-SVThost
-    if ($HostName) {
+    if ($PSBoundParameters.ContainsKey('HostName')) {
         try {
             $HostName = Resolve-SVTFullHostname $HostName $Allhost
         }
@@ -5233,19 +5226,19 @@ function Get-SVTvm {
         $Uri += "&host_id=$HostId"
     }
 
-    if ($VMname) {
+    if ($PSBoundParameters.ContainsKey('VMname')) {
         $Uri += "&name=$VMname"
     }
 
-    if ($Id) {
+    if ($PSBoundParameters.ContainsKey('Id')) {
         $Uri += "&id=$Id"
     }
 
-    if ($DataStoreName) {
+    if ($PSBoundParameters.ContainsKey('DataStoreName')) {
         $Uri += "&datastore_name=$DataStoreName"
     }
 
-    if ($ClusterName) {
+    if ($PSBoundParameters.ContainsKey('ClusterName')) {
         $Uri += "&omnistack_cluster_name=$ClusterName"
     }
 
@@ -5264,11 +5257,11 @@ function Get-SVTvm {
         Write-Verbose "There are $VMCount matching virtual machines"
     }
 
-    if ($VMname -and -not $response.virtual_machines.name) {
+    if ($PSBoundParameters.ContainsKey('VMname') -and -not $response.virtual_machines.name) {
         throw "Specified VM $VMname not found"
     }
 
-    if ($VMId -and -not $response.virtual_machines.name) {
+    if ($PSBoundParameters.ContainsKey('VMId') -and -not $response.virtual_machines.name) {
         throw "Specified VM ID $VMId not found"
     }
 
@@ -5361,16 +5354,16 @@ function Get-SVTvmReplicaSet {
     begin {
         $Allhost = Get-SVThost
 
-        if ($VMname) {
+        if ($PSBoundParameters.ContainsKey('VMname')) {
             $VMobj = Get-SVTvm -VMname $VMname
         }
-        elseif ($DataStoreName) {
+        elseif ($PSBoundParameters.ContainsKey('DataStoreName')) {
             $VMobj = Get-SVTvm -DataStoreName $DataStoreName
         }
-        elseif ($ClusterName) {
+        elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
             $VMobj = Get-SVTvm -ClusterName $ClusterName
         }
-        elseif ($HostName) {
+        elseif ($PSBoundParameters.ContainsKey('HostName')) {
             $VMobj = Get-SVTvm -HostName $HostName
         }
         else {
@@ -5483,7 +5476,7 @@ function New-SVTclone {
     }
 
     $ApplicationConsistent = $false
-    if ($AppConsistent) {
+    if ($PSBoundParameters.ContainsKey('AppConsistent')) {
         $ApplicationConsistent = $true
     }
     
@@ -5497,7 +5490,6 @@ function New-SVTclone {
         'consistency_type'     = $ConsistencyType.ToUpper()
     } | ConvertTo-Json
     Write-Verbose $Body
-
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
