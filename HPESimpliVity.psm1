@@ -46,6 +46,7 @@ function Resolve-SVTFullHostname {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
+        [Alias("Name")]
         [System.String[]]$HostName,
         
         [Parameter(Mandatory = $true, Position = 1)]
@@ -1171,6 +1172,7 @@ function Get-SVTbackup {
         [System.String]$ClusterName,
 
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByBackupName')]
+        [Alias("Name")]
         [System.String]$BackupName,
 
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'AllBackup')]
@@ -1570,6 +1572,7 @@ function Restore-SVTvm {
 
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipelinebyPropertyName = $true,
             ParameterSetName = 'NewVM')]
+        [Alias("Name")]
         [System.String]$VMname,
 
         [Parameter(Mandatory = $true, Position = 1, ValueFromPipelinebyPropertyName = $true,
@@ -1795,8 +1798,11 @@ function Stop-SVTbackup {
 function Copy-SVTbackup {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'ByClusterName')]
         [System.String]$ClusterName,
+    
+        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'ByExternalStoreName')]
+        [System.String]$ExternalStoreName,
 
         [Parameter(Mandatory = $true, Position = 1, ValueFromPipelinebyPropertyName = $true)]
         [System.String]$BackupId
@@ -1809,16 +1815,22 @@ function Copy-SVTbackup {
             'Content-Type'  = 'application/vnd.simplivity.v1.5+json'
         }
 
-        try {
-            $ClusterId = Get-SVTcluster | 
-            Where-Object ClusterName -eq $ClusterName -ErrorAction Stop | 
-            Select-Object -ExpandProperty ClusterId
+        if ($PSBoundParameters.ContainsKey('ClusterName')) {
+            try {
+                $ClusterId = Get-SVTcluster | 
+                Where-Object ClusterName -eq $ClusterName -ErrorAction Stop | 
+                Select-Object -ExpandProperty ClusterId
 
-            $Body = @{ 'destination_id' = $ClusterId } | ConvertTo-Json
-            Write-Verbose $Body
+                $Body = @{ 'destination_id' = $ClusterId } | ConvertTo-Json
+                Write-Verbose $Body
+            }
+            catch {
+                throw $_.Exception.Message
+            }
         }
-        catch {
-            throw $_.Exception.Message
+        else {
+            $Body = @{ 'external_store_name' = $ExternalStoreName } | ConvertTo-Json
+            Write-Verbose $Body
         }
     }
 
@@ -1926,6 +1938,8 @@ function Rename-SVTbackup {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
+        [Alias("Name")]
+        [Alias("NewName")]
         [System.String]$BackupName,
 
         [Parameter(Mandatory = $true, Position = 1, ValueFromPipelinebyPropertyName = $true)]
@@ -2152,6 +2166,7 @@ function Get-SVTdatastore {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false)]
+        [Alias("Name")]
         [System.String]$DatastoreName
     )
 
@@ -2229,6 +2244,7 @@ function New-SVTdatastore {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
+        [Alias("Name")]
         [System.String]$DatastoreName,
 
         [Parameter(Mandatory = $true, Position = 1)]
@@ -2301,6 +2317,7 @@ function Remove-SVTdatastore {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
+        [Alias("Name")]
         [System.String]$DatastoreName
     )
 
@@ -2354,6 +2371,7 @@ function Resize-SVTdatastore {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
+        [Alias("Name")]
         [System.String]$DatastoreName,
 
         [Parameter(Mandatory = $true, Position = 1)]
@@ -2538,6 +2556,7 @@ function Unpublish-SVTdatastore {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
+        [Alias("Name")]
         [System.String]$DatastoreName,
 
         [Parameter(Mandatory = $true, Position = 1)]
@@ -2678,6 +2697,7 @@ function Get-SVTexternalStore {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false)]
+        [Alias("Name")]
         [System.String]$ExternalStoreName
     )
 
@@ -2760,6 +2780,7 @@ function New-SVTexternalStore {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
+        [Alias("Name")]
         [System.String]$ExernalStoreName,
 
         [Parameter(Mandatory = $true)]
@@ -2858,6 +2879,7 @@ function Get-SVThost {
     [CmdletBinding(DefaultParameterSetName = 'ByHostName')]
     param (
         [Parameter(Mandatory = $false, ParameterSetName = 'ByHostName')]
+        [Alias("Name")]
         [System.String]$HostName,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
@@ -3372,6 +3394,7 @@ function Get-SVTcapacity {
 function Remove-SVThost {
     param (
         [Parameter(Mandatory = $true)]
+        [Alias("Name")]
         [System.String]$HostName,
 
         [switch]$Force
@@ -3784,6 +3807,7 @@ function Get-SVTcluster {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false)]
+        [Alias("Name")]
         [System.String]$ClusterName
     )
 
@@ -4102,6 +4126,7 @@ function Get-SVTpolicy {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false, Position = 0)]
+        [Alias("Name")]
         [System.String]$PolicyName,
 
         [Parameter(Mandatory = $false, Position = 1)]
@@ -4195,6 +4220,7 @@ function New-SVTpolicy {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
+        [Alias("Name")]
         [System.String]$PolicyName
     )
 
@@ -4815,6 +4841,7 @@ function Remove-SVTpolicy {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
+        [Alias("Name")]
         [System.String]$PolicyName
     )
 
@@ -5156,6 +5183,7 @@ function Get-SVTvm {
     [CmdletBinding(DefaultParameterSetName = 'ByVMname')]
     param (
         [Parameter(Mandatory = $false, ParameterSetName = 'ByVMName')]
+        [Alias("Name")]
         [System.String]$VMname,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ById')]
@@ -5317,6 +5345,7 @@ function Get-SVTvmReplicaSet {
     [CmdletBinding(DefaultParameterSetName = 'ByVM')]
     param (
         [Parameter(Mandatory = $false, ParameterSetName = 'ByVM')]
+        [Alias("Name")]
         [System.String]$VMname,
 
         [Parameter(Mandatory = $true, ParameterSetName = 'ByDatastore')]
@@ -5387,25 +5416,32 @@ function Get-SVTvmReplicaSet {
 .PARAMETER ClonesName
     Specify the name of the new clone
 .PARAMETER AppConsistent
-    Flush data disk prior to the clone operation, using one of the consistency methods
+    Confirms that application data has been previously flushed to disk
 .PARAMETER ConsistencyType
     The type of backup used for the clone method, DEFAULT is crash-consistent, VSS is
     application-consistent using VSS and NONE is application-consistent using a snapshot.
     VSS is only applicable to Windows guests.
+
+    NOTE: Consistency type overides AppConsistent. If AppConsistent is specified and consistency 
+    type is not set, the consistency type will be set to DEFAULT (crash-consistent). If neither are
+    set, consistency type is set to NONE (application consistent using a snapshot)
 .EXAMPLE
     PS C:\> New-SVTclone -VMname Server2016-01 -CloneName Server2016-Clone
+    PS C:\> New-SVTclone -VMname Server2016-01 -CloneName Server2016-Clone -ConsistencyType NONE
 
-    Creates a crash-consistant clone of the specified virtual machine
+    Both commands do the same thing, they create an application consistant clone of the specified 
+    virtual machine, using a snapshot
 .EXAMPLE
-    PS C:\> Get-SVTclone -VMname RHEL8-01 -CloneName RHEL8-01-New -AppConsistant 
-        -ConsistencyType DEFAULT
+    PS C:\> New-SVTclone -VMname RHEL8-01 -CloneName RHEL8-01-New -AppConsistent
+    PS C:\> New-SVTclone -VMname RHEL8-01 -CloneName RHEL8-01-New -ConsistencyType DEFAULT
 
-    Create an application consistant clone of the specified virtual machine, using a snapshot
+    Both commands do the same thing, they create a crash-consistent clone of the specified 
+    virtual machine
 .EXAMPLE
-    PS C:\> New-SVTclone -VMname Server2016-06 -CloneName Server2016-Clone -AppConsistant
-        -ConsistencyType VSS
+    PS C:\> New-SVTclone -VMname Server2016-06 -CloneName Server2016-Clone -ConsistencyType VSS
 
-    Create an application consistem clone of the specified Windows VM, using a VSS snapshot
+    Creates an application consistent clone of the specified Windows VM, using a VSS snapshot. The clone
+    will fail for None-Windows virtual machines.
 .INPUTS
     System.String
     HPE.SimpliVity.VirtualMachine
@@ -5420,6 +5456,7 @@ function New-SVTclone {
         [System.String]$VMname,
 
         [Parameter(Mandatory = $true, Position = 1)]
+        [Alias("Name")]
         [System.String]$CloneName,
 
         [Parameter(Mandatory = $false, Position = 2)]
@@ -5437,37 +5474,30 @@ function New-SVTclone {
     }
 
     try {
-        $AllVm = Get-SVTvm -ErrorAction Stop
+        $VmId = Get-SVTvm -VMname $VMname -ErrorAction Stop | Select-Object -ExpandProperty VmId
+        $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/clone'
+        Write-Verbose "Creating clone $CloneName from $VMname"
     }
     catch {
         throw $_.Exception.Message
     }
+
+    $ApplicationConsistent = $false
+    if ($AppConsistent) {
+        $ApplicationConsistent = $true
+    }
     
-    #if ($CloneName -in ($Allvm | Select-Object -ExpandProperty VMname)) {
-    #    throw "Specified virtual machine name $CloneName already exists"
-    #}
-    #else {
-        Write-Verbose "Creating clone $CloneName from $VMname"
-        $VmId = $AllVm | Where-Object VMname -eq $VMname | Select-Object -ExpandProperty VmId
-        $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/clone'
+    if ($ConsistencyType -eq 'VSS') {
+        Write-Verbose 'Consistancy type of VSS will only work with Windows virtual machines'
+    }
 
-        if ($AppConsistent) {
-            $ApplicationConsistent = $true
-        }
-        else {
-            $ApplicationConsistent = $false
-        }
-        if ($ConsistencyType -eq 'VSS') {
-            Write-Verbose 'Consistancy type of VSS will only work with Windows virtual machines'
-        }
+    $Body = @{
+        'virtual_machine_name' = $CloneName
+        'app_consistent'       = $ApplicationConsistent
+        'consistency_type'     = $ConsistencyType.ToUpper()
+    } | ConvertTo-Json
+    Write-Verbose $Body
 
-        $Body = @{
-            'virtual_machine_name' = $CloneName
-            'app_consistent'       = $ApplicationConsistent
-            'consistency_type'     = $ConsistencyType.ToUpper()
-        } | ConvertTo-Json
-        Write-Verbose $Body
-    #}
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -5524,6 +5554,7 @@ function Move-SVTvm {
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
             ValueFromPipelinebyPropertyName = $true)]
+        [Alias("Name")]
         [System.String]$VMname,
 
         [Parameter(Mandatory = $true, Position = 1)]
@@ -5611,6 +5642,7 @@ function Stop-SVTvm {
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, 
             ValueFromPipelinebyPropertyName = $true)]
+        [Alias("Name")]
         [System.String]$VMname
     )
 
@@ -5680,6 +5712,7 @@ function Start-SVTvm {
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, 
             ValueFromPipelinebyPropertyName = $true)]
+        [Alias("Name")]
         [System.String]$VMname
     )
 
@@ -5754,6 +5787,7 @@ function Set-SVTvmPolicy {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
+        [Alias("Name")]
         [System.String]$PolicyName,
 
         [Parameter(Mandatory = $true, Position = 1, ValueFromPipeline = $true, 
