@@ -14,7 +14,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.10'
+$HPESimplivityVersion = '2.0.11'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -1175,6 +1175,10 @@ function Get-SVTbackup {
         [Alias("Name")]
         [System.String]$BackupName,
 
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByBackupId')]
+        [Alias("Id")]
+        [System.String]$BackupId,
+
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'AllBackup')]
         [switch]$All,
 
@@ -1248,15 +1252,18 @@ function Get-SVTbackup {
         $BackupName = "$BackupName*"  # Note the asterix
         $Uri += "&limit=$Limit&name=$($BackupName -replace '\+', '%2B')"
     }
+    elseif ($PSBoundParameters.ContainsKey('BackupId')) {
+        $Uri += "&limit=$Limit&id=$BackupId"
+    }
     elseif ($PSBoundParameters.ContainsKey('All')) {
-        # Bypass filtering by $Hour, or by the default 24 hours
+        # Bypasses filtering by $Hour, or by the default 24 hours
         Write-Verbose "Assuming maximum recommended limit of 3000 with the -All parameter. This command may take a long time to complete"
         $Limit = 3000
         $Uri += "&limit=$Limit"
     }
     else {
         # If no other parameters are specified, show the last 24 hours by default, 
-        # or by a specified hour range.
+        # or by the specified hour range.
         $UniversalDate = $StartDate.ToUniversalTime()
         $CreatedAfter = "$(Get-Date $UniversalDate -format s)Z"
         $Uri += "&limit=$Limit&created_after=$CreatedAfter"
@@ -1282,10 +1289,13 @@ function Get-SVTbackup {
         throw "Specified backup name $BackupName not found"
     }
 
+    If ($PSBoundParameters.ContainsKey('BackupId') -and -not $Response.Backups.Name) {
+        throw "Specified backup ID $BackupId not found"
+    }
+
     If ($PSBoundParameters.ContainsKey('VMname') -and -not $Response.Backups.Name) {
         throw "Backups for specified virtual machine $VMName (last $DisplayHour hours) not found"
     }
-
 
     $Response.backups | ForEach-Object {
         if ($_.created_at -as [datetime]) {
@@ -1602,6 +1612,22 @@ function Restore-SVTvm {
     process {
         foreach ($BkpId in $BackupId) {
             if ($PSBoundParameters.ContainsKey('RestoreToOriginal')) {
+
+                # Restoring a VM from an external store backup with 'RestoreToOriginal' set is currently
+                # not supported. So check if the backup is located on an external store. 
+                try {
+                    $ThisBackup = Get-SVTbackup -BackupId $BkpId -ErrorAction Stop
+                    if ($ThisBackup.ExternalStoreName) {
+                        throw "Restoring VM $($ThisBackup.VMName) from a backup located on an external " +
+                        "store with 'RestoreToOriginal' set is not supported"    
+                    }
+                }
+                catch {
+                    # Don't exit, continue with other restores in the pipeline
+                    Write-Error $_.Exception.Message
+                    continue
+                }
+
                 $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/restore?restore_original=true'
             }
             else {
@@ -4046,11 +4072,12 @@ function Get-SVTclusterConnected {
         'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'        = 'application/json'
     }
-    $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/' + $ClusterId + '/connected_clusters'
 
     try {
         $ClusterId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | 
         Select-Object -ExpandProperty ClusterId
+
+        $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/' + $ClusterId + '/connected_clusters'
     }
     catch {
         throw $_.Exception.Message
