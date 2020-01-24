@@ -14,7 +14,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.11'
+$HPESimplivityVersion = '2.0.12'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -1123,7 +1123,7 @@ function Get-SVTmodel {
 
     Show backups up to 48 hours old and select specific properties to display
 .EXAMPLE
-    PS C:\> Get-SVTbackup -BackupName '2019-05-05T00:00:00-04:00'
+    PS C:\> Get-SVTbackup -Name '2019-05-05T00:00:00-04:00'
 
     Shows the backup(s) with the specified backup name
 .EXAMPLE
@@ -2173,7 +2173,7 @@ function Update-SVTbackupUniqueSize {
 
     Shows all datastores in the Federation
 .EXAMPLE
-    PS C:\> Get-SVTdatastore -DatastoreName MyDS | Export-CSV Datastore.csv
+    PS C:\> Get-SVTdatastore -Name MyDS | Export-CSV Datastore.csv
 
     Writes the specified datastore information into a CSV file
 .EXAMPLE
@@ -2703,7 +2703,7 @@ function Get-SVTdatastoreComputeNode {
 .PARAMETER ExternalStoreName
     Specify the external datastore to display information
 .EXAMPLE
-    PS C:\>Get-SVTexternalStore -ExternalstoreName StoreOnce-Data01
+    PS C:\>Get-SVTexternalStore -Name StoreOnce-Data01
 
     Display information about the specified external datastore
 .EXAMPLE
@@ -2882,7 +2882,7 @@ function New-SVTexternalStore {
 
     Shows all hosts in the Federation
 .EXAMPLE
-    PS C:\> Get-SVThost -HostName MyHost
+    PS C:\> Get-SVThost -Name MyHost
 
     Shows the specified host
 .EXAMPLE
@@ -3024,17 +3024,13 @@ function Get-SVThost {
 .PARAMETER HostName
     Show information for the specified host only
 .EXAMPLE
-    PS C:\> Get-SVThost -ClusterName MyCluster | Get-SVThardware
-
-    Shows hardware information for the hosts in the specified cluster
-.EXAMPLE
     PS C:\> Get-SVThardware -HostName Host01 | Select-Object -ExpandProperty LogicalDrives
 
     Enumerates all of the logical drives from the specified host
 .EXAMPLE
     PS C:\> (Get-SVThardware -HostName Host01).RaidCard
 
-    Enumerate all of the RAID cards from the specified host, using dot notation
+    Enumerate all of the RAID cards from the specified host
 .INPUTS
     System.String
     HPE.SimpliVity.Host
@@ -3817,7 +3813,7 @@ function Stop-SVTshutdown {
 
     Shows information about all clusters in the Federation
 .EXAMPLE
-    PS C:\>Get-SVTcluster -ClusterName Production
+    PS C:\>Get-SVTcluster -Name Production
 
     Shows information about the specified cluster
 .INPUTS
@@ -4234,6 +4230,11 @@ function Get-SVTpolicy {
 
     Creates a new blank backup policy. To create or replace rules for the new backup policy, 
     use New-SVTpolicyRule.
+.EXAMPLE
+    PS C:\> New-SVTpolicy Gold
+
+    Creates a new blank backup policy. To create or replace rules for the new backup policy, 
+    use New-SVTpolicyRule.
 .INPUTS
     System.String
 .OUTPUTS
@@ -4468,8 +4469,8 @@ function New-SVTpolicyRule {
     } 
     
     # Must test $ExternalStoreName because $ClusterName / $ClusterId = '' is valid
-    if ($PSBoundParameters.ContainsKey('ExternalStore')) {
-        $Body += @{ 'external_store_name' = $ExternalStore }
+    if ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
+        $Body += @{ 'external_store_name' = $ExternalStoreName }
     } 
     else {
         $Body += @{ 'destination_id' = $ClusterId }
@@ -4694,11 +4695,17 @@ function Update-SVTpolicyRule {
     } 
     
     # Must test $ExternalStoreName because $ClusterId = '' is valid (<local>)
-    if ($PSBoundParameters.ContainsKey('ExternalStore')) {
-        $Body += @{ 'external_store_name' = $ExternalStore }
+    if ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
+        $Body += @{ 
+            'external_store_name' = $ExternalStoreName
+            'destination_id' = ''
+        }
     } 
     else {
-        $Body += @{ 'destination_id' = $ClusterId }
+        $Body += @{
+            'destination_id' = $ClusterId
+            'external_store_name' = ''
+        }
     }
 
     $Body = $Body | ConvertTo-Json
@@ -4791,7 +4798,12 @@ function Remove-SVTpolicyRule {
     PS C:\>Get-SVTpolicy
     PS C:\>Rename-SVTpolicy -PolicyName Silver -NewPolicyName Gold
 
-    The first command confirms the new policy name doesn't exist. The second command renames the backup policy as specified.
+    The first command confirms the new policy name doesn't exist. 
+    The second command renames the backup policy as specified.
+.EXAMPLE
+    PS C:\>Rename-SVTpolicy Silver Gold
+
+    Renames the backup policy as specified
 .INPUTS
     System.String
 .OUTPUTS
