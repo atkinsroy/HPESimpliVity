@@ -31,7 +31,7 @@
                                 <PropertyName>TaskID</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>AffectedObjects</PropertyName>
+                                <PropertyName>Message</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>

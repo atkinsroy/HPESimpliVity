@@ -8,13 +8,13 @@
 # Website:
 #   https://github.com/atkinsroy/HPESimpliVity
 #
-#   VERSION 2.0.0
+#   VERSION 2.0.16
 #
 #   AUTHOR
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.12'
+$HPESimplivityVersion = '2.0.16'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -50,7 +50,7 @@ function Resolve-SVTFullHostname {
         [System.String[]]$HostName,
         
         [Parameter(Mandatory = $true, Position = 1)]
-        [Array]$HostObj
+        [System.Object]$HostObj
     )
 
     foreach ($ThisHost in $HostName) {
@@ -79,7 +79,7 @@ function Get-SVTerror {
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]
-        [Array]$Err
+        [System.Object]$Err
     )
 
     # $VerbosePreference = 'Continue'
@@ -233,7 +233,6 @@ function Invoke-SVTrestMethod {
     The task object(s). Use the global variable $SVTtask which is generated from a 'task producing' 
     HPE SimpliVity cmdlet, like New-SVTbackup, New-SVTclone and Move-SVTvm.
 .INPUTS
-    System.String
     HPE.SimpliVity.Task
 .OUTPUTS
     HPE.SimpliVity.Task
@@ -261,7 +260,7 @@ function Get-SVTtask {
         # Use the global variable by default. i.e. the output from the last cmdlet 
         # that created task(s) in this session
         [Parameter(Mandatory = $false, ValueFromPipeLine = $true)]
-        [PSobject]$Task = $SVTtask
+        [System.Object]$Task = $SVTtask
     )
 
     begin {
@@ -522,17 +521,17 @@ function Get-SVTmetric {
     param
     (
         [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'Cluster')]
-        [string[]]$ClusterName,
+        [System.String[]]$ClusterName,
 
         [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'Host')]
-        [string[]]$HostName,
+        [System.String[]]$HostName,
 
         [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'VirtualMachine')]
-        [string[]]$VMName,
+        [System.String[]]$VMName,
 
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
             ParameterSetName = 'SVTobject')]
-        [psobject]$SVTobject,
+        [System.Object]$SVTobject,
 
         [Parameter(Mandatory = $false, Position = 1)]
         [System.Int32]$OffsetHour = 0,
@@ -725,7 +724,7 @@ function Get-SVTmetricChart {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
-        [psobject]$Metric,
+        [System.Object]$Metric,
 
         [Parameter(Mandatory = $true, Position = 1)]
         [System.String]$TypeName
@@ -949,7 +948,7 @@ function Get-SVTcapacityChart {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [psobject]$Capacity
+        [System.Object]$Capacity
     )
 
     if ($PSVersionTable.PSVersion.Major -gt 5) {
@@ -4406,7 +4405,7 @@ function New-SVTpolicyRule {
         # external store name is not case sensitive with Get, but it is with Post, 
         # so get the name here to ensure correct case
         if ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
-            $ExternalStore = Get-SVTexternalStore -ExternalstoreName $ExternalStoreName | 
+            $ExternalStoreName = Get-SVTexternalStore -ExternalstoreName $ExternalStoreName | 
             Select-Object -ExpandProperty ExternalStoreName
         }
         elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
@@ -4562,7 +4561,7 @@ function Update-SVTpolicyRule {
         [Parameter(Mandatory = $false, ParameterSetName = 'ByMonthDay_Cluster')]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByLastDay_Cluster')]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByAllDay_Cluster')]
-        [System.String]$ClusterName = '', # Default is local cluster
+        [System.String]$ClusterName = '', # Default is local cluster if not specified
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ByWeekDay_External')]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByMonthDay_External')]
@@ -4604,8 +4603,7 @@ function Update-SVTpolicyRule {
         $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/rules/' + $RuleId
         
         if ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
-            # external store name is not case sensitive with Get, but it is with Post, so get the 
-            # name here to ensure correct case
+            # get the right case
             $ExternalStore = Get-SVTexternalStore -ExternalstoreName $ExternalStoreName | 
             Select-Object -ExpandProperty ExternalStoreName
         }
@@ -4694,17 +4692,15 @@ function Update-SVTpolicyRule {
         'consistency_type'       = $ConsistencyType
     } 
     
-    # Must test $ExternalStoreName because $ClusterId = '' is valid (<local>)
+    # Must test $ExternalStoreName because $ClusterId = '' is valid (i.e. $ClusterName not specified)
     if ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
         $Body += @{ 
-            'external_store_name' = $ExternalStoreName
-            'destination_id' = ''
+            'external_store_name' = $ExternalStore
         }
     } 
     else {
         $Body += @{
             'destination_id' = $ClusterId
-            'external_store_name' = ''
         }
     }
 
@@ -5219,7 +5215,8 @@ function Get-SVTvm {
         [System.String]$VMname,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ById')]
-        [System.String]$Id,
+        [Alias("Id")]
+        [System.String]$VmId,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
         [System.String]$DatastoreName,
@@ -5269,8 +5266,8 @@ function Get-SVTvm {
         $Uri += "&name=$VMname"
     }
 
-    if ($PSBoundParameters.ContainsKey('Id')) {
-        $Uri += "&id=$Id"
+    if ($PSBoundParameters.ContainsKey('VmId')) {
+        $Uri += "&id=$VmId"
     }
 
     if ($PSBoundParameters.ContainsKey('DataStoreName')) {
