@@ -7,7 +7,7 @@
     * New-SVTpolicyRule - has a new parameter -ExternalStoreName
     * Update-SvtPolicyRule - has a new parameter -ExternalStoreName
 
-Note: Remove-SVTbackup and Restore-SVTvm work without change with backups stored on external stores.
+Note: Remove-SVTbackup and Restore-SVTvm work without change with backups stored on external stores, although restoring with -RestoreToOrignal set is currently not supported with exteranl store backups.
 
 Note: The new Catalyst datastore must be added via the StoreOnce management console with appropriate permissions prior to registering it as a SimpliVity external store.
 * Added support for more meaningful run time errors, by determining the error message embedded in the body of the responce from the API and passing this through in the cmdlets.
