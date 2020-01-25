@@ -1,18 +1,19 @@
 # Version 2.0.0
 
-* Added support for new HPE SimpliVity V4.0.0 features. Specifically, the ability to create new and show external stores with two new cmdlets (New-SVTexternalStore and Get-SVTexternalStore). In addition, the following cmdlets have been updated to support external stores:
+* Added support for new HPE SimpliVity V4.0.0 features. Specifically, the ability to create new and show external stores with two new cmdlets (New-SVTexternalStore and Get-SVTexternalStore, respectively). In addition, the following cmdlets have been updated to support external stores:
     * Get-SVTbackup - displays 'DestinationName' showing either a SimpliVity cluster or the external store
     * New-SVTbackup - has a new parameter -ExternalStoreName
     * Copy-SVTbckup - has a new parameter -ExternalStoreName
     * New-SVTpolicyRule - has a new parameter -ExternalStoreName
     * Update-SvtPolicyRule - has a new parameter -ExternalStoreName
 
-Note: Remove-SVTbackup works without change on backups stored on external stores.
+Note: Remove-SVTbackup and Restore-SVTvm work without change with backups stored on external stores.
 
 Note: The new Catalyst datastore must be added via the StoreOnce management console with appropriate permissions prior to registering it as a SimpliVity external store.
-* Added better support for more meaningful run time errors, by determining the error message embedded in the body of the responce from the API.
-* Hostname is now checked as well as the fully qualified domain name for those cmdlets that accept the hostname parameter. Users can now enter hostname in the form <host> as well as <host.domain.com>.
+* Added support for more meaningful run time errors, by determining the error message embedded in the body of the responce from the API and passing this through in the cmdlets.
+* Hostname is now accepted as well as the fully qualified domain name for those cmdlets that accept the hostname parameter. Users can now enter hostname in the form <host> as well as <host.domain.com>.
 * Refactored some of the cmdlets to simplify the code. Some cmdlets, like Get-SVTvm and New-SVTclone do not accept input from the pipeline any more. Get-SVTvm -Hostname <host> can be used to filter on a specific hostname.
+* New-SVTclone now accepts a -CloneName parameter and will only perform a single clone operation on one VM. The previous functionality (cloning multiple VMs once, cloning one VM multiple times or both) will be moved to a utility script to be used in conjunction with the updated New-SVTclone.  
 * Renamed Set-SVTPolicyRule to New-SVTpolicyRule
 * Ausized columns added for most SimpliVity objects. For performance reasons, cmdlets that produce a lot of objects, like Get-SVTmetric, are not autosized. 
 * Bug fixes
