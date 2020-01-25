@@ -3692,7 +3692,7 @@ function Get-SVTshutdownStatus {
             }
             catch {
                 Write-Error "The virtual controller $($ThisHost.ManagementName) on host $ThisHostName is not responding"
-                break
+                continue
             }
 
             try {
@@ -3702,7 +3702,7 @@ function Get-SVTshutdownStatus {
             }
             catch {
                 Write-Error "Error connecting to $($ThisHost.ManagementIP) (host $ThisHostName). Check that it is running"
-                break
+                continue
             }
 
             $Response.shutdown_status | ForEach-Object {
