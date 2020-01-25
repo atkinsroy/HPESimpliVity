@@ -8,6 +8,7 @@
     * Update-SvtPolicyRule - has a new parameter -ExternalStoreName
 
 Note: Remove-SVTbackup works without change on backups stored on external stores.
+
 Note: The new Catalyst datastore must be added via the StoreOnce management console with appropriate permissions prior to registering it as a SimpliVity external store.
 * Added better support for more meaningful run time errors, by determining the error message embedded in the body of the responce from the API.
 * Hostname is now checked as well as the fully qualified domain name for those cmdlets that accept the hostname parameter. Users can now enter hostname in the form <host> as well as <host.domain.com>.
