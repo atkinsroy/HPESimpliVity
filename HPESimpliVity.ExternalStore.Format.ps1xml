@@ -2,15 +2,19 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTHostTable</Name>
+            <Name>SVTDataStoreTable</Name>
             <ViewSelectedBy>
-                <TypeName>HPE.SimpliVity.Host</TypeName>
+                <TypeName>HPE.SimpliVity.ExternalStore</TypeName>
             </ViewSelectedBy>
             <TableControl>
                 <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
-                        <Width>40</Width>
+                        <Width>25</Width>
+                        <Alignment>left</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
@@ -22,19 +26,7 @@
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>14</Width>
-                        <Alignment>right</Alignment>
-                    </TableColumnHeader>
-                    <TableColumnHeader>
-                        <Width>16</Width>
-                        <Alignment>left</Alignment>
-                    </TableColumnHeader>
-                    <TableColumnHeader>
-                        <Width>16</Width>
-                        <Alignment>left</Alignment>
-                    </TableColumnHeader>
-                    <TableColumnHeader>
-                        <Width>16</Width>
+                        <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                 </TableHeaders>
@@ -42,25 +34,19 @@
                     <TableRowEntry>
                         <TableColumnItems>
                             <TableColumnItem>
-                                <PropertyName>HostName</PropertyName>
+                                <PropertyName>ExternalStoreName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>DataCenterName</PropertyName>
-                            </TableColumnItem>
-                            <TableColumnItem>
-                                <PropertyName>ClusterName</PropertyName>
-                            </TableColumnItem>
-                            <TableColumnItem>
-                                <PropertyName>FreeSpaceGB</PropertyName>
+                                <PropertyName>Type</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>ManagementIP</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>StorageIP</PropertyName>
+                                <PropertyName>ManagementPort</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>FederationIP</PropertyName>
+                                <PropertyName>StoragePort</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>

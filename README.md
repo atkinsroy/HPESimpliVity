@@ -29,7 +29,7 @@ For example:
 ```
 
 
-The module contains 52 exported cmdlets, divided into the following feature categories:
+The module contains 54 exported cmdlets, divided into the following feature categories:
 
 Backups | Backup Policy | Datastore & Cluster
 --- | --- | ---
@@ -43,6 +43,9 @@ Get-SVTbackup | Set-SVTpolicyRule | New-SVTdatastore
 Set-SVTbackupRetention | Update-SVTpolicyRule | Unpublish-SVTdatastore
 Update-SVTbackupUniqueSize | Remove-SVTpolicyRule | Get-SVTdatastoreComputeNode
 &nbsp; | Get-SVTpolicyScheduleReport | Set-SVTdatastorePolicy
+&nbsp; | &nbsp; | Get-SVTexternalStore
+&nbsp; | &nbsp; | New-SVTexternalStore
+
 
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; VM &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Host &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; |  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Utility &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
 ---------------- | --- | ---
@@ -54,6 +57,10 @@ Restore-SVTvm | Stop-SVTshutdown | Get-SVTtimezone
 Stop-SVTvm | Get-SVTshutdownStatus | Set-SVTtimezone
 Set-SVTvmPolicy | Get-SVTthroughput | Get-SVTversion
 Get-SVTvmReplicaSet | Get-SVTdisk
+
+## Update V2.0.0 new features
+
+Supports the new features in HPE SimpliVity 4.0.0. Specifically, the ability to add and show external store (HPE StoreOnce is currently supported) and the ability to backup to external stores.
 
 ## Update V1.1.5 new features
 
