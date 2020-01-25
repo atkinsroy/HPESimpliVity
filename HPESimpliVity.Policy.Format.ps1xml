@@ -7,6 +7,7 @@
                 <TypeName>HPE.SimpliVity.Policy</TypeName>
             </ViewSelectedBy>
             <TableControl>
+                <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
                         <Width>30</Width>

@@ -7,6 +7,7 @@
                 <TypeName>HPE.SimpliVity.Cluster</TypeName>
             </ViewSelectedBy>
             <TableControl>
+                <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
                         <Width>25</Width>

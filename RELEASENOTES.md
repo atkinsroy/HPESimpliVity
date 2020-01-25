@@ -1,3 +1,12 @@
+# Version 2.0.0
+
+* Added support for new HPE SimpliVity V4.0.0 features. Specifically, the ability to create new and show external stores with two new cmdlets (New-SVTexternalStore and Get-SVTexternalStore) and updated backup cmdlets that allow you to backup to external stores and show backups on external stores. Note: The new Catalyst datastore must be added to StoreOnce via the console with appropriate permissions prior to registering it as a SimpliVity external store.
+* Added better support for more meaningful run time errors, by determining the error message embedded in the body of the responce from the API.
+* Hostname is now checked as well as the fully qualified domain name for those cmdlets that accept the hostname parameter. Users can now enter hostname in the form <host> as well as <host.domain.com>.
+* Refactored some of the cmdlets to simplify the code. Some cmdlets, like Get-SVTvm do not accept input from the pipeline any more. Get-SVTvm -Hostname <host> can be used to filter on a specific hostname.
+* Bug fixes
+
+
 # Version 1.1.5
 
 * Added the Get-SVTdisk command. The information here was mostly already available from Get-SVThardware, but this command makes it much more readily available. It includes a list of physical disks with health, serial number, firmware and capacity. In addition, the installed storage kit is shown, derived from the host model, as well as number and capacity of the disks.
