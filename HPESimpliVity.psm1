@@ -1099,7 +1099,7 @@ function Get-SVTmodel {
     Show backups for the specified virtual machine only.
 .PARAMETER DataStoreName
     Show backups from the specified Simplivity datastore only.
-.PARAMTER ExternalStoreName
+.PARAMETER ExternalStoreName
     Show backups from the specified external datastore only.
 .PARAMETER ClusterName
     Show backups from the specified HPE SimpliVity cluster only.
