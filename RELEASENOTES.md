@@ -1,12 +1,11 @@
 # Version 2.0.0
 
 * Added support for new HPE SimpliVity V4.0.0 features. Specifically, the ability to create new and show external stores with two new cmdlets (New-SVTexternalStore and Get-SVTexternalStore). In addition, the following cmdlets have been updated to support external stores:
-- Get-SVTbackup - displays 'DestinationName' showing either a SimpliVity cluster or the external store
-- New-SVTbackup - has a new parameter -ExternalStoreName
-- Copy-SVTbckup - has a new parameter -ExternalStoreName
-- New-SVTpolicyRule - has a new parameter -ExternalStoreName
-- Update-SvtPolicyRule - has a new parameter -ExternalStoreName
-
+    * Get-SVTbackup - displays 'DestinationName' showing either a SimpliVity cluster or the external store
+    * New-SVTbackup - has a new parameter -ExternalStoreName
+    * Copy-SVTbckup - has a new parameter -ExternalStoreName
+    * New-SVTpolicyRule - has a new parameter -ExternalStoreName
+    * Update-SvtPolicyRule - has a new parameter -ExternalStoreName
 Note: Remove-SVTbackup works without change on backups stored on external stores.
 Note: The new Catalyst datastore must be added via the StoreOnce management console with appropriate permissions prior to registering it as a SimpliVity external store.
 * Added better support for more meaningful run time errors, by determining the error message embedded in the body of the responce from the API.
