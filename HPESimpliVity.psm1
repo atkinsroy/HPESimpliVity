@@ -1051,16 +1051,16 @@ function Get-SVTmodel {
     $DiskCount = (4, 6, 6, 5, 5, 9, 12, 12, 12, 4, 6)
     $DiskCapacity = (2, 2, 2, 1, 2, 2, 2, 4, 2, 2, 2)
     $Kit = ('4-8TB - SVT325 Extra Small',
-        '7-15TB - SVT325 Small',
-        '7-15TB - SVT2600',
-        '3-6TB - SVT380Gen10 Extra Small',
-        '6-12TB - SVT380Gen10 Small',
+        ' 7-15TB - SVT325 Small',
+        ' 7-15TB - SVT2600',
+        '  3-6TB - SVT380Gen10 Extra Small',
+        ' 6-12TB - SVT380Gen10 Small',
         '12-25TB - SVT380Gen10 Medium',
         '20-40TB - SVT380Gen10 Large',
         '40-80TB - SVT380Gen10 Extra Large',
         '20-50TB - SVT380Gen10H', #4X1.92 SSD + 8X4TB HDD = 12 disks
-        '8-16TB - SVT380Gen10G 4X1.92TB',
-        '7-15TB - SVT380Gen10G 6X.192TB'
+        ' 8-16TB - SVT380Gen10G 4X1.92TB',
+        ' 7-15TB - SVT380Gen10G 6X.192TB'
     )
     
     # return a custom object
@@ -3165,7 +3165,7 @@ function Get-SVTdisk {
             Get-Unique -AsString
             
             # Check capacity of first disk in collection (works ok all most models - 380 H included, for now)
-            $DiskCapacity = [math]::Round(($Disk | Select-Object -First 1).capacity / 1TB)
+            $DiskCapacity = [int][math]::Ceiling(($Disk | Select-Object -First 1).capacity / 1TB)
             $DiskCount = ($Disk | Measure-Object).Count
             
             $SVTmodel = Get-SVTmodel | Where-Object {
@@ -3544,10 +3544,6 @@ function Start-SVTshutdown {
         throw $_.Exception.Message
     }
 
-    $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $ThisHost.HostId + '/shutdown_virtual_controller'
-    $Body = @{ 'ha_wait' = $true } | ConvertTo-Json
-    Write-Verbose $Body
-
     # Confirm if this is the last running virtual controller in this cluster
     Write-Verbose "$LiveHost operational HPE Omnistack virtual controller(s) in the $ThisCluster cluster"
     If ($LiveHost -lt 2) {
@@ -3558,6 +3554,9 @@ function Start-SVTshutdown {
     # Only execute the command if confirmed. Using -Whatif will report only
     if ($PSCmdlet.ShouldProcess("$($ThisHost.Hostname)", "Shutdown virtual controller in cluster $ThisCluster")) {
         try {
+            $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $ThisHost.HostId + '/shutdown_virtual_controller'
+            $Body = @{ 'ha_wait' = $true } | ConvertTo-Json
+            Write-Verbose $Body
             $null = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
         }
         catch {
@@ -3568,11 +3567,11 @@ function Start-SVTshutdown {
             Write-Verbose 'Sleeping 10 seconds before issuing final shutdown...'
             Start-Sleep -Seconds 10
 
-            # Instruct the shutdown task running on the last virtual controller in the cluster not to 
-            # wait for HA compliance
-            $Body = @{'ha_wait' = $false } | ConvertTo-Json
-            Write-Verbose $Body
             try {
+                # Instruct the shutdown task running on the last virtual controller in the cluster not to 
+                # wait for HA compliance
+                $Body = @{'ha_wait' = $false } | ConvertTo-Json
+                Write-Verbose $Body
                 $null = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
             }
             catch {
@@ -3684,8 +3683,6 @@ function Get-SVTshutdownStatus {
     process {
         foreach ($ThisHostName in $Hostname) {
             $ThisHost = $Allhost | Where-Object Hostname -eq $ThisHostName
-            $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $ThisHost.HostId + 
-            '/virtual_controller_shutdown_status'
 
             try {
                 Connect-SVT -OVC $ThisHost.ManagementIP -Credential $SVTconnection.Credential -ErrorAction Stop | 
@@ -3694,28 +3691,26 @@ function Get-SVTshutdownStatus {
                 Write-Verbose $SVTconnection
             }
             catch {
-                Write-Error "The virtual controller $($ThisHost.ManagementName) " + 
-                "on host $ThisHostName is not responding"
-
+                Write-Error "The virtual controller $($ThisHost.ManagementName) on host $ThisHostName is not responding"
                 break
             }
 
             try {
+                $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $ThisHost.HostId + 
+                    '/virtual_controller_shutdown_status'
                 $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
             }
             catch {
-                Write-Error "Error connecting to $($ThisHost.ManagementIP) (host $ThisHostName)." +
-                'Check that it is running'
-
+                Write-Error "Error connecting to $($ThisHost.ManagementIP) (host $ThisHostName). Check that it is running"
                 break
             }
 
             $Response.shutdown_status | ForEach-Object {
                 [PSCustomObject]@{
-                    HostName       = $ThisHostName
-                    ManagementName = $ThisHost.ManagementName
-                    ManagemenIP    = $ThisHost.ManagementIP
-                    ShutdownStatus = $_.Status
+                    HostName              = $ThisHostName
+                    VirtualControllerName = $ThisHost.VirtualControllerName
+                    ManagementIP          = $ThisHost.ManagementIP
+                    ShutdownStatus        = $_.Status
                 }
             }
         } #end foreach hostname
