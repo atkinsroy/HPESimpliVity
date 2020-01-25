@@ -3,7 +3,7 @@
 * Added support for new HPE SimpliVity V4.0.0 features. Specifically, the ability to create new and show external stores with two new cmdlets (New-SVTexternalStore and Get-SVTexternalStore, respectively). In addition, the following cmdlets have been updated to support external stores:
     * Get-SVTbackup - displays 'DestinationName' showing either a SimpliVity cluster or the external store
     * New-SVTbackup - has a new parameter -ExternalStoreName
-    * Copy-SVTbckup - has a new parameter -ExternalStoreName
+    * Copy-SVTbackup - has a new parameter -ExternalStoreName
     * New-SVTpolicyRule - has a new parameter -ExternalStoreName
     * Update-SvtPolicyRule - has a new parameter -ExternalStoreName
 
