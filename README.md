@@ -100,15 +100,15 @@ This is a sample capacity chart:
 
 ## Requirements
 
-* PowerShell V5.1 and above. (note that the chart features do not work with PowerShell Core 6.0/7.0)
+* PowerShell V5.1 and above. (note that the chart features do not work with PowerShell Core 6.0 and PowerShell 7.0)
 * The IP address and the credentials of an authorized OmniStack user account.
-* Tested with HPE OmniStack 3.7.7 and above. Both VMware and Hyper-V versions have been tested.
+* Tested with HPE SimpliVity V4.0.0. The module should be compatible with older versions, but has not been tested. 
 
 ## Installation
 
 * Install the HPESimplivity module from the PowerShell Gallery, using the following command:
 ```powershell
-    PS C:\> Install-Module -Name HPESimpliVity -RequiredVersion 1.1.5
+    PS C:\> Install-Module -Name HPESimpliVity -RequiredVersion 2.0.16
 ```
 The module is signed, so it will work with an execution policy set to Remote Signed.
 
