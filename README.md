@@ -13,9 +13,9 @@ For example:
     
     HostName      DataCenterName    ClusterName   FreeSpaceGB    ManagementIP   StorageIP     FederationIP 
     --------      --------------    -----------   -----------    ------------   ---------     ------------
-    192.168.1.1   SunGod            Production1         2,671    192.168.1.11   192.168.2.1   192.168.3.1
-    192.168.1.2   SunGod            Production1         2,671    192.168.1.12   192.168.2.2   192.168.3.2
-    192.170.1.1   SunGod            DR1                 2,671    192.170.1.11   192.170.2.1   192.170.3.1
+    srvr1.sg.com  SunGod            Production1         2,671    192.168.1.11   192.168.2.1   192.168.3.1
+    srvr2.sg.com  SunGod            Production1         2,671    192.168.1.12   192.168.2.2   192.168.3.2
+    srvr3.sg.com  SunGod            DR1                 2,671    192.170.1.11   192.170.2.1   192.170.3.1
    
     PS C:\>Get-SVThost -HostName 192.168.1.1 | Select-Object *
     
@@ -89,7 +89,7 @@ Here is a sample metric chart:
 Similarly, Get-SVTcapacity also has a new -Chart switch. Use the following command to create a chart for each host in the federation.
 
 ```powershell
-    PS C:\> Get-SVTcapacity -Chart
+    PS C:\> Get-SVTHost server01 | Get-SVTcapacity -Chart
 ```
 
 This is a sample capacity chart:
