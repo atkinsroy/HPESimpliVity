@@ -40,8 +40,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #region Utility
 
-# Helper function for most cmdlets that accept a hostname parameter. The user supplied hostname is compared to
-# an object containing a valid hostname property. (e.g. Get-SVThost and Get-SVThardware both have this)
+# Helper function for most cmdlets that accept a hostname parameter. The user supplied hostname(s) 
+# is/are compared to an object containing a valid hostname property. (e.g. Get-SVThost and Get-SVThardware 
+# both have this)
 function Resolve-SVTFullHostname {
     [CmdletBinding()]
     param (
