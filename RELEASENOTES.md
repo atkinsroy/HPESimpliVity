@@ -16,6 +16,7 @@ Note: The new Catalyst datastore must be added via the StoreOnce management cons
 * New-SVTclone now accepts a -CloneName parameter and will only perform a single clone operation on one VM. The previous functionality (cloning multiple VMs once, cloning one VM multiple times or both) will be moved to a utility script to be used in conjunction with the updated New-SVTclone cmdlet. 
 * Renamed Set-SVTPolicyRule to New-SVTpolicyRule
 * Autosized columns added for most SimpliVity objects. For performance reasons, cmdlets that produce a lot of objects, like Get-SVTmetric and Get-SVTbackup are not autosized.
+* Added some additional properties to cluster objects related to the new supported Arbiter configurations available in V4.0.0. 
 * Bug fixes
 
 
