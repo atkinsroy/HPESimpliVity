@@ -1617,8 +1617,7 @@ function Restore-SVTvm {
                 try {
                     $ThisBackup = Get-SVTbackup -BackupId $BkpId -ErrorAction Stop
                     if ($ThisBackup.ExternalStoreName) {
-                        throw "Restoring VM $($ThisBackup.VMName) from a backup located on an external " +
-                        "store with 'RestoreToOriginal' set is not supported"    
+                        throw "Restoring VM $($ThisBackup.VMName) from a backup located on an external store with 'RestoreToOriginal' set is not supported"    
                     }
                 }
                 catch {
@@ -4761,8 +4760,7 @@ function Remove-SVTpolicyRule {
     }
 
     if (-not ($PolicyId)) {
-        throw 'Specified policy name or Rule number not found. Use Get-SVTpolicy to determine rule ' +
-        'number for the rule you want to edit'
+        throw 'Specified policy name or Rule number not found. Use Get-SVTpolicy to determine rule number for the rule you want to edit'
     }
 
     try {
@@ -4900,13 +4898,13 @@ function Remove-SVTpolicy {
             $ObjectFound = $true
         }
         If ($Task.virtual_machines) {
-            $Message += "There are $(($Task.virtual_machines).Count) virtual machines using backup " +
+            $Message += "There are $(($Task.virtual_machines).Count) virtual machines using backup. " +
             "policy $PolicyName. "
             $ObjectFound = $true
         }
     }
     if ($ObjectFound) {
-        throw $Message + 'Cannot remove a backup policy that is still in use'
+        throw "$($Message)Cannot remove a backup policy that is still in use"
     }
 
     try {
