@@ -39,7 +39,7 @@ Lock-SVTbackup | Resume-SVTpolicy | Get-SVTdatastore
 Remove-SVTbackup | New-SVTpolicy | Publish-SVTdatastore
 New-SVTbackup | Remove-SVTpolicy | Remove-SVTdatastore
 Copy-SVTbackup | Get-SVTpolicy | Resize-SVTdatastore
-Get-SVTbackup | Set-SVTpolicyRule | New-SVTdatastore 
+Get-SVTbackup | New-SVTpolicyRule | New-SVTdatastore 
 Set-SVTbackupRetention | Update-SVTpolicyRule | Unpublish-SVTdatastore
 Update-SVTbackupUniqueSize | Remove-SVTpolicyRule | Get-SVTdatastoreComputeNode
 &nbsp; | Get-SVTpolicyScheduleReport | Set-SVTdatastorePolicy
