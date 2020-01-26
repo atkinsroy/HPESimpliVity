@@ -60,7 +60,7 @@ Get-SVTvmReplicaSet | Get-SVTdisk
 
 ## Update V2.0.16 new features
 
-Supports the new features in HPE SimpliVity 4.0.0. Specifically, the ability to add and show external store (HPE StoreOnce is currently supported) and the ability to backup to external stores. Refer to the ![Release Notes](/RELEASENOTES.md) for more details
+Supports the new features in HPE SimpliVity 4.0.0. Specifically, the ability to add and show external store (HPE StoreOnce is currently supported) and the ability to backup/restore to/from external stores. Refer to the ![Release Notes](/RELEASENOTES.md) for more details.
 
 ## Update V1.1.5 new features
 
