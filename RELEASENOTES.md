@@ -10,9 +10,9 @@
 Note: Remove-SVTbackup and Restore-SVTvm work without change with backups stored on external stores, although restoring with the -RestoreToOrignal switch enabled is currently not supported with external store backups.
 
 Note: The new HPE StoreOnce Catalyst datastore must be added via the StoreOnce management console with appropriate permissions prior to registering it as a SimpliVity external store.
-* Added support for more meaningful run time errors, by determining the error message embedded in the body of the responce from the API and passing this through in the cmdlets.
-* Hostname is now accepted as well as the fully qualified domain name for those cmdlets that accept the hostname parameter. Hostname can be entered in the form <host> as well as <host.domain.com>.
-* Refactored some of the cmdlets to simplify the code. Some cmdlets, like Get-SVTvm and New-SVTclone do not accept input from the pipeline any more. Get-SVTvm -Hostname <host> can be used to filter on a specific hostname.
+* Added support for more meaningful run time errors, by determining the error message embedded in the body of the response from the API and passing this through in the cmdlets.
+* Hostname is now accepted as well as the fully qualified domain name for those cmdlets that accept the hostname parameter. Hostname can be entered in the form 'host' as well as 'host.domain.com'.
+* Refactored some of the cmdlets to simplify the code. Some cmdlets, like Get-SVTvm and New-SVTclone do not accept input from the pipeline any more. Get-SVTvm -Hostname 'host' can be used to filter on a specific hostname.
 * New-SVTclone now accepts a -CloneName parameter and will only perform a single clone operation on one VM. The previous functionality (cloning multiple VMs once, cloning one VM multiple times or both) will be moved to a utility script to be used in conjunction with the updated New-SVTclone cmdlet. 
 * Renamed Set-SVTPolicyRule to New-SVTpolicyRule
 * Autosized columns added for most SimpliVity objects. For performance reasons, cmdlets that produce a lot of objects, like Get-SVTmetric and Get-SVTbackup are not autosized.
