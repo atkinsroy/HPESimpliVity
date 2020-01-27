@@ -1155,7 +1155,6 @@ Known issues with the REST API Get operations for Backup objects:
 OMNI-53190 REST API Limit recommendation for REST GET backup object calls
 OMNI-46361 REST API GET operations for backup objects and sorting and filtering constraints
 #>
-
 function Get-SVTbackup {
     [CmdletBinding(DefaultParameterSetName = 'ByHour')]
     param (
