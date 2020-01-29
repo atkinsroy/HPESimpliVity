@@ -26,7 +26,8 @@
 # or specify the -OVC parameter with a comma seperated list of IPs.
 param (
     [object]$OVC = (Import-CSV -Path .\ovclist.csv | Select-Object -ExpandProperty OVC),
-    [switch]$Silent
+    [switch]$Silent,
+    [switch]$Purge
 )
 
 if ($Silent) {
@@ -39,15 +40,30 @@ else {
 }
 
 $sshcapture = 'source /var/tmp/build/bin/appsetup; /var/tmp/build/cli/svt-support-capture'
+$sshpurge = 'sudo find /core/capture/Capture*.tgz -maxdepth 1 -type f -exec rm -fv {} \;'
 $sshfile = 'ls -pl /core/capture'
 
 # Connect to each OVC
 foreach ($controller in $OVC) {
     try {
-        New-SSHSession -ComputerName $controller -port 22 -Credential $cred
+        New-SSHSession -ComputerName $controller -port 22 -Credential $cred -ErrorAction Stop
     }
     catch {
         Write-Warning "Could not establish an SSH session to $controller"
+    }
+}
+
+# Get all the SSH Sessions
+$Session = Get-SSHsession
+
+# If -Purge is specified, remove any old capture files...
+If ($PSBoundParameters.ContainsKey('Purge')) {
+    try {
+        "Purging previous capture files..."
+        Invoke-SSHcommand -SessionId $Session.SessionId -Command $sshpurge -ErrorAction Stop
+    }
+    catch {
+        Write-Warning "Could not purge old capture files on one or more virtual controllers"
     }
 }
 
@@ -57,7 +73,6 @@ foreach ($controller in $OVC) {
 # messages generated later.
 try {
     "Running capture command on each target virtual controller. This will take up to 7 minutes..."
-    $Session = Get-SSHsession
     $null = Invoke-SSHcommand -SessionId $Session.SessionId -Command $sshcapture -TimeOut 420
 }
 catch {
