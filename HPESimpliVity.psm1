@@ -8,13 +8,13 @@
 # Website:
 #   https://github.com/atkinsroy/HPESimpliVity
 #
-#   VERSION 2.0.17
+#   VERSION 2.0.19
 #
 #   AUTHOR
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.18'
+$HPESimplivityVersion = '2.0.19'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -94,7 +94,7 @@ function Get-SVTerror {
         [System.Object]$Err
     )
 
-    # $VerbosePreference = 'Continue'
+    #$VerbosePreference = 'Continue'
     if ($PSVersionTable.PSVersion.Major -lt 6) {
         if ($Err.Exception.Response) {
             $Result = $Err.Exception.Response.GetResponseStream()
@@ -560,7 +560,7 @@ function Get-SVTmetric {
     )
 
     begin {
-        $VerbosePreference = 'Continue'
+        #$VerbosePreference = 'Continue'
 
         $Header = @{
             'Authorization' = "Bearer $($global:SVTconnection.Token)"
@@ -1058,25 +1058,45 @@ function Get-SVTcapacityChart {
 # of a problem. As long as the disks are sorted by slot number (i.e. the first disk will always be an SSD), 
 # then the 380H disk capacity will be 1.92TB - the first disk is used to confirm the server type. This 
 # method may break if additional models continue to be added.
+# G (all flash) and H are both software optimized models.
 function Get-SVTmodel { 
-    $Model = ('325', '325', '2600', '380', '380', '380', '380', '380', '380 Gen10 H', '380', '380')
-    $DiskCount = (4, 6, 6, 5, 5, 9, 12, 12, 12, 4, 6)
-    $DiskCapacity = (2, 2, 2, 1, 2, 2, 2, 4, 2, 2, 2)
-    $Kit = ('4-8TB - SVT325 Extra Small',
+    $Model = (
+        '325', 
+        '325', 
+        '2600', 
+        '380', 
+        '380', 
+        '380', 
+        '380', 
+        '380', 
+        '380 Gen10 H',
+        '380 Gen10 H', 
+        '380 Gen10 G', 
+        '380 Gen10 G',
+        '380 Gen10 G',
+        '380 Gen10 G'
+    )
+    $DiskCount    = (4, 6, 6, 5, 5, 9, 12, 12, 12, 24, 6, 8, 12, 16)
+    $DiskCapacity = (2, 2, 2, 1, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2)
+    $Kit = (
+        '  4-8TB - SVT325 Extra Small',
         ' 7-15TB - SVT325 Small',
         ' 7-15TB - SVT2600',
-        '  3-6TB - SVT380Gen10 Extra Small',
+        '  3-6TB - SVT380Gen10 Extra Small', # 960GB disk ~ 1TB
         ' 6-12TB - SVT380Gen10 Small',
         '12-25TB - SVT380Gen10 Medium',
         '20-40TB - SVT380Gen10 Large',
-        '40-80TB - SVT380Gen10 Extra Large',
-        '20-50TB - SVT380Gen10H', #4X1.92 SSD + 8X4TB HDD = 12 disks
-        ' 8-16TB - SVT380Gen10G 4X1.92TB',
-        ' 7-15TB - SVT380Gen10G 6X.192TB'
+        '40-80TB - SVT380Gen10 Extra Large', # 3.8TB disk ~ 4TB
+        '20-40TB - SVT380Gen10H (LFF)', #4X1.92 SSD + 8X4TB HDD = 12 disks (Backup/Archive)
+        '25-50TB - SVT380Gen10H (SFF)', #4X1.92 SSD + 20X1.2TB HDD = 24 disks (General Purpose)
+        ' 8-16TB - SVT380Gen10G x6',
+        ' 7-15TB - SVT380Gen10G x8',
+        '15-30TB - SVT380Gen10G x12',
+        '20-40TB - SVT380Gen10G x16'
     )
     
     # return a custom object
-    0..7 | ForEach-Object {
+    0..13 | ForEach-Object {
         [PSCustomObject]@{
             Model        = $Model[$_]
             DiskCount    = $DiskCount[$_]
@@ -1217,7 +1237,7 @@ function Get-SVTbackup {
         [System.Int32]$Limit = 500
     )
 
-    $VerbosePreference = 'Continue'
+    #$VerbosePreference = 'Continue'
     $Header = @{
         'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'        = 'application/json'
@@ -3300,7 +3320,7 @@ function Get-SVTcapacity {
     )
 
     begin {
-        $VerbosePreference = 'Continue'
+        #$VerbosePreference = 'Continue'
 
         $Header = @{
             'Authorization' = "Bearer $($global:SVTconnection.Token)"
