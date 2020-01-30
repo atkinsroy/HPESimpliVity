@@ -20,9 +20,11 @@
 #
 # Get a list of OVCs to connect to. By default, an existing CSV file with 
 # a list of IP addresses is assumed.
+#
 # Other ways:
 # $OVC = @('192.168.1.1','192.168.2.1')
 # $OVC = (Get-SVThost).ManagementIP
+#
 # or specify the -OVC parameter with a comma seperated list of IPs.
 param (
     [object]$OVC = (Import-CSV -Path .\ovclist.csv | Select-Object -ExpandProperty OVC),

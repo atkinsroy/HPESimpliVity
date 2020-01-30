@@ -26,7 +26,7 @@ param (
     [object]$OVC = (Import-CSV -Path .\ovclist.csv | Select-Object -ExpandProperty OVC),
     [switch]$Silent,
 
-    [string]$vCenter = '<Enter your Default vCenter IP here>' 
+    [string]$vCenter = '<Enter your Default vCenter IP address here>' 
 )
 
 if ($Silent) {
