@@ -38,7 +38,7 @@
                                 <PropertyName>DestinationClusterName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>ThroughputKBs</PropertyName>
+                                <PropertyName>AverageThroughputKBs</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>

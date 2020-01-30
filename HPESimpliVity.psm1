@@ -8,13 +8,11 @@
 # Website:
 #   https://github.com/atkinsroy/HPESimpliVity
 #
-#   VERSION 2.0.19
-#
 #   AUTHOR
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.19'
+$HPESimplivityVersion = '2.0.20'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -230,13 +228,14 @@ function Invoke-SVTrestMethod {
 
 <#
 .SYNOPSIS
-    Show information about tasks that are currently executing or have finished executing in HPE SimpliVity
+    Show information about tasks that are currently executing or have finished executing in a 
+    HPE SimpliVity environment
 .DESCRIPTION
     Performing most Post/Delete calls to the SimpliVity REST API will generate task objects as output.
     Whilst these task objects are immediately returned, the task themselves will change state over time. 
     For example, when a Clone VM task completes, its state changes from IN_PROGRESS to COMPLETED.
 
-    All cmdlets that return a JSON 'task' object, e.g. New-SVTbackup, New-SVTclone will output custom task 
+    All cmdlets that return a JSON 'task' object, (e.g. New-SVTbackup and New-SVTclone) will output custom task 
     objects of type HPE.SimpliVity.Task and can then be used as input here to find out if the task completed 
     successfully. You can either specify the Task ID from the cmdlet output or, more usefully, use $SVTtask. 
     This is a global variable that all 'task producing' HPE SimpliVity cmdlets create. $SVTtask is 
@@ -244,6 +243,8 @@ function Invoke-SVTrestMethod {
 .PARAMETER Task
     The task object(s). Use the global variable $SVTtask which is generated from a 'task producing' 
     HPE SimpliVity cmdlet, like New-SVTbackup, New-SVTclone and Move-SVTvm.
+.PARAMETER Id
+    Specify a valid task ID
 .INPUTS
     HPE.SimpliVity.Task
 .OUTPUTS
@@ -251,34 +252,45 @@ function Invoke-SVTrestMethod {
 .EXAMPLE
     PS C:\> Get-SVTtask
 
-    Provides an update of the task(s) from the last HPESimpliVity cmdlet that creates, 
-    deletes or updates a SimpliVity resource
+    Provides an update of the task(s) from the last HPESimpliVity cmdlet that creates, deletes or updates 
+    a SimpliVity resource
 .EXAMPLE
     PS C:\> New-SVTbackup -VMname MyVM
     PS C:\> Get-SVTtask
 
     Shows the state of the task executed from the New-SVTbackup cmdlet.
 .EXAMPLE
-    PS C:\> Get-SVTvm | Where-Object VMname -match '^A' | New-SVTclone
-    PS C:\> Get-SVTtask
+    PS C:\> New-SVTclone Server2016-01 NewServer2016-01
+    PS C:\> Get-SVTtask | Format-List
 
-    The first command enumerates all virtual machines with names beginning with the letter A and clones them.
-    The second command monitors the progress of the clone tasks.
+    The first command clones the specfied VM.
+    The second command monitors the progress of the clone task, showing all the task properties.
+.EXAMPLE
+    PS C:\> Get-SVTtask -ID d7ef1442-2633-f544-eb31-a5e9317beb0b:d7ef1442-2633-f544-eb31-a5e9317beb0b:3a04b0a7-sd19-4d39-ab93-a03e69ae24a6
+
+    Displays the progress of the specified task ID. This command is useful when using the Web console to 
+    test API calls
 .NOTES
 #>
 function Get-SVTtask {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'ByObject')]
     param(
         # Use the global variable by default. i.e. the output from the last cmdlet 
         # that created task(s) in this session
-        [Parameter(Mandatory = $false, Position = 0, ValueFromPipeLine = $true)]
-        [System.Object]$Task = $SVTtask
+        [Parameter(Mandatory = $false, Position = 0, ValueFromPipeLine = $true, ParameterSetName = 'ByObject')]
+        [System.Object]$Task = $SVTtask,
+        
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ById')]
+        [String]$Id
     )
 
     begin {
         $Header = @{
             'Authorization' = "Bearer $($global:SVTconnection.Token)"
             'Accept'        = 'application/json'
+        }
+        if ($PSboundParameters.ContainsKey('Id')) {
+            $Task = @{ TaskId = $Id }
         }
     }
 
@@ -658,9 +670,8 @@ function Get-SVTmetric {
             }
             Write-verbose "Object name is $ObjectName ($TypeName)"
 
-            $Uri = $Uri + "?time_offset=$Offset&range=$Range&resolution=$Resolution"
-
             try {
+                $Uri = $Uri + "?time_offset=$Offset&range=$Range&resolution=$Resolution"
                 $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
             }
             catch {
@@ -1076,7 +1087,7 @@ function Get-SVTmodel {
         '380 Gen10 G',
         '380 Gen10 G'
     )
-    $DiskCount    = (4, 6, 6, 5, 5, 9, 12, 12, 12, 24, 6, 8, 12, 16)
+    $DiskCount = (4, 6, 6, 5, 5, 9, 12, 12, 12, 24, 6, 8, 12, 16)
     $DiskCapacity = (2, 2, 2, 1, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2)
     $Kit = (
         '  4-8TB - SVT325 Extra Small',
@@ -3957,6 +3968,12 @@ function Get-SVTcluster {
     Display information about HPE SimpliVity cluster throughput
 .DESCRIPTION
     Calculates the throughput between each pair of omnistack_clusters in the federation
+.PARAMETER ClusterName
+    Specify a cluster name
+.PARAMETER Hour
+    Show throughput for the specified number of hours (starting from OffsetHour)
+.PARAMETER OffsetHour
+    Show throughput starting from the specified offset (hours from now, default is now)
 .EXAMPLE
     PS C:\>Get-SVTthroughput
 
@@ -3967,21 +3984,47 @@ function Get-SVTcluster {
 .NOTES
 #>
 function Get-SVTthroughput {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [System.String]$ClusterName,
+
+        [Parameter(Mandatory = $false, Position = 1)]
+        [System.In32]$Hour = 12,
+
+        [Parameter(Mandatory = $false, Position = 1)]
+        [System.In32]$OffsetHour = 0
+    )
+
     $Header = @{
         'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'        = 'application/json'
     }
-    $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/throughput'
+
+    $Range = $Hour * 3600
+    $Offset = $OffsetHour * 3600
     $LocalFormat = Get-SVTLocalDateFormat
+    
 
     try {
+        $ClusterId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | 
+        Select-Object -ExpandProperty ClusterId
+
+        $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/' + $ClusterId + '/throughput'
+    }
+    catch {
+        throw $_.Exception.Message
+    }
+
+    try {
+        $Uri = $Uri + "?time_offset=$Offset&range=$Range"
         $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
     }
     catch {
         throw $_.Exception.Message
     }
 
-    $Response | ForEach-Object {
+    $Response.cluster_throughput | ForEach-Object {
         if ($_.date -as [DateTime]) {
             $Date = Get-Date -Date $_.date -Format $LocalFormat
         }
@@ -3999,7 +4042,7 @@ function Get-SVTthroughput {
             SourceClusterHypervisorName      = $_.source_omnistack_cluster_hypervisor_object_parent_name
             SourceClusterId                  = $_.source_omnistack_cluster_id
             SourceClusterName                = $_.source_omnistack_cluster_name
-            ThroughputKBs                    = '{0:n2}' -f ($_.throughput / 1kb)
+            AverageThroughputKB              = '{0:n2}' -f ($_.average_throughput / 1kb)
         }
     }
 }
@@ -4244,22 +4287,22 @@ function Get-SVTpolicy {
                 # This matches $RuleNumber=0, which is a valid value; '0' would return all rules.
                 if (-not $PSBoundParameters.ContainsKey('RuleNumber') -or $RuleNumber -eq $_.number) {
                     [PSCustomObject]@{
-                        PSTypeName            = 'HPE.SimpliVity.Policy'
-                        PolicyName            = $PolicyName
-                        PolicyId              = $PolicyId
-                        DestinationId         = $_.destination_id
-                        EndTime               = $_.end_time
-                        DestinationName       = $_.destination_name
-                        ConsistencyType       = $_.consistency_type
-                        FrequencyHour         = $_.frequency / 60
-                        AppConsistent         = $_.application_consistent
-                        RuleNumber            = $_.number
-                        StartTime             = $_.start_time
-                        MaxBackup             = $_.max_backups
-                        Day                   = $_.days
-                        RuleId                = $_.id
-                        RetentionDay          = [math]::Round($_.retention / 1440)
-                        ExternalStoreName     = $_.external_store_name
+                        PSTypeName        = 'HPE.SimpliVity.Policy'
+                        PolicyName        = $PolicyName
+                        PolicyId          = $PolicyId
+                        DestinationId     = $_.destination_id
+                        EndTime           = $_.end_time
+                        DestinationName   = $_.destination_name
+                        ConsistencyType   = $_.consistency_type
+                        FrequencyHour     = $_.frequency / 60
+                        AppConsistent     = $_.application_consistent
+                        RuleNumber        = $_.number
+                        StartTime         = $_.start_time
+                        MaxBackup         = $_.max_backups
+                        Day               = $_.days
+                        RuleId            = $_.id
+                        RetentionDay      = [math]::Round($_.retention / 1440)
+                        ExternalStoreName = $_.external_store_name
                     }
                 } # end if
             } # foreach rule
@@ -5599,7 +5642,7 @@ function New-SVTclone {
 
         [Parameter(Mandatory = $false, Position = 1)]
         [Alias("Name")]
-        [System.String]$CloneName="$VMname-clone-$(Get-Date -Format 'yyMMddhhmmss')",
+        [System.String]$CloneName = "$VMname-clone-$(Get-Date -Format 'yyMMddhhmmss')",
 
         [Parameter(Mandatory = $false, Position = 2)]
         [switch]$AppConsistent,

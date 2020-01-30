@@ -1,40 +1,117 @@
-###########################################################################
+##############################################################################
 # Get-SupportCaptureFile.ps1
+#
+# Description:
+#   This is a utility script that automates the creation and download of the 
+#   support file from one or more SimpliVity virtual controllers.
 # 
-# Utility script that automates creation and download of the support file
-# from one or more SimpliVity virtual controllers.
-#
-# This script depends on a third party module called Posh-SSH which
-# allows you to enter username and password via a credential. This has
-# the advantage of not having to upload an ssh public key to every OVC, but
-# it is less secure.
 # 
-# I have a version that uses OpenSSH (available on Window 10 1809 and above)
-# if a more secure approach is required.
+#   Download:
+#   https://github.com/atkinsroy/HPESimpliVity
 #
-# Roy Atkins, HPE Pointnext Services
-###########################################################################
 #
-# Requirements - You need to install Posh-SSH
-# PS:\> Install-Module Posh-SSH
+#   AUTHOR
+#   Roy Atkins    HPE Pointnext Services
 #
-# Get a list of OVCs to connect to. By default, an existing CSV file with 
-# a list of IP addresses is assumed.
-#
-# Other ways:
-# $OVC = @('192.168.1.1','192.168.2.1')
-# $OVC = (Get-SVThost).ManagementIP
-#
-# or specify the -OVC parameter with a comma seperated list of IPs.
+##############################################################################
+
+<#
+(C) Copyright 2019 Hewlett Packard Enterprise Development LP
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+#>
+
+<#
+.SYNOPSIS
+    This is a utility script that automates the creation and download of the 
+    support capture file from one or more HPE SimpliVity virtual controllers.
+.DESCRIPTION
+    This script will connect to one or more HPE SimpliVity virtual controllers and
+    establish a persistent session. This then provides the ability to initiate the
+    creation of the support capture file in parallel. Finally, the support files are
+    downloaded locally from each virtual controller.
+
+    This script requires direct SSH (port 22) and HTTPS (port 443) access to each 
+    HPE SimplVity virtual controller.
+
+    This script depends on a third party module called Posh-SSH, which
+    provides the ability to enter username and password via a credential to eastablish
+    SSH sessions. This has the advantage of not having to upload an ssh public key to 
+    every OVC, but it is less secure. It is assumed that the same credentials can be used
+    for each virtual controller.
+ 
+    Install the required Posh-SSH using the following command: 
+    PS:\> Install-Module Posh-SSH
+.PARAMETER OVC
+    Accepts one or more FQDN's or IP Addresses. By default the script
+    will look for a CSV called .\ovclist.csv in the local folder. The file
+    must contain a heading of "OVC" on the first line. FQDN's or IP addresses
+    for each virtual controller must be entered one per line, with no commas.
+.PARAMETER Silent
+    Do not prompt for credentials. This is possible, if you have previously saved
+    the appropriate credentials to a file called .\cred.xml, in the local folder
+.PARAMETER Purge
+    This parameter will delete any previous capture files found on the virtual 
+    controller(s) prior to creating and downloading a new support capture file 
+
+.EXAMPLE
+    PS C:\> Install-Module Posh-SSH
+    PS C:\> Get-Credential -Message 'Enter password' -UserName 'administrator@vsphere.local' | Export-Clixml cred.xml
+    PS C:\> Get-SupportCaptureFile -OVC 192.168.1.1 -Silent
+
+    The first command installs the required PowerShell module called Posh-SSH from the
+    PowerShell Gallery. 
+
+    The second command creates a credential file so that the -Silent parameter can be used
+    
+    The the third command will connect over SSH with the specified virtual controller and 
+    initiate a support capture. Finally the capture file is downloaded locally over HTTPS.
+.EXAMPLE
+    PS C:\> Get-SupportCaptureFile
+
+    This command requires a file called .\ovclist.csv containing a list of virtual controllers
+    to connect to. Because -Silent was not entered, you will be prompted enter credentials.
+.EXAMPLE
+    PS C:\> Get-SupportCaptureFile -OVC '192.168.1.1','192.168.2.1' -Purge
+
+    This command will connect to the two specfied virtual controllers and delete any pre-existing
+    support capture files before initiating a new capture.
+.INPUTS
+System.PSobject
+System.String
+.OUTPUTS
+Ssytem.String
+.NOTES
+
+#>
+
 param (
     [object]$OVC = (Import-CSV -Path .\ovclist.csv | Select-Object -ExpandProperty OVC),
+
     [switch]$Silent,
+
     [switch]$Purge
 )
 
 if ($Silent) {
     # It is assumed you have previously created a credential file using, for example:
-    # PS:\> Get-Credential -Message 'Enter password' -UserName 'administrator@vsphere.local' | Export-Clixml cred.xml
+    # 
     $cred = Import-Clixml .\cred.xml
 }
 else {
