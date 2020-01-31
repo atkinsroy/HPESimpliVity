@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.20'
+$HPESimplivityVersion = '2.0.22'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -119,6 +119,45 @@ function Get-SVTLocalDateFormat {
     $LocalDate = "$($Culture.ShortDatePattern)" -creplace '^d/', 'dd/' -creplace '^M/', 'MM/' -creplace '/d/', '/dd/'
     $LocalTime = "$($Culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm', 'HH:mm'
     return "$LocalDate $LocalTime"
+}
+
+# Helper function used by New/Copy-SVTbackup and New/Update-SVTpolicyRule to return the backup destination
+# This must be a cluster or an external store. Otherwise throw an error.
+Function Get-SVTbackupDestination {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [Alias("Name")]
+        [System.String]$DestinationName
+    )
+
+    try {
+        $ClusterId = (Get-SVTcluster -Name $DestinationName -ErrorAction Stop).ClusterId
+
+        $ReturnObject = @{
+            Type = 'Cluster'
+            Id   = $ClusterId
+        }
+        Write-Verbose "$DestinationName is a SimpliVity Cluster"
+        Return $ReturnObject
+    }
+    catch {
+        # don't throw an error, try external stores
+    }
+    
+    try {
+        $ExternalStoreName = (Get-SVTexternalStore -Name $DestinationName -ErrorAction Stop).ExternalStoreName
+        
+        $ReturnObject = @{
+            Type = 'ExternalStore'
+            Id   = $ExternalStoreName
+        }
+        Write-Verbose "$DestinationName is an external store"
+        Return $ReturnObject
+    }
+    catch {
+        throw "Specified destination name $DestinationName is not a valid cluster name or external store name"
+    }
 }
 
 # Helper function for Invoke-RestMethod to handle REST errors in one place. The calling function 
@@ -710,7 +749,7 @@ function Get-SVTmetric {
                     # We expect one instance each of Iops, Latency and Throughput per date. 
                     # But sometimes the API returns more. Attempting to create a key that already 
                     # exists generates a non-terminating error so, check for duplicates.
-                    If ($_.name -ne $prevname) {
+                    if ($_.name -ne $prevname) {
                         $Property += [ordered]@{
                             "$($_.Name)Read"  = $_.Read
                             "$($_.Name)Write" = $_.Write
@@ -1039,10 +1078,10 @@ function Get-SVTcapacityChart {
         if ($Max -lt 10000) {
             $Area1.AxisY.Interval = 500
         }
-        Elseif ($Max -lt 20000) {
+        elseif ($Max -lt 20000) {
             $Area1.AxisY.Interval = 1000
         }
-        Else {
+        else {
             $Area1.AxisY.Interval = 5000
         }
         $Area1.AxisX.Interval = 1
@@ -1321,22 +1360,22 @@ function Get-SVTbackup {
     }
 
     $BackupCount = $Response.count
-    If ($BackupCount -gt $Limit) {
+    if ($BackupCount -gt $Limit) {
         Write-Warning "There are $BackupCount matching backups, but limited to displaying only $Limit. Either increase -Limit or use more restrictive parameters"
     }
     else {
         Write-Verbose "There are $BackupCount matching backups"
     }
 
-    If ($PSBoundParameters.ContainsKey('BackupName') -and -not $Response.Backups.Name) {
+    if ($PSBoundParameters.ContainsKey('BackupName') -and -not $Response.Backups.Name) {
         throw "Specified backup name $BackupName not found"
     }
 
-    If ($PSBoundParameters.ContainsKey('BackupId') -and -not $Response.Backups.Name) {
+    if ($PSBoundParameters.ContainsKey('BackupId') -and -not $Response.Backups.Name) {
         throw "Specified backup ID $BackupId not found"
     }
 
-    If ($PSBoundParameters.ContainsKey('VMname') -and -not $Response.Backups.Name) {
+    if ($PSBoundParameters.ContainsKey('VMname') -and -not $Response.Backups.Name) {
         throw "Backups for specified virtual machine $VMName (last $DisplayHour hours) not found"
     }
 
@@ -1401,9 +1440,9 @@ function Get-SVTbackup {
         $BackupObject += $CustomObject
     }
 
-    # If $Hour was specified with some other parameter, filter here. If by itself (or no parameters), 
+    # if $Hour was specified with some other parameter, filter here. if by itself (or no parameters), 
     # we've already filtered on hour via the /backups API.
-    If (($PSboundParameters).Count -gt 1 -and $PSBoundParameters.ContainsKey('Hour')) {
+    if (($PSboundParameters).Count -gt 1 -and $PSBoundParameters.ContainsKey('Hour')) {
         $params = ($PSboundParameters.Keys | Where-Object { $_ -ne 'Hour' }) -join ' -'
         Write-Verbose "The -Hour parameter was specified with -$params, show only the backups taken after $(Get-date $StartDate -Format $LocalFormat)"
         $BackupObject = $BackupObject | Where-Object { $(Get-Date $_.CreateDate) -gt $StartDate }
@@ -1431,18 +1470,17 @@ function Get-SVTbackup {
 .DESCRIPTION
     Creates a backup of one or more virtual machines hosted on HPE SimpliVity. Either specify the VM names 
     via the VMname parameter or use Get-SVTvm output to pass in the HPE SimpliVity VM objects to backup. 
-    Backups are directed to the specified destination cluster, or to the local cluster for each VM if no 
-    destination cluster name is specified.
+    Backups are directed to the specified destination cluster or external store, or to the local cluster 
+    for each VM if no destination name is specified.
 .PARAMETER VMname
-    The virtual machine(s) to backup
+    The virtual machine(s) to backup. Optionally use the output from Get-SVTvm to provide the required VM names. 
+.PARAMETER DestinationName
+    The destination cluster name or external store name. If nothing is specified, the virtual machine(s) 
+    is/are backed up locally. If there is a cluster with the same name as an external store, the cluster wins.
 .PARAMETER BackupName
-    Give the backup(s) a unique name, otherwise a date stamp is used.
-.PARAMETER ClusterName
-    The destination cluster name. If nothing is specified, the virtual machine(s) is/are backed up locally.
-.PARAMETER ExternalStoreName
-    The destination external datastore name
+    Give the backup(s) a unique name, otherwise a default name with a date stamp is used.
 .PARAMETER RetentionDay
-    Retention specified in days. The default is 1 day.
+    Retention specified in days.
 .PARAMETER AppConsistent
     An indicator to show if the backup represents a snapshot of a virtual machine with data that was first 
     flushed to disk. This is a switch parameter, true if present.
@@ -1454,18 +1492,19 @@ function Get-SVTbackup {
     2. DEFAULT - VMware Snapshot. This is the default method used for application consistency
     3. VSS - Microsoft VSS. Refer to the admin guide for requirements and supported applications
 .EXAMPLE
-    PS C:\> New-SVTbackup -VMname MyVM -ClusterName ClusterDR
+    PS C:\> New-SVTbackup -VMname MyVM -DestinationName ClusterDR
 
     Backup the specified VM to the specified SimpliVity cluster, using the default backup name and retention
 .EXAMPLE
-    PS C:\> New-SVTbackup -VMname MyVM -ExternalStoreName StoreOnce-Data01 -RetentionDay 365
+    PS C:\> New-SVTbackup MyVM StoreOnce-Data01 -RetentionDay 365
 
-    Backup the specified VM to the specified external datastore, using the default backup name for 1 year
+    Backup the specified VM to the specified external datastore, using the default backup name and retain the
+    backup for 1 year
 .EXAMPLE
     PS C:\> Get-SVTvm | ? VMname -match '^DB' | New-SVTbackup -BackupName 'Manual backup prior to SQL upgrade'
 
-    Locally backup up all VMs with names starting with 'DB' using the specified backup name and 
-    default retention
+    Locally backup up all VMs with names starting with 'DB' using the specified backup name and with default 
+    retention of 1 day.
 .INPUTS
     System.String
     HPE.SimpliVity.VirtualMachine
@@ -1480,11 +1519,8 @@ function New-SVTbackup {
             ValueFromPipelinebyPropertyName = $true)]
         [System.String]$VMname,
 
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByClusterName')]
-        [System.String]$ClusterName,
-
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByExternalStoreName')]
-        [System.String]$ExternalStoreName,
+        [Parameter(Mandatory = $false, Position = 1)]
+        [System.String]$DestinationName,
 
         [Parameter(Mandatory = $false, Position = 2)]
         [System.String]$BackupName = "Created by $(($SVTconnection.Credential.Username -split "@")[0]) at " +
@@ -1507,6 +1543,20 @@ function New-SVTbackup {
             'Accept'        = 'application/json'
             'Content-Type'  = 'application/vnd.simplivity.v1.5+json'
         }
+
+        if ($PSBoundParameters.ContainsKey('DestinationName')) {
+            try {
+                $Destination = Get-SVTbackupDestination -Name $DestinationName -ErrorAction Stop
+            }
+            catch {
+                throw $_.Exception.Message
+            }
+        }
+
+        $ApplicationConsistent = $False
+        if ($PSBoundParameters.ContainsKey('AppConsistent')) {
+            $ApplicationConsistent = $True
+        }
     }
 
     process {
@@ -1521,33 +1571,6 @@ function New-SVTbackup {
                 throw $_.Exception.Message
             }
 
-            if ($PSBoundParameters.ContainsKey('ClusterName')) {
-                try {
-                    $DestId = Get-SVTcluster -ClusterName $ClusterName | Select-Object -ExpandProperty ClusterId
-                }
-                catch {
-                    throw $_.Exception.Message
-                }
-            }
-            elseif ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
-                try {
-                    $DestExternal = Get-SVTexternalStore -ExternalstoreName $ExternalStoreName |
-                    Select-Object -ExpandProperty ExternalStoreName 
-                }
-                catch {
-                    throw $_.Exception.Message
-                }
-            }
-            else {
-                # No destination cluster specified, so use the cluster id local the VM being backed up
-                $DestId = $VMobj.ClusterId
-            }
-
-            $ApplicationConsistent = $False
-            if ($PSBoundParameters.ContainsKey('AppConsistent')) {
-                $ApplicationConsistent = $True
-            }
-
             $Body = @{
                 'backup_name'      = $BackupName
                 'app_consistent'   = $ApplicationConsistent
@@ -1555,11 +1578,16 @@ function New-SVTbackup {
                 'retention'        = $RetentionDay * 1440  # must be specified in minutes
             }
 
-            if ($DestId) {
-                $Body += @{'destination_id' = $DestId }
+            if ($Destination.Type -eq 'Cluster') {
+                $Body += @{ 'destination_id' = $Destination.Id }
+            }
+            elseif ($Destination.Type -eq 'ExternalStore') {
+                $Body += @{ 'external_store_name' = $Destination.Id }
             }
             else {
-                $Body += @{'external_store_name' = $DestExternal }
+                # No destination cluster/external store specified, so use the cluster id local for VM being 
+                # backed up will be used.
+                $Body += @{ 'destination_id' = $VMobj.ClusterId }
             }
 
             $Body = $Body | ConvertTo-Json
@@ -1567,14 +1595,15 @@ function New-SVTbackup {
 
             try {
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+                [array]$AllTask += $Task
+                $Task
             }
             catch {
                 throw $_.Exception.Message
             }
-            [array]$AllTask += $Task
-            $Task
-        }
-    }
+        } #end foreach
+    } #end process
+
     end {
         $global:SVTtask = $AllTask
         $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
@@ -1849,23 +1878,37 @@ function Stop-SVTbackup {
 
 <#
 .SYNOPSIS
-    Copy HPE SimpliVity backups to another cluster
+    Copy HPE SimpliVity backups to another cluster or an external store
 .DESCRIPTION
-    Copy HPE SimpliVity backups to another cluster
+    Copy HPE SimpliVity backups between SimpliVity clusters and backups to and from external stores.
+    
+    Note, backups currently on external stores can only be copied to the cluster they were backed 
+    up from. A backup on an external store cannot be copied to another external store. If you 
+
+    If you try to copy a backup to a destination where is already exists, the task will fail with a "Duplicate
+    name exists" message. 
 
     BackupId is the only unique identifier for backup objects (e.g. multiple backups can have the same name). 
     This makes using this command a little cumbersome by itself. However, you can use Get-SVTBackup to 
     identify the backups you want to target and then pass the output to this command.
-.PARAMETER ClusterName
-    Specify the destination SimpliVity Cluster name
-.PARAMETER ExternalStoreName
-    Specify the destination external store name
+.PARAMETER DestinationName
+    Specify the destination SimpliVity Cluster name or external store name. If a cluster exists with the
+    same name as an external store, the cluster wins.
 .PARAMETER BackupId
-    Specify the Backup ID to copy
+    Specify the Backup ID(s) to copy. Use the output from an appropriate Get-SVTbackup command to provide
+    one or more Backup ID's to copy. 
 .EXAMPLE
-    PS C:\>Get-SVTbackup -Hour 2 | Copy-SVTbackup -ClusterName Production
+    PS C:\>Get-SVTbackup -VMname Server2016-01 | Copy-SVTbackup -DestinationName Cluster02
 
-    Copy the last two hours of backups to the specified cluster.
+    Copy the last 24 hours of backups for the specified VM to the specified SimpliVity cluster
+.EXAMPLE
+    PS C:\>Get-SVTbackup -Hour 2 | Copy-SVTbackup Cluster02
+
+    Copy the last two hours of all backups to the specified cluster
+.EXAMPLE
+    PS C:\>Get-SVTbackup -Name 'BeforeSQLupgrade' | Copy-SVTbackup StoreOnce-Data02
+
+    Copy backups with the specfied name to the specified external store.
 .INPUTS
     System.String
     HPE.SimpliVity.Backup
@@ -1876,11 +1919,8 @@ function Stop-SVTbackup {
 function Copy-SVTbackup {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'ByClusterName')]
-        [System.String]$ClusterName,
-    
-        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'ByExternalStoreName')]
-        [System.String]$ExternalStoreName,
+        [Parameter(Mandatory = $true, Position = 0)]
+        [System.String]$DestinationName,
 
         [Parameter(Mandatory = $true, Position = 1, ValueFromPipelinebyPropertyName = $true)]
         [System.String]$BackupId
@@ -1893,37 +1933,34 @@ function Copy-SVTbackup {
             'Content-Type'  = 'application/vnd.simplivity.v1.5+json'
         }
 
-        if ($PSBoundParameters.ContainsKey('ClusterName')) {
-            try {
-                $ClusterId = Get-SVTcluster | 
-                Where-Object ClusterName -eq $ClusterName -ErrorAction Stop | 
-                Select-Object -ExpandProperty ClusterId
+        try {
+            $Destination = Get-SVTbackupDestination -Name $DestinationName -ErrorAction Stop
 
-                $Body = @{ 'destination_id' = $ClusterId } | ConvertTo-Json
+            if ($Destination.Type -eq 'Cluster') {
+                $Body = @{ 'destination_id' = $Destination.Id } | ConvertTo-Json
                 Write-Verbose $Body
             }
-            catch {
-                throw $_.Exception.Message
+            else {
+                $Body = @{ 'external_store_name' = $Destination.Id } | ConvertTo-Json
+                Write-Verbose $Body
             }
         }
-        else {
-            $Body = @{ 'external_store_name' = $ExternalStoreName } | ConvertTo-Json
-            Write-Verbose $Body
+        catch {
+            throw $_.Exception.Message
         }
     }
 
     process {
         foreach ($thisbackup in $BackupId) {
-            $Uri = $global:SVTconnection.OVC + '/api/backups/' + $thisbackup + '/copy'
-
             try {
+                $Uri = $global:SVTconnection.OVC + '/api/backups/' + $thisbackup + '/copy'
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+                [array]$AllTask += $Task
+                $Task
             }
             catch {
-                throw $_.Exception.Message
+                Write-Warning "Cannot copy backup for VM $($thisbackup.VMname), $($_.Exception.Message)"
             }
-            [array]$AllTask += $Task
-            $Task
         }
     }
     end {
@@ -3425,7 +3462,7 @@ function Get-SVTcapacity {
                             "$($_.Name)" = '{0:n2}' -f $_.Value
                         }
                     }
-                    Else {
+                    else {
                         $Property += @{
                             "$($_.Name)" = $_.Value
                         }
@@ -3616,7 +3653,7 @@ function Start-SVTshutdown {
 
     # Confirm if this is the last running virtual controller in this cluster
     Write-Verbose "$LiveHost operational HPE Omnistack virtual controller(s) in the $ThisCluster cluster"
-    If ($LiveHost -lt 2) {
+    if ($LiveHost -lt 2) {
         Write-Warning "This is the last Omnistack virtual controller running in the $ThisCluster cluster"
         Write-Warning "Using this command with confirm turned off could result in loss of data if you have not already powered off all virtual machines"
     }
@@ -3990,10 +4027,10 @@ function Get-SVTthroughput {
         [System.String]$ClusterName,
 
         [Parameter(Mandatory = $false, Position = 1)]
-        [System.In32]$Hour = 12,
+        [System.Int32]$Hour = 12,
 
         [Parameter(Mandatory = $false, Position = 1)]
-        [System.In32]$OffsetHour = 0
+        [System.Int32]$OffsetHour = 0
     )
 
     $Header = @{
@@ -4274,7 +4311,7 @@ function Get-SVTpolicy {
         throw $_.Exception.Message
     } 
 
-    If ($PSBoundParameters.ContainsKey('PolicyName') -and -not $Response.policies.Name) {
+    if ($PSBoundParameters.ContainsKey('PolicyName') -and -not $Response.policies.Name) {
         throw "Specified policy $PolicyName not found"
     }
 
@@ -4376,9 +4413,10 @@ function New-SVTpolicy {
 
 <#
 .SYNOPSIS
-    Create or replace a backup policy rule in a HPE SimpliVity backup policy
+    Create a new backup policy rule in a HPE SimpliVity backup policy
 .DESCRIPTION
-    Create or replace backup policies within an existing HPE Simplivity backup policy
+    Create backup policies within an existing HPE Simplivity backup policy. Optionally,
+    You can replace all the existing policy rules with the new policy rule.
 .PARAMETER PolicyName
     The backup policy to add/replace backup policy rules
 .PARAMETER WeekDay
@@ -4389,10 +4427,10 @@ function New-SVTpolicy {
     Specifies the last day of the month to run a backup
 .PARAMETER All
     Specifies every day to run backup
-.PARAMETER ClusterName
-    Specifies the destination HPE SimpliVity cluster name
-.PARAMETER ExternalDataStore
-    Specifies the destination external datastore
+.PARAMETER DestinationName
+    Specifies the destination HPE SimpliVity cluster name or external store name. If not specified, the
+    destination will be the local cluster. If an external store has the same name as a cluster, the cluster
+    wins.
 .PARAMETER StartTime
     Specifies the start time (24 hour clock) to run backup, e.g. 22:00
 .PARAMETER EndTime
@@ -4402,11 +4440,6 @@ function New-SVTpolicy {
     Must be between 1 and 1440 minutes (24 hours).
 .PARAMETER RetentionDay
     Specifies the retention, in days.
-.PARAMETER AppConsistent
-    An indicator to show if the backup represents a snapshot of a virtual machine with data that was first 
-    flushed to disk. This is a switch parameter, true if present.
-
-    The default is false (crash consistent backup is taken), which is equivalent to ConsistencyType = None
 .PARAMETER ConsistencyType
     This parameter overrides the AppConsistent parameter. Available options are:
     1. NONE - This is the default and creates a crash consistent backup
@@ -4415,6 +4448,11 @@ function New-SVTpolicy {
 .PARAMETER ReplaceRules
     If this switch is specified, ALL existing rules in the specified backup policy are removed and 
     replaced with this new rule.
+.PARAMETER AppConsistent
+    An indicator to show if the backup represents a snapshot of a virtual machine with data that was first 
+    flushed to disk. This is a switch parameter, true if present.
+
+    The default is false (crash consistent backup is taken), which is equivalent to ConsistencyType = None
 .EXAMPLE
     PS C:\>New-SVTpolicyRule -PolicyName Silver -All -ClusterName ProductionCluster -ReplaceRules
 
@@ -4443,61 +4481,48 @@ function New-SVTpolicy {
 .NOTES
 #>
 function New-SVTpolicyRule {
-    [CmdletBinding(DefaultParameterSetName = 'ByAllDay_Cluster')]
+    [CmdletBinding(DefaultParameterSetName = 'ByWeekDay')]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
         [System.String]$PolicyName,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByAllDay_Cluster')]
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByAllDay_External')]
+        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByAllDay')]
         [switch]$All,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByWeekDay_Cluster')]
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByWeekDay_External')]
+        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByWeekDay')]
         [array]$WeekDay,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByMonthDay_Cluster')]
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByMonthDay_External')]
+        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByMonthDay')]
         [array]$MonthDay,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByLastDay_Cluster')]
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByLastDay_External')]
+        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByLastDay')]
         [switch]$LastDay,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByWeekDay_Cluster')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByMonthDay_Cluster')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByLastDay_Cluster')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByAllDay_Cluster')]
-        [System.String]$ClusterName = '', # Default is local cluster
+        [Parameter(Mandatory = $false, Position = 2)]
+        [System.String]$DestinationName,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByWeekDay_External')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByMonthDay_External')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByLastDay_External')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByAllDay_External')]
-        [System.String]$ExternalStoreName,
-
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, Position = 3)]
         [System.String]$StartTime = '00:00',
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, Position = 4)]
         [System.String]$EndTime = '00:00',
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, Position = 5)]
         [ValidateRange(1, 1440)]
         [System.String]$FrequencyMin = 1440, # Default is once per day
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, Position = 6)]
         [System.Int32]$RetentionDay = 1,
 
-        [Parameter(Mandatory = $false)]
-        [switch]$AppConsistent,
-
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, Position = 7)]
         [ValidateSet('NONE', 'DEFAULT', 'VSS', 'FAILEDVSS', 'NOT_APPLICABLE')]
         [System.String]$ConsistencyType = 'NONE',
 
-        [Parameter(Mandatory = $false)]
-        [switch]$ReplaceRules
+        [Parameter(Mandatory = $false, Position = 8)]
+        [switch]$ReplaceRules,
+
+        [Parameter(Mandatory = $false, Position = 9)]
+        [switch]$AppConsistent
     )
 
     $Header = @{
@@ -4511,25 +4536,36 @@ function New-SVTpolicyRule {
         Select-Object -ExpandProperty PolicyId -Unique
 
         $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/rules'
-
-        # external store name is not case sensitive with Get, but it is with Post, 
-        # so get the name here to ensure correct case
-        if ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
-            $ExternalStoreName = Get-SVTexternalStore -ExternalstoreName $ExternalStoreName | 
-            Select-Object -ExpandProperty ExternalStoreName
-        }
-        elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
-            $ClusterId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | 
-            Select-Object -ExpandProperty ClusterId
+        
+        if ($PSBoundParameters.ContainsKey('ReplaceRules')) {
+            $Uri += "?replace_all_rules=$true"
         }
         else {
-            # Neither -ClusterName, nor -ExternalStoreName are specified, 
-            # so the default destination is local cluster
-            $ClusterId = ''
+            $Uri += "?replace_all_rules=$false"
         }
     }
     catch {
         throw $_.Exception.Message
+    }
+
+    if ($PSBoundParameters.ContainsKey('DestinationName')) {
+        try {
+            $Destination = Get-SVTbackupDestination -Name $DestinationName -ErrorAction Stop
+
+            if ($Destination.Type -eq 'Cluster') {
+                $Body = @{ 'destination_id' = $Destination.Id }
+            }
+            else {
+                $Body = @{ 'external_store_name' = $Destination.Id }
+            }
+        }
+        catch {
+            throw $_.Exception.Message
+        }
+    }
+    else {
+        # No destination specified, so the default destination is local cluster (<local>)
+        $Body = @{ 'destination_id' = '' }
     }
 
     if ($PSBoundParameters.ContainsKey('WeekDay')) {
@@ -4567,7 +4603,7 @@ function New-SVTpolicyRule {
         $ApplicationConsistent = $true
     }
 
-    $Body = @{
+    $Body += @{
         'frequency'              = $FrequencyMin
         'retention'              = $RetentionDay * 1440  # Retention is in minutes
         'days'                   = $TargetDay
@@ -4576,24 +4612,9 @@ function New-SVTpolicyRule {
         'application_consistent' = $ApplicationConsistent
         'consistency_type'       = $ConsistencyType
     } 
-    
-    # Must test $ExternalStoreName because $ClusterName / $ClusterId = '' is valid
-    if ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
-        $Body += @{ 'external_store_name' = $ExternalStoreName }
-    } 
-    else {
-        $Body += @{ 'destination_id' = $ClusterId }
-    }
 
     $Body = '[' + $($Body | ConvertTo-Json) + ']'
     Write-Verbose $Body
-
-    if ($PSBoundParameters.ContainsKey('ReplaceRules')) {
-        $Uri += "?replace_all_rules=$true"
-    }
-    else {
-        $Uri += "?replace_all_rules=$false"
-    }
 
     try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -4610,36 +4631,30 @@ function New-SVTpolicyRule {
 .SYNOPSIS
     Updates an existing HPE SimpliVity backup policy rule
 .DESCRIPTION
-    Updates an existing HPE SimpliVity backup policy. You must specify at least:
-    
-    - the policy name continuing the rule you'd like to update
-    - the existing rule number
-    - the required day (via -All, -Weekday, -Monthday or -Lastday)
-    - the backup destination (via -ClusterName or -ExternalStoreName)
-    
-    for the backup policy rule to be replaced. All other parameters are optional; the new policy rule will 
-    inherit the current policy rule settings.
+    Updates an existing HPE SimpliVity backup policy rule. You must specify at least:
 
-    Note: Currently, you must delete and recreate the rule if you want to change the destination (i.e. once
-    either ClusterName is set, you cannot change the rules' destination to an external datastore, and visa-versa).
+    - the name of policy to update
+    - the existing policy rule number
+    - the required day (via -All, -Weekday, -Monthday or -Lastday), even if you're not changing the day
+
+    All other parameters are optional, if not set the new policy rule will inherit the current policy rule settings.
+
+    Note: Policy rule destinations cannot be changed. You must first delete the policy rule and then recreate it
+    using Remove-SVTpolicyRule and New-SVTpolicyRule respectively. 
 
     Rule numbers start from 0 and increment by 1. Use Get-SVTpolicy to identify the rule you want to replace
 .PARAMETER PolicyName
-    The backup policy to update
+    The name of the backup policy to update
 .PARAMETER RuleNumber
-    Specify the policy rule number. Use Get-SVTpolicy to show policy information
+    The number of the policy rule to update. Use Get-SVTpolicy to show policy information
 .PARAMETER WeekDay
-    Specifies the Weekday(s) to run backup, e.g. "Mon", "Mon,Tue" or "Mon,Wed,Fri"
+    Specify the Weekday(s) to run backup, e.g. Mon, Mon,Tue or Mon,Wed,Fri
 .PARAMETER MonthDay
-    Specifies the day(s) of the month to run backup, e.g. 1 or 1,11,21
+    Specify the day(s) of the month to run backup, e.g. 1, 1,16 or 2,4,6,8,10,12,14,16,18,20,22,24,26,28
 .PARAMETER LastDay
     Specifies the last day of the month to run a backup
 .PARAMETER All
-    Specifies every day to run backup
-.PARAMETER ClusterName
-    Specifies the destination HPE SimpliVity cluster name
-.PARAMETER ExternalDataStore
-    Specifies the destination external datastore
+    Specifies every day to run a backup
 .PARAMETER StartTime
     Specifies the start time (24 hour clock) to run backup, e.g. 22:00
     If not set, the existing policy rule setting is used
@@ -4653,17 +4668,16 @@ function New-SVTpolicyRule {
 .PARAMETER RetentionDay
     Specifies the retention, in days.
     If not set, the existing policy rule setting is used
-.PARAMETER AppConsistent
-    An indicator to show if the backup represents a snapshot of a virtual machine with data that was first 
-    flushed to disk. This is a switch parameter, true if present.
-
-    If not set, the existing policy rule setting is used
-
 .PARAMETER ConsistencyType
     This parameter overrides the AppConsistent parameter. Available options are:
     1. NONE - This is the default and creates a crash consistent backup
     2. DEFAULT - VMware Snapshot. This is the default method used for application consistency
     3. VSS - Microsoft VSS. Refer to the admin guide for requirements and supported applications
+
+    If not set, the existing policy rule setting is used
+.PARAMETER AppConsistent
+    An indicator to show if the backup represents a snapshot of a virtual machine with data that was first 
+    flushed to disk. This is a switch parameter, true if present.
 
     If not set, the existing policy rule setting is used
 .EXAMPLE
@@ -4684,7 +4698,7 @@ function New-SVTpolicyRule {
 
 #>
 function Update-SVTpolicyRule {
-    [CmdletBinding(DefaultParameterSetName = 'ByAllDay_Cluster')]
+    [CmdletBinding(DefaultParameterSetName = 'ByWeekDay')]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
         [System.String]$PolicyName,
@@ -4692,53 +4706,37 @@ function Update-SVTpolicyRule {
         [Parameter(Mandatory = $true, Position = 1)]
         [System.String]$RuleNumber,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByAllDay_Cluster')]
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByAllDay_External')]
+        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByAllDay')]
         [switch]$All,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByWeekDay_Cluster')]
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByWeekDay_External')]
+        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByWeekDay')]
         [array]$WeekDay,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByMonthDay_Cluster')]
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByMonthDay_External')]
+        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByMonthDay')]
         [array]$MonthDay,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByLastDay_Cluster')]
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByLastDay_External')]
+        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByLastDay')]
         [switch]$LastDay,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByWeekDay_Cluster')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByMonthDay_Cluster')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByLastDay_Cluster')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByAllDay_Cluster')]
-        [System.String]$ClusterName = '', # Default is local cluster if not specified
+        [Parameter(Mandatory = $false, Position = 3)]
+        [System.String]$StartTime,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByWeekDay_External')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByMonthDay_External')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByLastDay_External')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByAllDay_External')]
-        [System.String]$ExternalStoreName,
+        [Parameter(Mandatory = $false, Position = 4)]
+        [System.String]$EndTime,
 
-        [Parameter(Mandatory = $false)]
-        [System.String]$StartTime, #Default will be whatever the rule is currently set to
-
-        [Parameter(Mandatory = $false)]
-        [System.String]$EndTime, #Default will be whatever the rule is currently set to
-
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, Position = 5)]
         [ValidateRange(1, 1440)]
-        [System.String]$FrequencyMin, #Default will be whatever the rule is currently set to
+        [System.String]$FrequencyMin,
 
-        [Parameter(Mandatory = $false)]
-        [System.Int32]$RetentionDay, #Default will be whatever the rule is currently set to
+        [Parameter(Mandatory = $false, Position = 6)]
+        [System.Int32]$RetentionDay, 
 
-        [Parameter(Mandatory = $false)]
-        [switch]$AppConsistent, #Default will be whatever the rule is currently set to
-
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, Position = 7)]
         [ValidateSet('NONE', 'DEFAULT', 'VSS', 'FAILEDVSS', 'NOT_APPLICABLE')]
-        [System.String]$ConsistencyType #Default will be whatever the rule is currently set to
+        [System.String]$ConsistencyType, 
+
+        [Parameter(Mandatory = $false, Position = 8)]
+        [switch]$AppConsistent
     )
 
     $Header = @{
@@ -4748,56 +4746,16 @@ function Update-SVTpolicyRule {
     }
     try {
         $Policy = Get-SVTpolicy -PolicyName $PolicyName -RuleNumber $RuleNumber -ErrorAction Stop 
-        
         $PolicyId = $Policy | Select-Object -ExpandProperty PolicyId
         $RuleId = $Policy | Select-Object -ExpandProperty RuleId
-        $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/rules/' + $RuleId
         
-        if ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
-            # get the right case
-            $ExternalStore = Get-SVTexternalStore -ExternalstoreName $ExternalStoreName | 
-            Select-Object -ExpandProperty ExternalStoreName
-        }
-        elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
-            $ClusterId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | 
-            Select-Object -ExpandProperty ClusterId
-        }
-        else {
-            # Neither -ClusterName, nor -ExternalStoreName are specified, so the default 
-            # destination is local cluster
-            $ClusterId = ''
-        }
+        $Uri = $global:SVTconnection.OVC + '/api/policies/' + $PolicyId + '/rules/' + $RuleId
     }
     catch {
         throw $_.Exception.Message
     }
 
-    # Inherit the existing policy rule properties, if not specified
-    If ( -not $PSBoundParameters.ContainsKey('StartTime')) {
-        $StartTime = $Policy | Select-Object -ExpandProperty StartTime
-        Write-Verbose "Inheriting existing start time $StartTime"
-    }
-    If ( -not $PSBoundParameters.ContainsKey('EndTime')) {
-        $EndTime = $Policy | Select-Object -ExpandProperty EndTime
-        Write-Verbose "Inheriting existing end time $EndTime"
-    }
-    If ( -not $PSBoundParameters.ContainsKey('FrequencyMin')) {
-        $FrequencyMin = ($Policy | Select-Object -ExpandProperty FrequencyHour) * 60
-        Write-Verbose "Inheriting existing backup frequency of $FrequencyMin minutes"
-    }
-    If ( -not $PSBoundParameters.ContainsKey('RetentionDay')) {
-        $RetentionDay = $Policy | Select-Object -ExpandProperty RetentionDay
-        Write-Verbose "Inheriting existing retention of $RetentionDay days"
-    }
-    If ( -not $PSBoundParameters.ContainsKey('AppConsistent')) {
-        $AppConsistent = $Policy | Select-Object -ExpandProperty AppConsistent
-        Write-Verbose "Inheriting existing application consistency setting of $AppConsistent"
-    }
-    If ( -not $PSBoundParameters.ContainsKey('ConsistencyType')) {
-        $ConsistencyType = ($Policy | Select-Object -ExpandProperty ConsistencyType).ToUpper()
-        Write-Verbose "Inheriting existing consistency type $ConsistencyType"
-    }
-
+    # Determine the value for 'Day' property.
     if ($PSBoundParameters.ContainsKey('WeekDay')) {
         foreach ($day in $WeekDay) {
             if ($day -notmatch '^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$') {
@@ -4821,11 +4779,44 @@ function Update-SVTpolicyRule {
         $TargetDay = 'all'
     }
 
-    if ($StartTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
-        throw "Start time invalid. It must be in the form 00:00 (24 hour time). e.g. -StartTime 06:00"
+    if ($PSBoundParameters.ContainsKey('StartTime')) {
+        if ($StartTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
+            throw "Start time invalid. It must be in the form 00:00 (24 hour time). e.g. -StartTime 06:00"
+        }
     }
-    if ($EndTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
-        throw "End time invalid. It must be in the form 00:00 (24 hour time). e.g. -EndTime 23:30"
+    else {
+        $StartTime = $Policy | Select-Object -ExpandProperty StartTime
+        Write-Verbose "Inheriting existing start time $StartTime"
+    }
+
+    if ($PSBoundParameters.ContainsKey('EndTime')) {
+        if ($EndTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
+            throw "End time invalid. It must be in the form 00:00 (24 hour time). e.g. -EndTime 23:30"
+        }
+    }
+    else {
+        $EndTime = $Policy | Select-Object -ExpandProperty EndTime
+        Write-Verbose "Inheriting existing end time $EndTime"
+    }
+
+    if ( -not $PSBoundParameters.ContainsKey('FrequencyMin')) {
+        $FrequencyMin = ($Policy | Select-Object -ExpandProperty FrequencyHour) * 60
+        Write-Verbose "Inheriting existing backup frequency of $FrequencyMin minutes"
+    }
+
+    if ( -not $PSBoundParameters.ContainsKey('RetentionDay')) {
+        $RetentionDay = $Policy | Select-Object -ExpandProperty RetentionDay
+        Write-Verbose "Inheriting existing retention of $RetentionDay days"
+    }
+
+    if ( -not $PSBoundParameters.ContainsKey('AppConsistent')) {
+        $AppConsistent = $Policy | Select-Object -ExpandProperty AppConsistent
+        Write-Verbose "Inheriting existing application consistency setting of $AppConsistent"
+    }
+
+    if ( -not $PSBoundParameters.ContainsKey('ConsistencyType')) {
+        $ConsistencyType = ($Policy | Select-Object -ExpandProperty ConsistencyType).ToUpper()
+        Write-Verbose "Inheriting existing consistency type $ConsistencyType"
     }
 
     $ApplicationConsistent = $false
@@ -4841,18 +4832,6 @@ function Update-SVTpolicyRule {
         'end_time'               = $EndTime
         'application_consistent' = $ApplicationConsistent
         'consistency_type'       = $ConsistencyType
-    } 
-    
-    # Must test $ExternalStoreName because $ClusterId = '' is valid (i.e. $ClusterName not specified)
-    if ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
-        $Body += @{ 
-            'external_store_name' = $ExternalStore
-        }
-    } 
-    else {
-        $Body += @{
-            'destination_id' = $ClusterId
-        }
     }
 
     $Body = $Body | ConvertTo-Json
@@ -4921,7 +4900,7 @@ function Remove-SVTpolicyRule {
     }
 
     if (-not ($PolicyId)) {
-        throw 'Specified policy name or Rule number not found. Use Get-SVTpolicy to determine rule number for the rule you want to edit'
+        throw 'Specified policy name or Rule number not found. Use Get-SVTpolicy to determine rule number for the rule you want to delete'
     }
 
     try {
@@ -5058,7 +5037,7 @@ function Remove-SVTpolicy {
             $Message += "There are $(($Task.datastores).Count) databases using backup policy $PolicyName. "
             $ObjectFound = $true
         }
-        If ($Task.virtual_machines) {
+        if ($Task.virtual_machines) {
             $Message += "There are $(($Task.virtual_machines).Count) virtual machines using backup " +
             "policy $PolicyName. "
             $ObjectFound = $true
@@ -5380,7 +5359,7 @@ function Get-SVTvm {
         [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
         [System.String]$ClusterName,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByHostName')]
         [System.String]$HostName,
 
         [Parameter(Mandatory = $false)]
@@ -5407,6 +5386,15 @@ function Get-SVTvm {
 
     # Get hosts so we can convert HostId to the more useful HostName in the virtual machine object
     $Allhost = Get-SVThost
+
+    if ($PSBoundParameters.ContainsKey('VMname')) {
+        $Uri += "&name=$VMname"
+    }
+
+    if ($PSBoundParameters.ContainsKey('VmId')) {
+        $Uri += "&id=$VmId"
+    }
+    
     if ($PSBoundParameters.ContainsKey('HostName')) {
         try {
             $HostName = Resolve-SVTFullHostname $HostName $Allhost
@@ -5418,21 +5406,14 @@ function Get-SVTvm {
         $Uri += "&host_id=$HostId"
     }
 
-    if ($PSBoundParameters.ContainsKey('VMname')) {
-        $Uri += "&name=$VMname"
-    }
-
-    if ($PSBoundParameters.ContainsKey('VmId')) {
-        $Uri += "&id=$VmId"
+    if ($PSBoundParameters.ContainsKey('ClusterName')) {
+        $Uri += "&omnistack_cluster_name=$ClusterName"
     }
 
     if ($PSBoundParameters.ContainsKey('DataStoreName')) {
         $Uri += "&datastore_name=$DataStoreName"
     }
 
-    if ($PSBoundParameters.ContainsKey('ClusterName')) {
-        $Uri += "&omnistack_cluster_name=$ClusterName"
-    }
 
     try {
         $Response = Invoke-SVTrestMethod -Uri "$Uri" -Header $Header -Method Get -ErrorAction Stop

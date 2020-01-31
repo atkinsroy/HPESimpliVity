@@ -190,8 +190,8 @@ else {
 try {
     Connect-SVT -OVC $OVC -Credential $Cred -ErrorAction Stop | Out-Null
     $HostList = Get-SVTHost -ClusterName $ClusterName -ErrorAction Stop
-    $vCenterIP = $HostList | Select -First 1 -ExpandProperty HypervisorManagementIP
-    $vCenterName = $HostList | Select -First 1 -ExpandProperty HypervisorManagementName
+    $vCenterIP = $HostList | Select-Object -First 1 -ExpandProperty HypervisorManagementIP
+    $vCenterName = $HostList | Select-Object -First 1 -ExpandProperty HypervisorManagementName
     Write-Log "Connected to HPE Omnistack Virtual Controller: $OVC"
 }
 catch {
@@ -215,7 +215,7 @@ $NumberOfTags..1 | Foreach-Object {
     [string]$Tag = "$TagName$_"
     try {
         $VMcluster = Get-Cluster -Name $ClusterName -ErrorAction Stop
-        $VMhost = $VMcluster | Get-VMhost -ErrorAction Stop # used later to shutdown hosts
+        $VMhost = $VMcluster | Get-VMhost -ErrorAction Stop # This is used later to shutdown hosts
         $VMlist = $VMcluster | Get-VM -Tag $Tag -ErrorAction Stop | 
         Where-Object Name -notmatch 'OmniStackVC' | 
         Where-Object PowerState -eq 'PoweredOn'
@@ -300,7 +300,6 @@ foreach ($VM in $VMlist) {
     }
 }
 
-
 # Shutdown the virtual controllers, but wait until all other VMs are shutdown first
 [int]$WaitSec = 0
 if ($Force) {
@@ -339,10 +338,12 @@ if ($Force) {
     
     } while ($VMpoweredOn)
 
-    # NOTE: Here would be good a place to attempt a remote backup, if you have multiple sites, your infrastructure (i.e. network) is still running and 
-    # you have enough UPS battery to try it. Its not implemented, but you could do something as simple as the following in small environments.
+    # NOTE: Here would be good a place to attempt a remote backup, if you have multiple sites, your infrastructure 
+    # (i.e. network) is still running and you have enough UPS battery to try it. Its not implemented, but you could 
+    # do something as simple as the following in small environments:
     # Get-SVTvm | New-SVTbackup -ClusterName <destination cluster>
-    # and then keep checking with Get-SVTtask until State = 'COMPLETED' for all backup tasks before shutting down the virtual controllers.
+    # and then keep checking with Get-SVTtask until State = 'COMPLETED' for all backup tasks before shutting down 
+    # the virtual controllers.
 
     # Shutdown the virtual controllers now
     try {
@@ -350,7 +351,7 @@ if ($Force) {
             Write-Log "Shutting down the HPE Omnistack virtual controller on host $($_.Hostname)..."
             # Using Start-Transcript capture verbose and error streams to log file.
             Start-Transcript -Path $LogFile -Append | Out-Null
-            $response = Start-SVTshutdown -HostName $_.Hostname -Confirm:$False -ErrorAction Stop
+            $null = Start-SVTshutdown -HostName $_.Hostname -Confirm:$False -ErrorAction Stop
             Stop-Transcript | Out-Null
             Write-Log "Successfully shutdown HPE Omnistack virtual controller on host $($_.Hostname)"
         }

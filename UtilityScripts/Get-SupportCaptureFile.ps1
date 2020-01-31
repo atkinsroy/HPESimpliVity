@@ -79,7 +79,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     PowerShell Gallery. 
 
     The second command creates a credential file so that the -Silent parameter can be used
-    
+
     The the third command will connect over SSH with the specified virtual controller and 
     initiate a support capture. Finally the capture file is downloaded locally over HTTPS.
 .EXAMPLE
@@ -93,12 +93,12 @@ OTHER DEALINGS IN THE SOFTWARE.
     This command will connect to the two specfied virtual controllers and delete any pre-existing
     support capture files before initiating a new capture.
 .INPUTS
-System.PSobject
-System.String
+    System.PSobject
+    System.String
 .OUTPUTS
-Ssytem.String
+    System.String
 .NOTES
-
+    Tested with 3.7.9 and 3.7.10.
 #>
 
 param (
@@ -109,18 +109,22 @@ param (
     [switch]$Purge
 )
 
+$sshcapture = 'source /var/tmp/build/bin/appsetup; /var/tmp/build/cli/svt-support-capture'
+$sshpurge = 'sudo find /core/capture/Capture*.tgz -maxdepth 1 -type f -exec rm -fv {} \;'
+$sshfile = 'ls -pl /core/capture'
+
 if ($Silent) {
     # It is assumed you have previously created a credential file using, for example:
-    # 
-    $cred = Import-Clixml .\cred.xml
+    try {
+        $cred = Import-Clixml .\cred.xml -ErrorAction Stop
+    }
+    catch {
+        throw $_.Exception.Message
+    }
 }
 else {
     $cred = Get-Credential -Message 'Enter Password' -UserName 'administrator@vsphere.local'
 }
-
-$sshcapture = 'source /var/tmp/build/bin/appsetup; /var/tmp/build/cli/svt-support-capture'
-$sshpurge = 'sudo find /core/capture/Capture*.tgz -maxdepth 1 -type f -exec rm -fv {} \;'
-$sshfile = 'ls -pl /core/capture'
 
 # Connect to each OVC
 foreach ($controller in $OVC) {
@@ -158,8 +162,8 @@ catch {
     Write-Warning "Capture command timed out on one or more virtual controllers. We'll need to wait longer, it seems."
 }
 
-# Now we think we've got a capture file on each virtual controller. If the capture is not finished, there will still be 
-# a folder, so wait until this is replaced with a capture file.
+# Now we think we've got a capture file on each virtual controller. If the capture is not 
+# finished, there will still be a folder, so wait until this is replaced with a capture file.
 foreach ($ThisSession in $Session) {
     $ThisId = $ThisSession.SessionId
     $ThisHost = $ThisSession.Host
