@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.22'
+$HPESimplivityVersion = '2.0.23'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -132,27 +132,27 @@ Function Get-SVTbackupDestination {
     )
 
     try {
-        $ClusterId = (Get-SVTcluster -Name $DestinationName -ErrorAction Stop).ClusterId
-
+        $Destination = Get-SVTcluster -Name $DestinationName -ErrorAction Stop
         $ReturnObject = @{
             Type = 'Cluster'
-            Id   = $ClusterId
+            Name = $Destination.ClusterName  #correct case
+            Id   = $Destination.ClusterId
         }
-        Write-Verbose "$DestinationName is a SimpliVity Cluster"
+        Write-Verbose "$($Destination.ClusterName) is a SimpliVity Cluster"
         Return $ReturnObject
     }
     catch {
         # don't throw an error, try external stores
     }
-    
+
     try {
-        $ExternalStoreName = (Get-SVTexternalStore -Name $DestinationName -ErrorAction Stop).ExternalStoreName
-        
+        $Destination = Get-SVTexternalStore -Name $DestinationName -ErrorAction Stop
         $ReturnObject = @{
             Type = 'ExternalStore'
-            Id   = $ExternalStoreName
+            Name = $Destination.ExternalStoreName
+            Id   = $Destination.ExternalStoreName
         }
-        Write-Verbose "$DestinationName is an external store"
+        Write-Verbose "$($Destination.ExternalStoreName) is an external store"
         Return $ReturnObject
     }
     catch {
@@ -1180,20 +1180,19 @@ function Get-SVTmodel {
 .PARAMETER VMname
     Show backups for the specified virtual machine only.
 .PARAMETER DataStoreName
-    Show backups from the specified Simplivity datastore only.
-.PARAMETER ExternalStoreName
-    Show backups from the specified external datastore only.
-.PARAMETER ClusterName
-    Show backups from the specified HPE SimpliVity cluster only.
+    Show backups located on the specified Simplivity datastore only.
+.PARAMETER DestinationName
+    Show backups located on the specified HPE SimpliVity cluster name or external datastore name only.
 .PARAMETER BackupName
-    Show backups from the specified backup name.
+    Show backups for the specified backup name only.
 .PARAMETER BackupId
-    Show backups with the specified backup ID.
+    Show backups with the specified backup ID only.
 .PARAMETER All
     Show all backups. The maximum limit of 3000 is assumed, so this command might take a while depending 
     on the number of backups in the environment.
 .PARAMETER Latest
-    Show (one of) the latest backup for every unique virtual machine.
+    Show (one of) the latest backups for every unique virtual machine. If a policy has two rules, for example,
+    one with a local destination and one with remote a cluster destination, only one of these backups are shown.
 .PARAMETER Hour
     The number of hours preceding to report on. By default, the last 24 hours of backups are shown.
 .EXAMPLE
@@ -1226,9 +1225,11 @@ function Get-SVTmodel {
 
     Shows all backups on the specified SimpliVity datastore.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -ExternalDataStore StoreOnce-Data02
+    PS C:\> Get-SVTbackup -DestinationName SVTcluster -
+.EXAMPLE
+    PS C:\> Get-SVTbackup -DestinationName StoreOnce-Data02 -Hour 2
 
-    Shows all backups on the specified external datastore.
+    Shows backups that are up to 2 hours old on the specified external datastore.
 .INPUTS
     System.String
 .OUTPUTS
@@ -1247,11 +1248,8 @@ function Get-SVTbackup {
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByDatastoreName')]
         [System.String]$DatastoreName,
 
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByExternalStoreName')]
-        [System.String]$ExternalStoreName,
-
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByClusterName')]
-        [System.String]$ClusterName,
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByDestinationName')]
+        [System.String]$DestinationName,
 
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByBackupName')]
         [Alias("Name")]
@@ -1266,16 +1264,14 @@ function Get-SVTbackup {
 
         [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByVMName')]
         [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByDatastoreName')]
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByExternalStoreName')]
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByDestinationName')]
         [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByHour')]
         [ValidateRange(1, 175400)]   # up to 20 years
         [System.String]$Hour,
 
         [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByVMName')]
         [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByDatastoreName')]
-        [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByExternalStoreName')]
-        [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByDestinationName')]
         [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'AllBackup')]
         [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByHour')]
         [switch]$Latest,
@@ -1321,13 +1317,19 @@ function Get-SVTbackup {
         Write-Verbose "Datastore names are currently case sensitive"
         $Uri += "&limit=$Limit&datastore_name=$DatastoreName"
     }
-    elseif ($PSBoundParameters.ContainsKey('ExternalStoreName')) {
-        Write-Verbose "External store names are currently case sensitive"
-        $Uri += "&limit=$Limit&external_store_name=$ExternalStoreName"
-    }
-    elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
-        Write-Verbose "Cluster names are currently case sensitive"
-        $Uri += "&limit=$Limit&omnistack_cluster_name=$ClusterName"
+    elseif ($PSBoundParameters.ContainsKey('DestinationName')) {
+        try {
+            $Destination = Get-SVTbackupDestination -Name $DestinationName
+            if ($Destination.Type -eq 'Cluster') {
+                $Uri += "&limit=$Limit&omnistack_cluster_id=$($Destination.Id)"
+            }
+            else {
+                $Uri += "&limit=$Limit&external_store_name=$($Destination.Name)"
+            }
+        }
+        catch {
+            throw $_.Exception.Message
+        }
     }
     elseif ($PSBoundParameters.ContainsKey('BackupName')) {
         Write-Verbose "Backup names are currently case sensitive. Incomplete backup names are matched"
