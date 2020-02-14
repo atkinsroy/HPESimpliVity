@@ -60,7 +60,7 @@ Get-SVTvmReplicaSet | Get-SVTdisk
 
 ## Update V2.0.24 new features
 
-Added support for new HPE SimpliVity hardware variants.
+Added support for new HPE SimpliVity hardware models.
 
 ## Update V2.0.16 new features
 
