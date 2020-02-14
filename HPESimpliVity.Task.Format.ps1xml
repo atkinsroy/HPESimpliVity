@@ -31,7 +31,7 @@
                                 <PropertyName>TaskID</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>Message</PropertyName>
+                                <PropertyName>ErrorMessage</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>
