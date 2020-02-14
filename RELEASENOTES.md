@@ -1,13 +1,12 @@
 # Version 2.0.24
 
 * Added support for new hardware models. Get-SVTdisk supports the new Gen 10 H and Gen 10 G models
-* Tested the HPEsimpliVity module with the new Management Virual Appliance in V4.0.0.
-* Refactored the cmdlets that deal with external stores. Cmdlets now support a single parameter called -DestinationName
-rather than -ClusterName and -ExternalStoreName. This is a breaking change.
-* Added default parameters to New-SVTclone and Get-SVTclusterConnected cmdlets
-* Refactored Get-SVTbackup again to improve performance
-* Added additional new attributes provided by API to some cmdlets 
-* Bug fixes
+* Tested the HPEsimpliVity module with the new Management Virtual Appliance in V4.0.0.
+* Refactored the cmdlets that deal with external stores. Cmdlets now support a single parameter called -DestinationName rather than -ClusterName and -ExternalStoreName. This is a breaking change.
+* Added default parameters to New-SVTclone and Get-SVTclusterConnected cmdlets.
+* Refactored Get-SVTbackup to improve performance, specfically with the -Hour parameter.
+* Added additional new attributes provided by API to some cmdlets. 
+* Bug fixes.
 
 
 # Version 2.0.16
