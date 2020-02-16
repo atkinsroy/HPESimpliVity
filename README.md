@@ -23,10 +23,18 @@ For example:
     ClusterId                : 3baba7ec-6d02-4fb6-b510-5ce19cd9c1d0
     StorageMask              : 255.255.255.0
     Model                    : HPE SimpliVity 380 Series 4000
+    HostName                 : srvr1.sq.com
     .
     .
     .
 ```
+## Update V2.0.24 new features
+
+* Supports the new features in HPE SimpliVity 4.0.0. Specifically, the ability to add and show external store (HPE StoreOnce is currently supported) and the ability to backup/restore to/from external stores. 
+
+* Added support for new HPE SimpliVity hardware models.
+
+Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
 
 The module contains 54 exported cmdlets, divided into the following feature categories:
@@ -57,50 +65,6 @@ Restore-SVTvm | Stop-SVTshutdown | Get-SVTtimezone
 Stop-SVTvm | Get-SVTshutdownStatus | Set-SVTtimezone
 Set-SVTvmPolicy | Get-SVTthroughput | Get-SVTversion
 Get-SVTvmReplicaSet | Get-SVTdisk
-
-## Update V2.0.24 new features
-
-Added support for new HPE SimpliVity hardware models.
-
-## Update V2.0.16 new features
-
-Supports the new features in HPE SimpliVity 4.0.0. Specifically, the ability to add and show external store (HPE StoreOnce is currently supported) and the ability to backup/restore to/from external stores. Refer to the ![Release Notes](/RELEASENOTES.md) for more details.
-
-## Update V1.1.5 new features
-
-Show physical disk and storage kit information with the new Get-SVTdisk command.
-
-Properly shutdown a host, cluster or the entire federation, with the updated Start-SVTshutdown command. This function is accompanied with the utility script called ShutdownHPESimpliVityCluster.ps1 in the UtilityScripts folder, which will shutdown virtual machines in a specific order, then shuts down the virtual controllers and finally places the hosts into maintenance mode before shutting them down.
-
-## Update V1.1.4 features
-
-With V1.1.4, the Get-SVTmetric cmdlet now produces charts. You can create charts for clusters, hosts and virtual machines. Here's
-how it works:
-
-```powershell
-    PS C:\> Get-SVThost | Select-Object -First 1 | Get-SVTmetric -Hour 48 -Chart
-```
-
-This will create a single chart for the first host in the Federation using the specified hourly range. The cmdlet also has a new -Force 
-parameter. By default, up to five charts are created, one for each object passed in. If there are more objects than this in
-the pipeline, the cmdlet will issue a warning. You can override this limit with the -Force switch. There is potential to create a
-lot of charts with Get-SVTvm. 
-
-Here is a sample metric chart:
-
-![Here is a sample metric chart](/Media/SVTmetric-sample.png)
-
-Similarly, Get-SVTcapacity also has a new -Chart switch. Use the following command to create a chart for each host in the federation.
-
-```powershell
-    PS C:\> Get-SVTHost server01 | Get-SVTcapacity -Chart
-```
-
-This is a sample capacity chart:
-
-![Here is a sample capacity chart](/Media/SVTcapacity-sample.png)
-
-**Note:** Both of these commands require Windows PowerShell (tested with V5.1 only). They will not work with PowerShell Core V6.x / V7.0 (.NET Core does not support Microsoft Chart Controls).
 
 ## Requirements
 
@@ -146,7 +110,15 @@ and then in your script, import the credential:
 
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
+## Known issues with V4.0.0 of the API (With HPESimpliVity 2.0.24)
+
+The API has some documented and undocumented issues:
+* OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation
+* OMNI-46361: REST API GET opertions for backup objects and sorting filtering constraints. Comma separated list of values for filtering is not supported. Some properties do not support case insensitive filter option. The HPE SimpliVity module does not allow you to enter multiple values for filtering options, as per the recommendation.
+* Backups stored on external stores cannot be deleted if the VM has been deleted, with a backup not found error. This does not apply to backups stored on clusters. This restriction is specific to the API; the CLI command svt-backup-delete works as expected for external store backups.
+* the PUT /policies/<policyid>/rules/<ruleid> API call (implementmented in Update-SVTpolicyRule) doesn't work as expected in some circumstances. Changing a rules' destination is not supported (this is documented), but in addition, changing the consistancy type to anything other than NONE or DEFAULT doesn't work. If you attempt to change the consistenct type to VSS, for example, the command is ignored. In this scenario, a work around would be to delete the rule entirely from the policy using Remove-SVTpolicyRule and then use New-SVTpolicyRule to create a new rule with the desired destination, consistenecy type and other settings.
+
 ## Things to do
-* Test using PowerShell Core 6.0 (Windows and Linux)
+* Test using PowerShell 7.0 (Windows and Linux)
 
 If you would like to keep up to date with changes, please subscribe to receive notifications.

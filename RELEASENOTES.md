@@ -48,9 +48,31 @@ Note: The new HPE StoreOnce Catalyst datastore must be added via the StoreOnce m
 
 # Version 1.1.4
 
-* Added -Chart parameter to the Get-SVTmetric and Get-SVTcapacity cmdlets - Note this will only work with Windows PowerShell 5.1. PowerShell Core (6.0) doesn't support Microsoft Chart Controls
-* Added -Force parameter to the Get-SVTmetric to override the default chart limit
-* Improved Get-SVTbackup so that API filters are used properly - This should improve performance and remove some weird results.
+* Added -Chart parameter to the Get-SVTmetric and Get-SVTcapacity cmdlets - Note this will only work with Windows PowerShell 5.1. PowerShell Core (6.0) doesn't support Microsoft Chart Controls. For example:
+
+```powershell
+    PS C:\> Get-SVThost | Select-Object -First 1 | Get-SVTmetric -Hour 48 -Chart
+```
+
+This will create a single chart for the first host in the Federation using the specified hourly range. The cmdlet also has a new -Force parameter. By default, up to five charts are created, one for each object passed in. If there are more objects than this in the pipeline, the cmdlet will issue a warning. You can override this limit with the -Force switch. There is potential to create a lot of charts with Get-SVTvm. 
+
+Here is a sample metric chart:
+
+![Here is a sample metric chart](/Media/SVTmetric-sample.png)
+
+Similarly, Get-SVTcapacity also has a new -Chart switch. Use the following command to create a chart for each host in the federation.
+
+```powershell
+    PS C:\> Get-SVTHost server01 | Get-SVTcapacity -Chart
+```
+
+This is a sample capacity chart:
+
+![Here is a sample capacity chart](/Media/SVTcapacity-sample.png)
+
+**Note:** Both of these commands require Windows PowerShell (tested with V5.1 only). They will not work with PowerShell Core V6.x / V7.0 (.NET Core does not support Microsoft Chart Controls).
+
+* Improved Get-SVTbackup so that API filters are used properly - This improves performance and removes some weird results
 * Performance updates to Get-SVTvm and bug fixes to Get-SVTclusterConnected
 * Renamed Stop-SVTovc to Start-SVTshutdown
 * Renamed Undo-SVTovcShutdown to Stop-SVTshutdown and implemented this cmdlet 
