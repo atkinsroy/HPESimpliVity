@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.24'
+$HPESimplivityVersion = '2.0.25'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -78,7 +78,7 @@ function Resolve-SVTFullHostname {
             return $ReturnHost
         }
         else {
-            throw 'Specified host(s) not found'
+            throw 'Specified host not found'
         }
     }
 }
@@ -3161,9 +3161,13 @@ function Get-SVThost {
 
     Enumerates all of the logical drives from the specified host
 .EXAMPLE
-    PS C:\> (Get-SVThardware -HostName Host01).RaidCard
+    PS C:\> (Get-SVThardware Host01).RaidCard
 
     Enumerate all of the RAID cards from the specified host
+.EXAMPLE
+    PC C:\> Get-SVThardware Host1,Host2,Host3
+
+    Shows hardware information for all hosts in the specified list
 .INPUTS
     System.String
     HPE.SimpliVity.Host
@@ -3257,6 +3261,10 @@ function Get-SVThardware {
     PC C:\> Get-SVThost -Cluster PROD | Get-SVTdisk
 
     Shows physical disk information for all hosts in the specified cluster.
+.EXAMPLE
+    PC C:\> Get-SVThost Host1,Host2,Host3
+
+    Shows physical disk information for all hosts in the specified list
 .INPUTS
     System.String
     HPE.SimpliVity.Host
@@ -3359,17 +3367,21 @@ function Get-SVTdisk {
     Create a chart from capacity information. If more than one host is passed in, a chart
     for each host is created.
 .EXAMPLE
-    PS C:\>Get-SVTcapacity -HostName MyHost
+    PS C:\>Get-SVTcapacity MyHost
 
     Shows capacity information for the specified host for the last 24 hours
 .EXAMPLE
-    PS C:\>Get-SVTcapacity -HostName MyHost -Hour 1 -resolution MINUTE
+    PS C:\>Get-SVTcapacity -HostName MyHost -Hour 1 -Resolution MINUTE
 
     Shows capacity information for the specified host showing every minute for the last hour
 .EXAMPLE
     PS C:\>Get-SVTcapacity -Chart
 
     Creates a chart for each host in the SimpliVity federation showing the latest (24 hours) capacity details
+.EXAMPLE
+    PC C:\> Get-SVTcapacity Host1,Host2,Host3
+
+    Shows capacity information for all hosts in the specified list
 .INPUTS
     system.string
     HPESimpliVity.Host
@@ -3784,7 +3796,7 @@ function Start-SVTshutdown {
     PS C:\> '10.10.57.59','10.10.57.61' | Get-SVTshutdownStatus
 
     Hostname is passed in them the pipeline by value. Same as:
-    Get-SVTshutdownStatus -Hostname @(''10.10.57.59','10.10.57.61')
+    Get-SVTshutdownStatus -Hostname '10.10.57.59','10.10.57.61'
 .INPUTS
     System.String
     HPE.SimpliVity.Host
@@ -4259,7 +4271,7 @@ function Get-SVTclusterConnected {
         Write-Verbose "No cluster specified, using $ClusterName by default"
     }
     $ClusterId = $AllCluster | Where-Object ClusterName -eq $ClusterName | 
-        Select-Object -ExpandProperty ClusterId
+    Select-Object -ExpandProperty ClusterId
     
     try {
         $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/' + $ClusterId + '/connected_clusters'
@@ -5419,25 +5431,25 @@ function Get-SVTvm {
 
         [Parameter(Mandatory = $false)]
         [ValidateSet("ALIVE", "DELETED", "REMOVED")]
-        [System.String]$State = "ALIVE",
+        [System.String[]]$State = "ALIVE",
 
         [Parameter(Mandatory = $false)]
         [ValidateRange(1, 8000)]   # HPE recommends 8000 max records to avoid out of memory errors (OMNI-69918)
         [System.Int32]$Limit = 500
     )
 
-    
     $Header = @{
         'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'        = 'application/json'
     }
+    
     $LocalFormat = Get-SVTLocalDateFormat
     $Uri = "$($global:SVTconnection.OVC)/api/virtual_machines" +
     '?show_optional_fields=true' +
     '&case=insensitive' +
     '&offset=0' +
     "&limit=$Limit" +
-    "&state=$State"
+    "&state=$($State -join ',')"
 
     # Get hosts so we can convert HostId to the more useful HostName in the virtual machine object
     $Allhost = Get-SVThost
