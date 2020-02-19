@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.25'
+$HPESimplivityVersion = '2.0.26'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -4497,18 +4497,15 @@ function New-SVTpolicy {
 .PARAMETER RetentionDay
     Specifies the retention, in days.
 .PARAMETER ConsistencyType
-    This parameter overrides the AppConsistent parameter. Available options are:
+    Available options are:
     1. NONE - This is the default and creates a crash consistent backup
-    2. DEFAULT - VMware Snapshot. This is the default method used for application consistency
-    3. VSS - Microsoft VSS. Refer to the admin guide for requirements and supported applications
+    2. DEFAULT - Create application consistent backups using VMware Snapshot
+    3. VSS - Create application consistent backups using Microsoft VSS in the guest operating system. Refer 
+    to the admin guide for requirements and supported applications
+
 .PARAMETER ReplaceRules
     If this switch is specified, ALL existing rules in the specified backup policy are removed and 
     replaced with this new rule.
-.PARAMETER AppConsistent
-    An indicator to show if the backup represents a snapshot of a virtual machine with data that was first 
-    flushed to disk. This is a switch parameter, true if present.
-
-    The default is false (crash consistent backup is taken), which is equivalent to ConsistencyType = None
 .EXAMPLE
     PS C:\>New-SVTpolicyRule -PolicyName Silver -All -ClusterName ProductionCluster -ReplaceRules
 
@@ -4526,7 +4523,7 @@ function New-SVTpolicy {
     Adds a new rule to the specified policy to run backups on the specified weekdays and retain backup for a week.
 .EXAMPLE
     PS C:\>New-SVTpolicyRule -PolicyName Silver -Last -ClusterName Prod `
-        -RetentionDay 30 -AppConsistent -ConsistencyType VSS
+        -RetentionDay 30 -ConsistencyType VSS
 
     Adds a new rule to the specified policy to run an application consistent backup on the last day 
     of each month, retaining it for 1 month.
@@ -4571,14 +4568,11 @@ function New-SVTpolicyRule {
         [System.Int32]$RetentionDay = 1,
 
         [Parameter(Mandatory = $false, Position = 7)]
-        [ValidateSet('NONE', 'DEFAULT', 'VSS', 'FAILEDVSS', 'NOT_APPLICABLE')]
+        [ValidateSet('NONE', 'DEFAULT', 'VSS')]  #'FAILEDVSS', 'NOT_APPLICABLE'
         [System.String]$ConsistencyType = 'NONE',
 
         [Parameter(Mandatory = $false, Position = 8)]
-        [switch]$ReplaceRules,
-
-        [Parameter(Mandatory = $false, Position = 9)]
-        [switch]$AppConsistent
+        [switch]$ReplaceRules
     )
 
     $Header = @{
@@ -4654,9 +4648,12 @@ function New-SVTpolicyRule {
         throw "End time invalid. It must be in the form 00:00 (24 hour time). e.g. -EndTime 23:30"
     }
 
-    $ApplicationConsistent = $false
-    if ($PSBoundParameters.ContainsKey('AppConsistent')) {
-        $ApplicationConsistent = $true
+    # The new HTML5 client doesn't expose application consistent tick box - application_consistent must be
+    # true if consitency_type is VSS or DEFAULT. Otherwise the API sets it to NONE.
+    $ConsistencyType = $ConsistencyType.ToUpper()
+    $ApplicationConsistent = $true
+    if ($ConsistencyType -eq 'NONE') {
+        $ApplicationConsistent = $false
     }
 
     $Body += @{
@@ -4695,22 +4692,22 @@ function New-SVTpolicyRule {
 
     All other parameters are optional, if not set the new policy rule will inherit the current policy rule settings.
 
-    Note: Policy rule destinations cannot be changed. You must first delete the policy rule and then recreate it
-    using Remove-SVTpolicyRule and New-SVTpolicyRule respectively. 
+    Note: A backup destination cannot be changed in a rule. You must first delete the rule and then recreate it
+    using Remove-SVTpolicyRule and New-SVTpolicyRule respectively, to update the backup destination.
 
-    Rule numbers start from 0 and increment by 1. Use Get-SVTpolicy to identify the rule you want to replace
+    Rule numbers start from 0 and increment by 1. Use Get-SVTpolicy to identify the rule you want to update.
 .PARAMETER PolicyName
     The name of the backup policy to update
 .PARAMETER RuleNumber
     The number of the policy rule to update. Use Get-SVTpolicy to show policy information
 .PARAMETER WeekDay
-    Specify the Weekday(s) to run backup, e.g. Mon, Mon,Tue or Mon,Wed,Fri
+    Specify the Weekday(s) to run the backup, e.g. Mon, Mon,Tue or Mon,Wed,Fri
 .PARAMETER MonthDay
-    Specify the day(s) of the month to run backup, e.g. 1, 1,16 or 2,4,6,8,10,12,14,16,18,20,22,24,26,28
+    Specify the day(s) of the month to run the backup, e.g. 1, 1,16 or 2,4,6,8,10,12,14,16,18,20,22,24,26,28
 .PARAMETER LastDay
-    Specifies the last day of the month to run a backup
+    Specifies the last day of the month to run the backup
 .PARAMETER All
-    Specifies every day to run a backup
+    Specifies every day to run the backup
 .PARAMETER StartTime
     Specifies the start time (24 hour clock) to run backup, e.g. 22:00
     If not set, the existing policy rule setting is used
@@ -4722,37 +4719,39 @@ function New-SVTpolicyRule {
     Must be between 1 and 1440 minutes (24 hours).
     If not set, the existing policy rule setting is used
 .PARAMETER RetentionDay
-    Specifies the retention, in days.
+    Specifies the backup retention, in days.
     If not set, the existing policy rule setting is used
 .PARAMETER ConsistencyType
-    This parameter overrides the AppConsistent parameter. Available options are:
+    Available options are:
     1. NONE - This is the default and creates a crash consistent backup
-    2. DEFAULT - VMware Snapshot. This is the default method used for application consistency
-    3. VSS - Microsoft VSS. Refer to the admin guide for requirements and supported applications
-
-    If not set, the existing policy rule setting is used
-.PARAMETER AppConsistent
-    An indicator to show if the backup represents a snapshot of a virtual machine with data that was first 
-    flushed to disk. This is a switch parameter, true if present.
+    2. DEFAULT - Create application consistent backups using VMware Snapshot
+    3. VSS - Create application consistent backups using Microsoft VSS in the guest operating system. Refer 
+    to the admin guide for requirements and supported applications
 
     If not set, the existing policy rule setting is used
 .EXAMPLE
-    PS C:\>Update-SVTPolicyRule -Policy Gold -RuleNumber 2 -Weekday Sun,Fri -ClusterName Prod -StartTime 20:00 -EndTime 23:00
+    PS C:\>Update-SVTPolicyRule -Policy Gold -RuleNumber 2 -Weekday Sun,Fri -StartTime 20:00 -EndTime 23:00
 
-    Replaces rule number 2 in the specified policy with a new weekday policy. Uses the existing retention, frequency, and
-    application consistency settings.
+    Updates rule number 2 in the specified policy with a new weekday policy. start and finish times. This command 
+    inherits the existing retention, frequency, and application consistency settings from the existing rule.
 .EXAMPLE
-    PS C:\>Update-SVTPolicyRule -Policy Bronze -RuleNumber 1 -Last -ExternalStoreName StoreOnce-Data03
+    PS C:\>Update-SVTPolicyRule -Policy Bronze -RuleNumber 1 -Last
+    PS C:\>Update-SVTPolicyRule Bronze 1 -Last
     
-    Replaces rule 1 in the specified policy with a new day and destination. All other settings are inherited from
-    the current backup policy rule.
+    Both commands update rule 1 in the specified policy with a new day. All other settings are inherited from
+    the existing backup policy rule.
+.EXAMPLE
+    PS C:\>Update-SVTPolicyRule Silver 3 -MonthDay 1,7,14,21
+
+    Updates the existing rule 3 in the specified policy to perform backups four times a month on the specified days.
 .INPUTS
     System.String
 .OUTPUTS
     HPE.SimpliVity.Task
 .NOTES
-Changing the destination is unsupported. Changing ConsistencyType to anything other than None or Default doesn't
-appear to work. Use Remove-SVTpolicyRule and New-SVTpolicyRule to update the rule in test cases.
+- Changing the destination is unsupported.
+- Changing ConsistencyType to anything other than None or Default doesn't appear to work. 
+Use Remove-SVTpolicyRule and New-SVTpolicyRule to update ConsistencyType to VSS.
 #>
 function Update-SVTpolicyRule {
     [CmdletBinding(DefaultParameterSetName = 'ByWeekDay')]
@@ -4790,10 +4789,7 @@ function Update-SVTpolicyRule {
 
         [Parameter(Mandatory = $false, Position = 7)]
         [ValidateSet('NONE', 'DEFAULT', 'VSS', 'FAILEDVSS', 'NOT_APPLICABLE')]
-        [System.String]$ConsistencyType, 
-
-        [Parameter(Mandatory = $false, Position = 8)]
-        [switch]$AppConsistent
+        [System.String]$ConsistencyType
     )
 
     $Header = @{
@@ -4866,19 +4862,17 @@ function Update-SVTpolicyRule {
         Write-Verbose "Inheriting existing retention of $RetentionDay days"
     }
 
-    if ( -not $PSBoundParameters.ContainsKey('AppConsistent')) {
-        $AppConsistent = $Policy | Select-Object -ExpandProperty AppConsistent
-        Write-Verbose "Inheriting existing application consistency setting of $AppConsistent"
-    }
-
     if ( -not $PSBoundParameters.ContainsKey('ConsistencyType')) {
         $ConsistencyType = ($Policy | Select-Object -ExpandProperty ConsistencyType).ToUpper()
         Write-Verbose "Inheriting existing consistency type $ConsistencyType"
     }
 
-    $ApplicationConsistent = $false
-    if ($PSBoundParameters.ContainsKey('AppConsistent')) {
-        $ApplicationConsistent = $true
+    # The new HTML5 client doesn't expose application consistent tick box - application_consistent must be
+    # true if consitency_type is VSS or DEFAULT. Otherwise the API sets it to NONE.
+    $ConsistencyType = $ConsistencyType.ToUpper()
+    $ApplicationConsistent = $true
+    if ($ConsistencyType -eq 'NONE') {
+        $ApplicationConsistent = $false
     }
 
     $Body = @{

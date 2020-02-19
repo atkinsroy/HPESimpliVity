@@ -117,13 +117,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 #>
 [cmdletBinding()]
 Param (
-    [Parameter(Mandatory = $true, Position = 1, HelpMessage = "A HPE OmniStack Virtual Controller in the Federation")]
+    [Parameter(Mandatory = $true, Position = 0, HelpMessage = "A HPE OmniStack Virtual Controller in the Federation")]
     [System.String]$OVC,
 
-    [Parameter(Mandatory = $true, Position = 2)]
+    [Parameter(Mandatory = $true, Position = 1)]
     [System.String]$ClusterName,
 
-    [Parameter(Mandatory = $false, Position = 3, HelpMessage = "Without -Force, the script just reports without doing anything")]
+    [Parameter(Mandatory = $false, Position = 2, HelpMessage = "Without -Force, the script just reports without doing anything")]
     [Switch]$Force
 )
 
