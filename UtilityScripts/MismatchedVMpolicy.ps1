@@ -10,7 +10,7 @@
 # Install-Module -Name HPESimpliVity -RequiredVersion 1.1.4
 
 # Connect is an OmniStack Virtual Controller in your environment:
-$IP = 192.168.1.1   # change this to match one of your virtual controllers
+$IP = '192.168.1.1'   # change this to match one of your virtual controllers
 $Cred = Import-Clixml .\OVCcred.xml
 Connect-SVT -OVC $IP -Credential $Cred
 

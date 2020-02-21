@@ -47,6 +47,9 @@ OTHER DEALINGS IN THE SOFTWARE.
      This script will clone a given VM or VMs up to 20 times. It accepts multiple
      SimpliVity Virtual Machine objects and will execute 4 clone operations
      simultaneously, waiting so that only maximum of 4 clones are executing at once.
+
+     Assumes you have previously connected to an OmniStack Virtual Controller (or Managment 
+     Virtual Appliance) using Connect-SVT. 
 .PARAMETER VMname
     Specify one or more VMs to clone
 .PARAMETER NumberOfClones
