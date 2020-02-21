@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.26'
+$HPESimplivityVersion = '2.0.27'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -1510,25 +1510,22 @@ function Get-SVTbackup {
     Give the backup(s) a unique name, otherwise a default name with a date stamp is used.
 .PARAMETER RetentionDay
     Retention specified in days.
-.PARAMETER AppConsistent
-    An indicator to show if the backup represents a snapshot of a virtual machine with data that was first 
-    flushed to disk. This is a switch parameter, true if present.
-
-    The default is false (crash consistent backup is taken), which is equivalent to ConsistencyType = None
 .PARAMETER ConsistencyType
-    This parameter overrides the AppConsistent parameter. Available options are:
+    Available options are:
     1. NONE - This is the default and creates a crash consistent backup
-    2. DEFAULT - VMware Snapshot. This is the default method used for application consistency
-    3. VSS - Microsoft VSS. Refer to the admin guide for requirements and supported applications
+    2. DEFAULT - Create application consistent backups using VMware Snapshot
+    3. VSS - Create application consistent backups using Microsoft VSS in the guest operating system. Refer 
+    to the admin guide for requirements and supported applications
 .EXAMPLE
     PS C:\> New-SVTbackup -VMname MyVM -DestinationName ClusterDR
 
     Backup the specified VM to the specified SimpliVity cluster, using the default backup name and retention
 .EXAMPLE
-    PS C:\> New-SVTbackup MyVM StoreOnce-Data01 -RetentionDay 365
+    PS C:\> New-SVTbackup MyVM StoreOnce-Data01 -RetentionDay 365 -ConsistencyType DEFAULT
 
     Backup the specified VM to the specified external datastore, using the default backup name and retain the
-    backup for 1 year
+    backup for 1 year. A consistency type of DEFAULT creates a VMware snapshot to quiesce the disk prior to taking
+    the backup
 .EXAMPLE
     PS C:\> Get-SVTvm | ? VMname -match '^DB' | New-SVTbackup -BackupName 'Manual backup prior to SQL upgrade'
 
@@ -1558,9 +1555,6 @@ function New-SVTbackup {
         [Parameter(Mandatory = $false, Position = 3)]
         [System.Int32]$RetentionDay = 1,
 
-        [Parameter(Mandatory = $false, Position = 4)]
-        [switch]$AppConsistent,
-
         [Parameter(Mandatory = $false, Position = 5)]
         [ValidateSet('DEFAULT', 'VSS', 'NONE')]
         [System.String]$ConsistencyType = 'NONE'
@@ -1582,9 +1576,11 @@ function New-SVTbackup {
             }
         }
 
-        $ApplicationConsistent = $False
-        if ($PSBoundParameters.ContainsKey('AppConsistent')) {
-            $ApplicationConsistent = $True
+        if ($ConsistencyType -eq 'NONE') {
+            $ApplicationConsistent = $false
+        }
+        else {
+            $ApplicationConsistent = $true
         }
     }
 
@@ -4651,9 +4647,11 @@ function New-SVTpolicyRule {
     # The new HTML5 client doesn't expose application consistent tick box - application_consistent must be
     # true if consitency_type is VSS or DEFAULT. Otherwise the API sets it to NONE.
     $ConsistencyType = $ConsistencyType.ToUpper()
-    $ApplicationConsistent = $true
     if ($ConsistencyType -eq 'NONE') {
         $ApplicationConsistent = $false
+    }
+    else {
+        $ApplicationConsistent = $true
     }
 
     $Body += @{
@@ -4870,9 +4868,11 @@ function Update-SVTpolicyRule {
     # The new HTML5 client doesn't expose application consistent tick box - application_consistent must be
     # true if consitency_type is VSS or DEFAULT. Otherwise the API sets it to NONE.
     $ConsistencyType = $ConsistencyType.ToUpper()
-    $ApplicationConsistent = $true
     if ($ConsistencyType -eq 'NONE') {
         $ApplicationConsistent = $false
+    }
+    else {
+        $ApplicationConsistent = $true
     }
 
     $Body = @{
@@ -5428,7 +5428,7 @@ function Get-SVTvm {
         [System.String[]]$State = "ALIVE",
 
         [Parameter(Mandatory = $false)]
-        [ValidateRange(1, 8000)]   # HPE recommends 8000 max records to avoid out of memory errors (OMNI-69918)
+        [ValidateRange(1, 5000)]   # Limited to avoid out of memory errors (OMNI-69918) (Runtime error over 5000)
         [System.Int32]$Limit = 500
     )
 
@@ -5642,21 +5642,17 @@ function Get-SVTvmReplicaSet {
     Specify the VM to clone
 .PARAMETER CloneName
     Specify the name of the new clone
-.PARAMETER AppConsistent
-    Confirms that application data has been previously flushed to disk
 .PARAMETER ConsistencyType
-    The type of backup used for the clone method, DEFAULT is crash-consistent, VSS is
-    application-consistent using VSS and NONE is application-consistent using a snapshot.
-    VSS is only applicable to Windows guests.
-
-    NOTE: Consistency type overrides AppConsistent. If AppConsistent is specified and consistency 
-    type is not set, the consistency type will be set to DEFAULT (crash-consistent). If neither are
-    set, consistency type is set to NONE (application consistent using a snapshot)
+    Available options are:
+    1. NONE - This is the default and creates a crash consistent backup
+    2. DEFAULT - Create application consistent backups using VMware Snapshot
+    3. VSS - Create application consistent backups using Microsoft VSS in the guest operating system. Refer 
+    to the admin guide for requirements and supported applications
 .EXAMPLE
-    PS C:\> New-SVTclone -VMname MyVM
+    PS C:\> New-SVTclone -VMname MyVM1
 
-    Create a clone with the default name 'MyVM-clone-200212102304', where the suffix after '-clone-' 
-    is a date stamp in the form 'yyMMddhhmmss'
+    Create a clone with the default name 'MyVM1-clone-200212102304', where the suffix is a date stamp in 
+    the form 'yyMMddhhmmss'
 .EXAMPLE
     PS C:\> New-SVTclone -VMname Server2016-01 -CloneName Server2016-Clone
     PS C:\> New-SVTclone -VMname Server2016-01 -CloneName Server2016-Clone -ConsistencyType NONE
@@ -5664,11 +5660,9 @@ function Get-SVTvmReplicaSet {
     Both commands do the same thing, they create an application consistent clone of the specified 
     virtual machine, using a snapshot
 .EXAMPLE
-    PS C:\> New-SVTclone -VMname RHEL8-01 -CloneName RHEL8-01-New -AppConsistent
     PS C:\> New-SVTclone -VMname RHEL8-01 -CloneName RHEL8-01-New -ConsistencyType DEFAULT
 
-    Both commands do the same thing, they create a crash-consistent clone of the specified 
-    virtual machine
+    Create a crash-consistent clone of the specified virtual machine
 .EXAMPLE
     PS C:\> New-SVTclone -VMname Server2016-06 -CloneName Server2016-Clone -ConsistencyType VSS
 
@@ -5691,9 +5685,6 @@ function New-SVTclone {
         [Alias("Name")]
         [System.String]$CloneName = "$VMname-clone-$(Get-Date -Format 'yyMMddhhmmss')",
 
-        [Parameter(Mandatory = $false, Position = 2)]
-        [switch]$AppConsistent,
-
         [Parameter(Mandatory = $false, Position = 3)]
         [ValidateSet('DEFAULT', 'VSS', 'NONE')]
         [System.String]$ConsistencyType = 'NONE'
@@ -5708,19 +5699,21 @@ function New-SVTclone {
     try {
         $VmId = Get-SVTvm -VMname $VMname -ErrorAction Stop | Select-Object -ExpandProperty VmId
         $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/clone'
-        Write-Verbose "Creating clone $CloneName from $VMname"
+        Write-Verbose "Creating a clone of $VMname called $CloneName"
     }
     catch {
         throw $_.Exception.Message
     }
 
-    $ApplicationConsistent = $false
-    if ($PSBoundParameters.ContainsKey('AppConsistent')) {
-        $ApplicationConsistent = $true
-    }
-    
     if ($ConsistencyType -eq 'VSS') {
         Write-Verbose 'Consistency type of VSS will only work with Windows virtual machines'
+    }
+
+    if ($ConsistencyType -eq 'NONE') {
+        $ApplicationConsistent = $false
+    }
+    else {
+        $ApplicationConsistent = $true
     }
 
     $Body = @{
