@@ -1,8 +1,24 @@
 This folder contains PowerShell scripts that utilise the HPESimpliVity module.
 
+## CreateClone.ps1
+
+Clone multiple VMs or clone one VM multple times or both. This script accepts one or more VMs from the pipline and will clone it/them one or more times. Clones are created on the same datastore as the original, but they can be moved to a new datastore or across SimpliVity clusters using the Move-SVTvm command. Clones are named the same as the source VM with a dash and a unique 2 digit number, starting from '-01'.
+
+Use:
+```powershell
+Get-Help .\CreateClone.ps1 -Examples 
+```
+to see some examples on how to use the script.
+
 ## Get-SupportCaptureFile.ps1
 
-Connect to one or more Omnistack virtual controllers, create and then download the capture file(s) locally. This script uses a third party PowerShell module called Posh-SSH, that allows the use of a credential, rather than having to upload ssh public keys to each virtual controller. 
+Connect to one or more Omnistack virtual controllers over ssh, create and download the capture file(s) locally. This script uses a third party PowerShell module called Posh-SSH, that allows the use of a credential, rather than having to upload ssh public keys to each virtual controller. 
+
+See:
+```powershell
+Get-Help .\Get-SupportCaptureFile.ps1
+```
+for more details.
 
 ## DailyWeeklyMonthlyReport.ps1
 
