@@ -23,7 +23,7 @@ For example:
     ClusterId                : 3baba7ec-6d02-4fb6-b510-5ce19cd9c1d0
     StorageMask              : 255.255.255.0
     Model                    : HPE SimpliVity 380 Series 4000
-    HostName                 : srvr1.sq.com
+    HostName                 : srvr1.sg.com
     .
     .
     .
