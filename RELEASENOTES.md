@@ -1,3 +1,19 @@
+# Version 2.0.28
+
+* Removed -ApplicationConsistent switch from the policy and backup commands. If ConsistencyType is NONE, then application_consistent is false. For all other consistency types (DEFAULT and VSS), application_consistent is true. This removes confusion, with multiple parameters doing similar things.
+* Added multi-value support for most "Get" commands, where supported by the API. For example, 
+
+````powershell
+    PS C:\> Get-SVTvm -ClusterName cluster1,cluster2 -State ALIVE,REMOVED,DELETED
+    PS C:\> Get-SVTbackup -VmName Vm1,Vm2,Vm3
+    PS C:\> Get-SVThost Host1,Host2,Host3
+````
+Note: multi-value parameters do not work for Get-SVTbackup when connected to an OVC; they do work when connected to an MVA.
+
+* Added a new -PolicyName parameter to Get-SVTvm.
+* Added a new utility script called CreateClone.ps1. This script will clone multiple VMs or clone one VM multiple times or both at once.
+* Bug fixes.
+
 # Version 2.0.24
 
 * Added support for new hardware models. Get-SVTdisk supports the new Gen 10 H and Gen 10 G models

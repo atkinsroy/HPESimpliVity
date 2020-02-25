@@ -42,7 +42,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #>
 
 # Change IP address to match one of your virtual controllers
-$IP = 192.168.1.1
+$IP = '192.168.1.1'
 
 # It is assumed you have previously created a credential file using, for example:
 #Get-Credential -Message 'Enter a password at prompt' -UserName 'administrator@vsphere.local' | Export-Clixml OVCcred.xml

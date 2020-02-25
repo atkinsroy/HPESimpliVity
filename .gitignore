@@ -1,4 +1,5 @@
 New-Manifest.ps1
-UtilityScripts/SignCode.ps1
+UtilityScripts/Test-HPEsimpliVity.ps1
 UtilityScripts/HPEsimpliVity.Tests.ps1
+UtilityScripts/SignCode.ps1
 Signed/
