@@ -30,13 +30,11 @@ For example:
 ```
 ## Update V2.0.28 new features
 
-* Supports the new features in HPE SimpliVity 4.0.0. Specifically, the ability to add and show external store (HPE StoreOnce is currently supported) and the ability to backup/restore to/from external stores. 
-* Added support for multiple values to most of the "GET" commands. This works best when connected to a Management Virtual Appliance (MVA) rather than an OmniStack Virtual Controller (OVC). (See known issues below)
+* Supports the new features in HPE SimpliVity 4.0.0. Specifically, the ability to add and show external store information (HPE StoreOnce is currently supported) and the ability to backup/restore to/from external stores. 
+* Added support for multiple value parameters to most of the "GET" commands. This works best when connected to a Management Virtual Appliance (MVA) rather than an OmniStack Virtual Controller (OVC). (See known issues below)
 * Added support for new HPE SimpliVity hardware models.
 
-
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
-
 
 The module contains 54 exported cmdlets, divided into the following feature categories:
 
@@ -69,15 +67,17 @@ Get-SVTvmReplicaSet | Get-SVTdisk
 
 ## Requirements
 
-* PowerShell V5.1 and above. (note that the chart features do not work with PowerShell Core 6.0 and PowerShell 7.0)
+* PowerShell V5.1 and above. (note that the chart features do not work with PowerShell Core 6.0 or PowerShell 7.0)
 * The IP address and the credentials of an authorized OmniStack user account.
 * Tested with HPE SimpliVity V4.0.0. The module should be compatible with older versions, but has not been tested. 
 
 ## Installation
 
-* Install the HPESimplivity module from the PowerShell Gallery, using the following command:
+* Install or update the HPESimplivity module from the PowerShell Gallery, using the following respective commands:
 ```powershell
-    PS C:\> Install-Module -Name HPESimpliVity -RequiredVersion 2.0.16
+    PS C:\> Install-Module -Name HPESimpliVity
+    # or
+    PS C:\> Update-Module -Name HPESimpliVity
 ```
 The module is signed, so it will work with an execution policy set to Remote Signed.
 
@@ -91,10 +91,10 @@ The module is signed, so it will work with an execution policy set to Remote Sig
     PS C:\> Get-Help Connect-SVT
     PS C:\> Get-Help Get-SVTbackup
 ```
-* Once installed, you're ready to connect to the OmniStack virtual controller, as follows:
+* Once installed, you're ready to connect to the OmniStack virtual controller or Management Virtual Appliance, as follows:
 ```powershell
-    PS C:\> $Cred = Get-Credential -Message 'Enter OVC Credentials'
-    PS C:\> Connect-SVT -OVC <IP or FQDN of an OmniStack Virtual Controller> -Credential $Cred
+    PS C:\> $Cred = Get-Credential -Message 'Enter OVC/MVA Credentials'
+    PS C:\> Connect-SVT -OVC <IP or FQDN of an OVC or MVA> -Credential $Cred
     PS C:\> Get-SVThost
 ```
 Or, if you need to run commands in batch (non-interactively), save your credentials to a file first:
@@ -105,7 +105,7 @@ Or, if you need to run commands in batch (non-interactively), save your credenti
 and then in your script, import the credential:
 ```powershell
     PS C:\> $Cred = Import-CLIXML .\OVCcred.XML
-    PS C:\> Connect-SVT -OVC <IP or FQDN of an OmniStack Virtual Controller> -Credential $Cred
+    PS C:\> Connect-SVT -OVC <IP or FQDN of an OVC or MVA> -Credential $Cred
     PS C:\> Get-SVThost
 ```
 
@@ -115,8 +115,7 @@ and then in your script, import the credential:
 
 The API has some documented and undocumented issues:
 * OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation
-* OMNI-46361: REST API GET opertions for backup objects and sorting filtering constraints. Comma separated list of values for filtering is not supported. Some properties do not support case insensitive filter option. The HPE SimpliVity module does not allow you to enter multiple values for filtering options, as per the recommendation.
-* Some of the multi-value parameters will only work when connected to an MVA. Most notably this is with GET /backup. Attempting to use multi-value parameters whilst connected to an OVC returns no results. For example, the following commands all work when connected to an MVA:
+* OMNI-46361: REST API GET opertions for backup objects and sorting filtering constraints. Comma separated list of values for filtering is not supported. Some properties do not support case insensitive filter option. The HPE SimpliVity module does not allow you to enter multiple values for filtering options, as per the recommendation. This issue does not appear to effect connections made to Management Virtual Appliances. For example, the following commands all work when connected to an MVA:
 
 ````powershell
     PS C:\>  Get-SVTbackup -VmName Vm1,Vm2,Vm3
