@@ -28,11 +28,12 @@ For example:
     .
     .
 ```
-## Update V2.0.24 new features
+## Update V2.0.28 new features
 
 * Supports the new features in HPE SimpliVity 4.0.0. Specifically, the ability to add and show external store (HPE StoreOnce is currently supported) and the ability to backup/restore to/from external stores. 
-
+* Added support for multiple values to most of the "GET" commands. This works best when connected to a Management Virtual Appliance (MVA) rather than an OmniStack Virtual Controller (OVC). (See known issues below)
 * Added support for new HPE SimpliVity hardware models.
+
 
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
@@ -110,11 +111,22 @@ and then in your script, import the credential:
 
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
-## Known issues with V4.0.0 of the API (With HPESimpliVity 2.0.24)
+## Known issues with V4.0.0 of the API (With HPESimpliVity 2.0.28)
 
 The API has some documented and undocumented issues:
 * OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation
 * OMNI-46361: REST API GET opertions for backup objects and sorting filtering constraints. Comma separated list of values for filtering is not supported. Some properties do not support case insensitive filter option. The HPE SimpliVity module does not allow you to enter multiple values for filtering options, as per the recommendation.
+* Some of the multi-value parameters will only work when connected to an MVA. Most notably this is with GET /backup. Attempting to use multi-value parameters whilst connected to an OVC returns no results. For example, the following commands all work when connected to an MVA:
+
+````powershell
+    PS C:\>  Get-SVTbackup -VmName Vm1,Vm2,Vm3
+    PS C:\>  Get-SVTbackup -Destination Cluster1,Cluster2
+    PS C:\>  Get-SVTbackup -Destination StoreOnce-Data01,StoreOnce-Data02
+    PS C:\>  Get-SVTbackup -Datastore DS01,DS02
+    PS C:\>  Get-SVTbackup -BackupName Test1,Test2
+    PS C:\>  Get-SVTbackup -BackupId a9e82f..., 0ef1bd...
+````
+
 * Backups stored on external stores cannot be deleted if the VM has been deleted, with a backup not found error. This does not apply to backups stored on clusters. This restriction is specific to the API; the CLI command svt-backup-delete works as expected for external store backups.
 * the PUT /policies/\<policyid\>/rules/\<ruleid\> API call (implementmented in Update-SVTpolicyRule) doesn't work as expected in some circumstances. Changing a rules' destination is not supported (this is documented), but in addition, changing the consistancy type to anything other than NONE or DEFAULT doesn't work. If you attempt to change the consistenct type to VSS, for example, the command is ignored. In this scenario, a work around would be to delete the rule entirely from the policy using Remove-SVTpolicyRule and then use New-SVTpolicyRule to create a new rule with the desired destination, consistenecy type and other settings.
 * Using GET /backups with a specific cluster_id (implemented as Get-SVTbackup -DestinationName \<ClusterName\>) will result in backups located on the specified cluster AND external stores too. This issue only applies when connected to an OVC; calls to an MVA work as expected. In either case, filtering on an external store works as expected (e.g. Get-SVTbackup -DestinationName ExternalStore1)
