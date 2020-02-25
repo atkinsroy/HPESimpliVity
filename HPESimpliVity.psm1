@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.27'
+$HPESimplivityVersion = '2.0.28'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -41,7 +41,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 # Helper function for most cmdlets that accept a hostname parameter. The user supplied hostname(s) 
 # is/are compared to an object containing a valid hostname property. (e.g. Get-SVThost and Get-SVThardware 
 # both have this)
-function Resolve-SVTFullHostname {
+function Resolve-SVTFullHostName {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
@@ -49,19 +49,18 @@ function Resolve-SVTFullHostname {
         [System.String[]]$HostName,
         
         [Parameter(Mandatory = $true, Position = 1)]
-        [System.Object]$HostObj
+        [System.String[]]$ReferenceHost
     )
 
     process {
         foreach ($ThisHost in $HostName) {
-            $TestHost = $HostObj | Where-Object HostName -eq $ThisHost | Select-Object -Expandproperty HostName
+            $TestHost = $ReferenceHost | Where-Object { $_ -eq $ThisHost }
             
             if (-not $TestHost) {
-                Write-Verbose "Specified host $ThisHost not found, attempting to match hostname without domain suffix"
+                Write-Verbose "Specified host $ThisHost not found, attempting to match host name without domain suffix"
                 
-                $TestHost = $HostObj | 
-                Where-Object { ($_.HostName).Split(".")[0] -eq $ThisHost } | 
-                Select-Object -Expandproperty HostName
+                $TestHost = $ReferenceHost | 
+                Where-Object { $_.Split(".")[0] -eq $ThisHost }
             }
 
             if ($TestHost) {
@@ -75,10 +74,10 @@ function Resolve-SVTFullHostname {
 
     end {
         if ($ReturnHost) {
-            return $ReturnHost
+            return ($ReturnHost | Sort-Object | Select-Object -Unique)
         }
         else {
-            throw 'Specified host not found'
+            throw 'Specified host(s) not found'
         }
     }
 }
@@ -121,42 +120,75 @@ function Get-SVTLocalDateFormat {
     return "$LocalDate $LocalTime"
 }
 
-# Helper function used by New/Copy-SVTbackup and New/Update-SVTpolicyRule to return the backup destination
-# This must be a cluster or an external store. Otherwise throw an error.
+# Helper function used by Get/New/Copy-SVTbackup and New/Update-SVTpolicyRule to return the backup 
+# destination. This must be a cluster or an external store. Otherwise throw an error.
 Function Get-SVTbackupDestination {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
         [Alias("Name")]
-        [System.String]$DestinationName
+        [System.String[]]$DestinationName
     )
 
-    try {
-        $Destination = Get-SVTcluster -Name $DestinationName -ErrorAction Stop
-        $ReturnObject = @{
-            Type = 'Cluster'
-            Name = $Destination.ClusterName  #correct case
-            Id   = $Destination.ClusterId
+    [bool]$FoundCluster = $false
+    [bool]$FoundExternalStore = $false
+    foreach ($Destination in $DestinationName) {
+        try {
+            $Dest = Get-SVTcluster -Name $Destination -ErrorAction Stop
+            if ($FoundExternalStore) {
+                throw 'FoundMultipleDestinationTypes'
+            }
+            else {
+                Write-Verbose "$($Dest.ClusterName) is a SimpliVity Cluster"
+                $FoundCluster = $true
+                $DestObject = @{
+                    Type = 'Cluster'
+                    Name = $Dest.ClusterName  #correct case
+                    Id   = $Dest.ClusterId
+                }
+                [array]$ReturnObject += $DestObject
+                continue
+            }
         }
-        Write-Verbose "$($Destination.ClusterName) is a SimpliVity Cluster"
-        Return $ReturnObject
-    }
-    catch {
-        # don't throw an error, try external stores
-    }
+        catch {
+            if ($_.Exception.Message -eq 'FoundMultipleDestinationTypes') {
+                throw 'Destinations must be of type cluster or external store, not both'
+            }
+            else {
+                # Get-SVTcluster must have failed. Try External Store
+            }
+        }
 
-    try {
-        $Destination = Get-SVTexternalStore -Name $DestinationName -ErrorAction Stop
-        $ReturnObject = @{
-            Type = 'ExternalStore'
-            Name = $Destination.ExternalStoreName
-            Id   = $Destination.ExternalStoreName
+        try {
+            $Dest = Get-SVTexternalStore -Name $Destination -ErrorAction Stop
+            if ($FoundCluster) {
+                throw 'FoundMultipleDestinationTypes'
+            }
+            else {
+                Write-Verbose "$($Dest.ExternalStoreName) is an external store"
+                $FoundExternalStore = $true
+                $DestObject = @{
+                    Type = 'ExternalStore'
+                    Name = $Dest.ExternalStoreName
+                    Id   = $Dest.ExternalStoreName
+                }
+                [array]$ReturnObject += $DestObject
+            }
         }
-        Write-Verbose "$($Destination.ExternalStoreName) is an external store"
+        catch {
+            if ($_.Exception.Message -eq 'FoundMultipleDestinationTypes') {
+                throw 'Destinations must be of type cluster or external store, not both'
+            }
+            else {
+                Write-Warning "Specified destination name $Destination is not a valid cluster name or external store name"
+            }
+        }
+    } #end foreach
+    if ($ReturnObject) {
         Return $ReturnObject
     }
-    catch {
-        throw "Specified destination name $DestinationName is not a valid cluster name or external store name"
+    else {
+        throw "Invalid cluster name or external store name specified"
     }
 }
 
@@ -211,7 +243,7 @@ function Invoke-SVTrestMethod {
                     }
                 }
             }
-            elseif ($_.Exception.Message -match "The hostname could not be parsed") {
+            elseif ($_.Exception.Message -match "The host name could not be parsed") {
                 throw "Runtime error: You must first log in using Connect-SVT"
             }
             else {
@@ -299,7 +331,7 @@ function Invoke-SVTrestMethod {
     Provides an update of the task(s) from the last HPESimpliVity cmdlet that creates, deletes or updates 
     a SimpliVity resource
 .EXAMPLE
-    PS C:\> New-SVTbackup -VMname MyVM
+    PS C:\> New-SVTbackup -VmName MyVm
     PS C:\> Get-SVTtask
 
     Shows the state of the task executed from the New-SVTbackup cmdlet.
@@ -536,9 +568,9 @@ function Get-SVTversion {
     Used to accept input from the pipeline. Accepts HPESimpliVity objects with a specific type
 .PARAMETER ClusterName
     Show performance metrics for the specified SimpliVity cluster(s)
-.PARAMETER Hostname
+.PARAMETER HostName
     Show performance metrics for the specified SimpliVity node(s)
-.PARAMETER VMname
+.PARAMETER VmName
     Show performance metrics for the specified virtual machine(s) hosted on SimpliVity storage
 .PARAMETER OffsetHour
     Show performance metrics starting from the specified offset (hours from now, default is now)
@@ -559,7 +591,7 @@ function Get-SVTversion {
 
     Shows performance metrics for all hosts in the federation, for every second of the last hour
 .EXAMPLE
-    PS C:\>Get-SVTvm | Where VMname -match "SQL" | Get-SVTmetric
+    PS C:\>Get-SVTvm | Where VmName -match "SQL" | Get-SVTmetric
 
     Show performance metrics for every VM that has "SQL" in its name
 .EXAMPLE
@@ -567,12 +599,12 @@ function Get-SVTversion {
 
     Show daily performance metrics for the last two months for the specified cluster
 .EXAMPLE
-    PS C:\>Get-SVThost | Get-Metric -Chart -Verbose
+    PS C:\>Get-SVTvm Vm1,Vm2,Vm3 | Get-Metric -Chart -Verbose
 
     Create chart(s) instead of showing the metric data. Chart files are created in the current folder.
     Use filtering when creating charts for virtual machines to avoid creating a lot of charts.
 .EXAMPLE
-    PS C:\>Get-SVThost -HostName MyHost | Get-Metric -Chart | Foreach-Object {Invoke-Item $_}
+    PS C:\>Get-SVThost -Name MyHost | Get-Metric -Chart | Foreach-Object {Invoke-Item $_}
 
     Create a metrics chart for the specified host and display it. Note that Invoke-Item only works with
     image files when the Desktop Experience Feature is installed (may not be installed on some servers)
@@ -596,7 +628,7 @@ function Get-SVTmetric {
         [System.String[]]$ClusterName,
 
         [Parameter(Mandatory = $true, ParameterSetName = 'VirtualMachine')]
-        [System.String[]]$VMname,
+        [System.String[]]$VmName,
 
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, 
             ParameterSetName = 'SVTobject')]
@@ -660,7 +692,7 @@ function Get-SVTmetric {
             $InputObject = $HostName
         }
         else {
-            $InputObject = $VMname
+            $InputObject = $VmName
         }
 
         foreach ($Item in $InputObject) {
@@ -675,7 +707,7 @@ function Get-SVTmetric {
             }
             elseif ($TypeName -eq 'HPE.SimpliVity.VirtualMachine') {
                 $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $Item.VmId + '/metrics'
-                $ObjectName = $Item.VMname
+                $ObjectName = $Item.VmName
             }
             elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
                 try {
@@ -704,7 +736,7 @@ function Get-SVTmetric {
             }
             else {
                 try {
-                    $VmId = Get-SVTvm -VMname $Item -ErrorAction Stop | Select-Object -ExpandProperty VmId
+                    $VmId = Get-SVTvm -VmName $Item -ErrorAction Stop | Select-Object -ExpandProperty VmId
                     $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/metrics'
                     $ObjectName = $Item
                     $TypeName = 'HPE.SimpliVity.VirtualMachine'
@@ -1183,7 +1215,7 @@ function Get-SVTmodel {
     the environment exceeds the limit for a specific Get-SVTbackup command.
 
     Verbose is automatically turned on to show more information about what this command is doing.
-.PARAMETER VMname
+.PARAMETER VmName
     Show backups for the specified virtual machine only.
 .PARAMETER DataStoreName
     Show backups located on the specified Simplivity datastore only.
@@ -1207,7 +1239,7 @@ function Get-SVTmodel {
     Show the last 24 hours of backups from the SimpliVity Federation
 .EXAMPLE
     PS C:\> Get-SVTbackup -Hour 48 | 
-        Select-Object VMname, DataStoreName, SentMB, UniqueSizeMB | Format-Table -Autosize
+        Select-Object VmName, DataStoreName, SentMB, UniqueSizeMB | Format-Table -Autosize
 
     Show backups up to 48 hours old and select specific properties to display
 .EXAMPLE
@@ -1229,23 +1261,26 @@ function Get-SVTmodel {
     The third command shows the latest backup for each VM with a backup on the specified destination (either a
     SimpliVity cluster or an external store)
 .EXAMPLE
-    PS C:\> Get-SVTbackup -VMname MyVM
-    PS C:\> Get-SVTbackup -VMname MyVM -Hour 2
+    PS C:\> Get-SVTbackup -VmName Vm1,Vm2
+    PS C:\> Get-SVTbackup -VmName Vm1,Vm2 -Hour 2
 
-    The first command shows backups for the specified VM only, up to the default limit of 500 backups
-    The second command shows the latest 2 hours of backups for the specified VM
+    The first command shows backups for the specified VMs only, up to the default limit of 500 backups
+    The second command shows the latest 2 hours of backups for the specified VMs
 .EXAMPLE
-    PS C:\> Get-SVTbackup -Datastore MyDatastore -Limit 3000
+    PS C:\> Get-SVTbackup -Datastore DS01,DS02 -Limit 3000
 
-    Shows all backups on the specified SimpliVity datastore, up to the specified limit
+    Shows all backups on the specified SimpliVity datastores, up to the specified limit
 .EXAMPLE
-    PS C:\> Get-SVTbackup -DestinationName SVTcluster -Limit 100
+    PS C:\> Get-SVTbackup -DestinationName cluster1 -Limit 100
 
     Show the latest 100 backups for all VMs located on the specified cluster.
-.EXAMPLE
-    PS C:\> Get-SVTbackup -DestinationName StoreOnce-Data02 -Hour 2
 
-    Shows backups that are up to 2 hours old on the specified external datastore.
+    Note: You can specify multiple destinations, but they must all be of the same type. i.e. SimpliVity clusters
+    or external stores.
+.EXAMPLE
+    PS C:\> Get-SVTbackup -DestinationName StoreOnce-Data02,StoreOnce-Data03 -Hour 2
+
+    Shows backups that are up to 2 hours old on the specified external datastores.
 .INPUTS
     System.String
 .OUTPUTS
@@ -1259,34 +1294,34 @@ Filtering on a cluster destination also displays exernal store backups. This iss
 function Get-SVTbackup {
     [CmdletBinding(DefaultParameterSetName = 'ByHour')]
     param (
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByVMname')]
-        [System.String]$VMname,
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByVmName')]
+        [System.String[]]$VmName,
 
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByDatastoreName')]
-        [System.String]$DatastoreName,
+        [System.String[]]$DatastoreName,
 
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByDestinationName')]
-        [System.String]$DestinationName,
+        [System.String[]]$DestinationName,
 
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByBackupName')]
         [Alias("Name")]
-        [System.String]$BackupName,
+        [System.String[]]$BackupName,
 
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByBackupId')]
         [Alias("Id")]
-        [System.String]$BackupId,
+        [System.String[]]$BackupId,
 
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'AllBackup')]
         [switch]$All,
 
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByVMname')]
+        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByVmName')]
         [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByDatastoreName')]
         [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByDestinationName')]
         [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByHour')]
         [ValidateRange(1, 175400)]   # up to 20 years
         [System.String]$Hour,
 
-        [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByVMname')]
+        [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByVmName')]
         [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByDatastoreName')]
         [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByDestinationName')]
         [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'AllBackup')]
@@ -1325,22 +1360,26 @@ function Get-SVTbackup {
         $Uri += "&limit=$Limit"
     }
 
-    if ($PSBoundParameters.ContainsKey('VMname')) {
+    if ($PSBoundParameters.ContainsKey('VmName')) {
         Write-Verbose "VM names are currently case sensitive"
-        $Uri += "&virtual_machine_name=$VMname"
+        $VmName = $VmName -join ','
+        $Uri += "&virtual_machine_name=$VmName"
     }
     if ($PSBoundParameters.ContainsKey('DatastoreName')) {
         Write-Verbose "Datastore names are currently case sensitive"
+        $DatastoreName = $DatastoreName -join ','
         $Uri += "&datastore_name=$DatastoreName"
     }
     if ($PSBoundParameters.ContainsKey('DestinationName')) {
         try {
             $Destination = Get-SVTbackupDestination -Name $DestinationName
-            if ($Destination.Type -eq 'Cluster') {
-                $Uri += "&omnistack_cluster_id=$($Destination.Id)"
+            if (($Destination.Type | Select-Object -First 1) -eq 'Cluster') {
+                $ClusterId = $Destination.Id -join ','
+                $Uri += "&omnistack_cluster_id=$($ClusterId)"
             }
             else {
-                $Uri += "&external_store_name=$($Destination.Name)"
+                $ExternalStoreName = $Destination.Name -join ','
+                $Uri += "&external_store_name=$($ExternalStoreName)"
             }
         }
         catch {
@@ -1348,11 +1387,12 @@ function Get-SVTbackup {
         }
     }
     if ($PSBoundParameters.ContainsKey('BackupName')) {
-        Write-Verbose "Backup names are currently case sensitive. Incomplete backup names are matched"
-        $BackupName = "$BackupName*"  # Note the Asterix
+        Write-Verbose "Backup names are currently case sensitive. Incomplete backup names are matched" 
+        $BackupName = ($BackupName -join '*,') + '*'  # Note the Asterix
         $Uri += "&name=$($BackupName -replace '\+', '%2B')"
     }
     if ($PSBoundParameters.ContainsKey('BackupId')) {
+        $BackupId = $BackupId -join ','
         $Uri += "&id=$BackupId"
     }
 
@@ -1368,7 +1408,7 @@ function Get-SVTbackup {
     else {
         # -Hour not specified. We want to show the last 24 hours by default. The user can specify -latest
         # and/or -limit and this still applies. Ignore this 'default' filter if any other parameter is specified.
-        $ParamList = 'All', 'VMname', 'DatastoreName', 'DestinationName', 'BackupName', 'BackupId'
+        $ParamList = 'All', 'VmName', 'DatastoreName', 'DestinationName', 'BackupName', 'BackupId'
         $ParamFound = $false
         foreach ($Param in $ParamList) {
             if ($Param -in $PSBoundParameters.Keys) {
@@ -1404,15 +1444,15 @@ function Get-SVTbackup {
     }
 
     if ($PSBoundParameters.ContainsKey('BackupName') -and -not $Response.Backups.Name) {
-        throw "Specified backup name $BackupName not found"
+        throw "Specified backup name(s) $BackupName not found"
     }
 
     if ($PSBoundParameters.ContainsKey('BackupId') -and -not $Response.Backups.Name) {
-        throw "Specified backup ID $BackupId not found"
+        throw "Specified backup ID(s) $BackupId not found"
     }
 
-    if ($PSBoundParameters.ContainsKey('VMname') -and -not $Response.Backups.Name) {
-        throw "Backups for specified virtual machine $VMname not found"
+    if ($PSBoundParameters.ContainsKey('VmName') -and -not $Response.Backups.Name) {
+        throw "Backups for specified virtual machine(s) $VmName not found"
     }
 
     $Response.backups | ForEach-Object {
@@ -1445,19 +1485,19 @@ function Get-SVTbackup {
 
         $CustomObject = [PSCustomObject]@{
             PSTypeName        = 'HPE.SimpliVity.Backup'
-            VMname            = $_.virtual_machine_name
+            VmName            = $_.virtual_machine_name
             CreateDate        = $CreateDate
             ConsistencyType   = $_.consistency_type
             BackupType        = $_.type
             DataStoreName     = $_.datastore_name
-            VMId              = $_.virtual_machine_id
+            VmId              = $_.virtual_machine_id
             AppConsistent     = $_.application_consistent
             ParentId          = $_.compute_cluster_parent_hypervisor_object_id
             ExternalStoreName = $_.external_store_name
             BackupId          = $_.id
             BackupState       = $_.state
             ClusterId         = $_.omnistack_cluster_id
-            VMType            = $_.virtual_machine_type
+            VmType            = $_.virtual_machine_type
             SentCompleteDate  = $_.sent_completion_time
             UniqueSizeMB      = [single]('{0:n0}' -f ($_.unique_size_bytes / 1mb))
             ClusterGroupIDs   = $_.cluster_group_ids
@@ -1466,7 +1506,7 @@ function Get-SVTbackup {
             ClusterName       = $_.omnistack_cluster_name
             SentMB            = [single]('{0:n0}' -f ($_.sent / 1mb))
             SizeGB            = [single]('{0:n2}' -f ($_.size / 1gb))
-            VMState           = $_.virtual_machine_state
+            VmState           = $_.virtual_machine_state
             BackupName        = $_.name
             DatastoreId       = $_.datastore_id
             DataCenterName    = $_.compute_cluster_parent_name
@@ -1484,7 +1524,7 @@ function Get-SVTbackup {
         Write-Verbose 'The -Latest parameter was specified, show only the latest backup of each VM from the requested backups'
         $BackupObject | 
         ForEach-Object { $_.CreateDate = [datetime]::ParseExact($_.CreateDate, $LocalFormat, $null); $_ } |
-        Group-Object VMname |
+        Group-Object VmName |
     
         ForEach-Object { $_.Group | Sort-Object CreateDate | Select-Object -Last 1 }
     }
@@ -1498,10 +1538,10 @@ function Get-SVTbackup {
     Create one or more new HPE SimpliVity backups
 .DESCRIPTION
     Creates a backup of one or more virtual machines hosted on HPE SimpliVity. Either specify the VM names 
-    via the VMname parameter or use Get-SVTvm output to pass in the HPE SimpliVity VM objects to backup. 
+    via the VmName parameter or use Get-SVTvm output to pass in the HPE SimpliVity VM objects to backup. 
     Backups are directed to the specified destination cluster or external store, or to the local cluster 
     for each VM if no destination name is specified.
-.PARAMETER VMname
+.PARAMETER VmName
     The virtual machine(s) to backup. Optionally use the output from Get-SVTvm to provide the required VM names. 
 .PARAMETER DestinationName
     The destination cluster name or external store name. If nothing is specified, the virtual machine(s) 
@@ -1517,17 +1557,17 @@ function Get-SVTbackup {
     3. VSS - Create application consistent backups using Microsoft VSS in the guest operating system. Refer 
     to the admin guide for requirements and supported applications
 .EXAMPLE
-    PS C:\> New-SVTbackup -VMname MyVM -DestinationName ClusterDR
+    PS C:\> New-SVTbackup -VmName MyVm -DestinationName ClusterDR
 
     Backup the specified VM to the specified SimpliVity cluster, using the default backup name and retention
 .EXAMPLE
-    PS C:\> New-SVTbackup MyVM StoreOnce-Data01 -RetentionDay 365 -ConsistencyType DEFAULT
+    PS C:\> New-SVTbackup MyVm StoreOnce-Data01 -RetentionDay 365 -ConsistencyType DEFAULT
 
     Backup the specified VM to the specified external datastore, using the default backup name and retain the
     backup for 1 year. A consistency type of DEFAULT creates a VMware snapshot to quiesce the disk prior to taking
     the backup
 .EXAMPLE
-    PS C:\> Get-SVTvm | ? VMname -match '^DB' | New-SVTbackup -BackupName 'Manual backup prior to SQL upgrade'
+    PS C:\> Get-SVTvm | ? VmName -match '^DB' | New-SVTbackup -BackupName 'Manual backup prior to SQL upgrade'
 
     Locally backup up all VMs with names starting with 'DB' using the specified backup name and with default 
     retention of 1 day.
@@ -1543,7 +1583,7 @@ function New-SVTbackup {
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
             ValueFromPipelinebyPropertyName = $true)]
-        [System.String]$VMname,
+        [System.String]$VmName,
 
         [Parameter(Mandatory = $false, Position = 1)]
         [System.String]$DestinationName,
@@ -1585,12 +1625,12 @@ function New-SVTbackup {
     }
 
     process {
-        foreach ($VM in $VMname) {
+        foreach ($VM in $VmName) {
             try {
                 # Getting a specific VM name within the loop here deliberately. Getting all VMs in 
                 # the begin block might be a problem on systems with a large number of VMs.
-                $VMobj = Get-SVTvm -VMname $VM -ErrorAction Stop
-                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VMobj.VmId + '/backup'
+                $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
+                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + '/backup'
             }
             catch {
                 throw $_.Exception.Message
@@ -1612,7 +1652,7 @@ function New-SVTbackup {
             else {
                 # No destination cluster/external store specified, so use the cluster id local for VM being 
                 # backed up will be used.
-                $Body += @{ 'destination_id' = $VMobj.ClusterId }
+                $Body += @{ 'destination_id' = $VmObj.ClusterId }
             }
 
             $Body = $Body | ConvertTo-Json
@@ -1640,7 +1680,7 @@ function New-SVTbackup {
     Restore one or more HPE SimpliVity virtual machines
 .DESCRIPTION
     Restore one or more virtual machines hosted on HPE SimpliVity. Use Get-SVTbackup output to pass in the
-    backup ID(s) and VMname(s) you'd like to restore. You can either specify a destination datastore or restore
+    backup ID(s) and VmName(s) you'd like to restore. You can either specify a destination datastore or restore
     to the local datastore for each specified backup. By default, the restore will create a new VM with the
     same/specified name, but with a time stamp appended, or you can specify -RestoreToOriginal switch to 
     overwrite the existing virtual machine.
@@ -1652,7 +1692,7 @@ function New-SVTbackup {
     Specifies that the existing virtual machine is overwritten
 .PARAMETER BackupId
     The UID of the backup(s) to restore from
-.PARAMETER VMname
+.PARAMETER VmName
     The virtual machine name(s)
 .PARAMETER DatastoreName
     The destination datastore name
@@ -1661,7 +1701,7 @@ function New-SVTbackup {
 
     Restores the virtual machine(s) in the specified backup to the original VM name(s)
 .EXAMPLE
-    PS C:\> Get-SVTbackup -VMname MyVM | Sort-Object CreateDate | Select-Object -Last 1 | Restore-SVTvm
+    PS C:\> Get-SVTbackup -VmName MyVm | Sort-Object CreateDate | Select-Object -Last 1 | Restore-SVTvm
 
     Restores the latest backup of specified virtual machine, giving it the name of the original VM with a 
     data stamp appended
@@ -1680,12 +1720,12 @@ function Restore-SVTvm {
         [switch]$RestoreToOriginal,
 
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipelinebyPropertyName = $true,
-            ParameterSetName = 'NewVM')]
+            ParameterSetName = 'NewVm')]
         [Alias("Name")]
-        [System.String]$VMname,
+        [System.String]$VmName,
 
         [Parameter(Mandatory = $true, Position = 1, ValueFromPipelinebyPropertyName = $true,
-            ParameterSetName = 'NewVM')]
+            ParameterSetName = 'NewVm')]
         [System.String]$DataStoreName,
 
         [Parameter(Mandatory = $true, Position = 2, ValueFromPipelinebyPropertyName = $true)]
@@ -1717,7 +1757,7 @@ function Restore-SVTvm {
                 try {
                     $ThisBackup = Get-SVTbackup -BackupId $BkpId -ErrorAction Stop
                     if ($ThisBackup.ExternalStoreName) {
-                        throw "Restoring VM $($ThisBackup.VMname) from a backup located on an external store with 'RestoreToOriginal' set is not supported"    
+                        throw "Restoring VM $($ThisBackup.VmName) from a backup located on an external store with 'RestoreToOriginal' set is not supported"    
                     }
                 }
                 catch {
@@ -1734,16 +1774,16 @@ function Restore-SVTvm {
                 $DataStoreId = $AllDataStore | Where-Object DataStoreName -eq $DataStoreName | 
                 Select-Object -ExpandProperty DataStoreId
 
-                if ($VMname.Length -gt 59) {
-                    $RestoreVMname = "$($VMname.Substring(0, 59))-restore-$(Get-Date -Format 'yyMMddhhmmss')"
+                if ($VmName.Length -gt 59) {
+                    $RestoreVmName = "$($VmName.Substring(0, 59))-restore-$(Get-Date -Format 'yyMMddhhmmss')"
                 }
                 else {
-                    $RestoreVMname = "$VMname-restore-$(Get-Date -Format 'yyMMddhhmmss')"
+                    $RestoreVmName = "$VmName-restore-$(Get-Date -Format 'yyMMddhhmmss')"
                 }
 
                 $Body = @{
                     'datastore_id'         = $DataStoreId
-                    'virtual_machine_name' = $RestoreVMname
+                    'virtual_machine_name' = $RestoreVmName
                 } | ConvertTo-Json
                 Write-Verbose $Body
             }
@@ -1754,7 +1794,7 @@ function Restore-SVTvm {
                 [array]$AllTask += $Task
             }
             catch {
-                Write-Warning "$($_.Exception.Message), restore failed for VM $RestoreVMname"
+                Write-Warning "$($_.Exception.Message), restore failed for VM $RestoreVmName"
             }
         }
     }
@@ -1781,11 +1821,11 @@ function Restore-SVTvm {
 
     Deletes the backups with the specified backup name
 .EXAMPLE
-    PS C:\> Get-Backup -VMname MyVM -Hour 3 | Remove-SVTbackup
+    PS C:\> Get-Backup -VmName MyVm -Hour 3 | Remove-SVTbackup
 
     Delete any backup that is at least 3 hours old for the specified virtual machine
 .EXAMPLE
-    PS C:\> Get-Backup | ? VMname -match "test" | Remove-SVTbackup
+    PS C:\> Get-Backup | ? VmName -match "test" | Remove-SVTbackup
 
     Delete all backups for all virtual machines that have "test" in their name
 .INPUTS
@@ -1922,7 +1962,7 @@ function Stop-SVTbackup {
     Specify the Backup ID(s) to copy. Use the output from an appropriate Get-SVTbackup command to provide
     one or more Backup ID's to copy. 
 .EXAMPLE
-    PS C:\>Get-SVTbackup -VMname Server2016-01 | Copy-SVTbackup -DestinationName Cluster02
+    PS C:\>Get-SVTbackup -VmName Server2016-01 | Copy-SVTbackup -DestinationName Cluster02
 
     Copy the last 24 hours of backups for the specified VM to the specified SimpliVity cluster
 .EXAMPLE
@@ -2221,7 +2261,7 @@ function Set-SVTbackupRetention {
 .PARAMETER BackupId
     Use Get-SVTbackup to output the required VMs as input for this command
 .EXAMPLE
-    PS C:\>Get-SVTbackup -VMname VM01 | Update-SVTbackupUniqueSize
+    PS C:\>Get-SVTbackup -VmName VM01 | Update-SVTbackupUniqueSize
 
     Starts a task to calculate the unique size of the specified backup(s)
 .EXAMPLE
@@ -2291,13 +2331,13 @@ function Update-SVTbackupUniqueSize {
 
     Shows all datastores in the Federation
 .EXAMPLE
-    PS C:\> Get-SVTdatastore -Name MyDS | Export-CSV Datastore.csv
+    PS C:\> Get-SVTdatastore -Name DS01 | Export-CSV Datastore.csv
 
     Writes the specified datastore information into a CSV file
 .EXAMPLE
-    PS C:\> Get-SVTdatastore | Select-Object Name, SizeGB, Policy
+    PS C:\> Get-SVTdatastore DS01,DS02,DS03 | Select-Object Name, SizeGB, Policy
 
-    Shows the specified properties for the HPE SimpliVity datastore object(s).
+    Shows the specified properties for the HPE SimpliVity datastores
 .INPUTS
     System.String
 .OUTPUTS
@@ -2309,7 +2349,7 @@ function Get-SVTdatastore {
     param (
         [Parameter(Mandatory = $false, Position = 0)]
         [Alias("Name")]
-        [System.String]$DatastoreName
+        [System.String[]]$DatastoreName
     )
 
     $Header = @{
@@ -2320,6 +2360,7 @@ function Get-SVTdatastore {
     $LocalFormat = Get-SVTLocalDateFormat
 
     if ($PSBoundParameters.ContainsKey('DatastoreName')) {
+        $DatastoreName = $DatastoreName -join ','
         $Uri += '&name=' + $DatastoreName
     }
 
@@ -2331,7 +2372,7 @@ function Get-SVTdatastore {
     }
 
     if ($PSBoundParameters.ContainsKey('DatastoreName') -and -not $response.datastores.name) {
-        throw "Specified datastore $DatastoreName not found"
+        throw "Specified datastore(s) $DatastoreName not found"
     }
 
     $Response.datastores | ForEach-Object {
@@ -2651,12 +2692,10 @@ function Publish-SVTdatastore {
         [System.String]$ComputeNodeName
     )
 
-    # V4.0.0 states this is now application/vnd.simplivity.v1.14+json, 
-    # but there don't appear to be any new features
     $Header = @{
         'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'        = 'application/json'
-        'Content-Type'  = 'application/vnd.simplivity.v1.5+json'
+        'Content-Type'  = 'application/vnd.simplivity.v1.14+json'
     }
 
     try {
@@ -2714,12 +2753,10 @@ function Unpublish-SVTdatastore {
         [System.String]$ComputeNodeName
     )
 
-    # V4.0.0 states this is now application/vnd.simplivity.v1.14+json, but there don't 
-    # appear to be any new features
     $Header = @{
         'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'        = 'application/json'
-        'Content-Type'  = 'application/vnd.simplivity.v1.5+json'
+        'Content-Type'  = 'application/vnd.simplivity.v1.14+json'
     }
 
     $Body = @{ 'host_name' = $ComputeNodeName } | ConvertTo-Json
@@ -2810,7 +2847,7 @@ function Get-SVTdatastoreComputeNode {
                     ComputeNodeIp      = $_.ip_address
                     ComputeNodeName    = $_.name
                     Shared             = $_.shared
-                    VMCount            = $_.virtual_machine_count
+                    VmCount            = $_.virtual_machine_count
                 }
             }
         } #end foreach datastore
@@ -2830,10 +2867,10 @@ function Get-SVTdatastoreComputeNode {
 .PARAMETER ExternalStoreName
     Specify the external datastore to display information
 .EXAMPLE
-    PS C:\>Get-SVTexternalStore StoreOnce-Data01
+    PS C:\>Get-SVTexternalStore StoreOnce-Data01,StoreOnce-Data02,StoreOnce-Data03
     PS C:\>Get-SVTexternalStore -Name StoreOnce-Data01
 
-    Display information about the specified external datastore
+    Display information about the specified external datastore(s)
 .EXAMPLE
     PS C:\>Get-SVTexternalStore
 
@@ -2850,7 +2887,7 @@ function Get-SVTexternalStore {
     param (
         [Parameter(Mandatory = $false, Position = 0)]
         [Alias("Name")]
-        [System.String]$ExternalStoreName
+        [System.String[]]$ExternalStoreName
     )
 
     $Header = @{
@@ -2860,6 +2897,7 @@ function Get-SVTexternalStore {
 
     $Uri = $global:SVTconnection.OVC + '/api/external_stores?case=insensitive'
     if ($PSBoundParameters.ContainsKey('ExternalstoreName')) {
+        $ExternalstoreName = $ExternalstoreName -join ','
         $Uri += '&name=' + $ExternalstoreName
     }
 
@@ -2871,7 +2909,7 @@ function Get-SVTexternalStore {
     }
 
     if ($PSBoundParameters.ContainsKey('ExternalStoreName') -and -not $response.external_stores.name) {
-        throw "Specified external datastore $ExternalStoreName not found"
+        throw "Specified external datastore(s) $ExternalStoreName not found"
     }
 
     $Response.external_stores | ForEach-Object {
@@ -3010,13 +3048,14 @@ function New-SVTexternalStore {
 
     Shows all hosts in the Federation
 .EXAMPLE
-    PS C:\> Get-SVThost -Name MyHost
+    PS C:\> Get-SVThost -Name Host01
+    PS C:\> Get-SVThost Host01,Host02
 
-    Shows the specified host
+    Shows the specified host(s)
 .EXAMPLE
     PS C:\> Get-SVThost -ClusterName MyCluster
 
-    Shows hosts in specified HPE SimpliVity cluster
+    Shows hosts in specified HPE SimpliVity cluster(s)
 .EXAMPLE
     PS C:\> Get-SVTHost | Where-Object DataCenter -eq MyDC | Format-List *
 
@@ -3032,10 +3071,10 @@ function Get-SVThost {
     param (
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByHostName')]
         [Alias("Name")]
-        [System.String]$HostName,
+        [System.String[]]$HostName,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
-        [System.String]$ClusterName
+        [System.String[]]$ClusterName
     )
 
     $Header = @{
@@ -3045,10 +3084,8 @@ function Get-SVThost {
     $Uri = $global:SVTconnection.OVC + '/api/hosts?show_optional_fields=true&case=insensitive'
     $LocalFormat = Get-SVTLocalDateFormat
     
-    if ($PSBoundParameters.ContainsKey('HostName')) {
-        $Uri += '&name=' + $HostName
-    }
     if ($PSBoundParameters.ContainsKey('ClusterName')) {
+        $ClusterName = $ClusterName -join ','
         $Uri += '&compute_cluster_name=' + $ClusterName
     }
 
@@ -3060,29 +3097,21 @@ function Get-SVThost {
     }
 
     if ($PSBoundParameters.ContainsKey('ClusterName') -and -not $Response.hosts.name) {
-        throw "Specified cluster $ClusterName not found"
+        throw "Specified cluster(s) $ClusterName not found"
     }
 
-    if ($PSBoundParameters.ContainsKey('HostName') -and -not $Response.hosts.name) {
+    if ($PSBoundParameters.ContainsKey('HostName')) {
         try {
-            Write-Verbose "Specified host $HostName not found, attempting to match hostname without domain suffix"
-            $Uri = $global:SVTconnection.OVC + '/api/hosts?show_optional_fields=true&case=insensitive'
-            
-            $MatchedHost = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop |
-            Select-Object -ExpandProperty hosts | 
-            ForEach-Object { 
-                $_ | Where-Object { 
-                    $_.Name.split(".")[0] -eq $HostName 
+            $FullHostName = Resolve-SVTFullHostName $HostName $Response.hosts.name
+            foreach ($Thishost in $FullHostName) {
+                [array]$MatchedHost += $Response.hosts | ForEach-Object { 
+                    $_ | Where-Object { $_.name -eq $Thishost }
                 }
             }
-            
-            $Response = @{ hosts = $MatchedHost }  # repack the object
+            $Response = @{ hosts = $MatchedHost }  # repack the object with just the host objects we want
         }
         catch {
             throw $_.Exception.Message
-        }
-        if (-not $Response.hosts.name) {
-            throw "Specified host $HostName not found"
         }
     }
 
@@ -3136,10 +3165,10 @@ function Get-SVThost {
             LocalBackupCapacityGB    = '{0:n0}' -f ($_.local_backup_capacity / 1gb)
             CapacitySavingsGB        = '{0:n0}' -f ($_.capacity_savings / 1gb)
             AllocatedCapacityGB      = '{0:n0}' -f ($_.allocated_capacity / 1gb)
-            StoredVMdataGB           = '{0:n0}' -f ($_.stored_virtual_machine_data / 1gb)
+            StoredVmDataGB           = '{0:n0}' -f ($_.stored_virtual_machine_data / 1gb)
             RemoteBackupCapacityGB   = '{0:n0}' -f ($_.remote_backup_capacity / 1gb)
             FreeSpaceGB              = '{0:n0}' -f ($_.free_space / 1gb)
-        } 
+        }
     }
 }
 
@@ -3188,7 +3217,7 @@ function Get-SVThardware {
         $Allhost = Get-SVThost
         if ($PSBoundParameters.ContainsKey('HostName')) {
             try {
-                $HostName = Resolve-SVTFullHostname $HostName $Allhost -ErrorAction Stop
+                $HostName = Resolve-SVTFullHostName $HostName $Allhost.HostName -ErrorAction Stop
             }
             catch {
                 throw $_.Exception.Message
@@ -3280,14 +3309,14 @@ function Get-SVTdisk {
         $Hardware = Get-SVThardware
         if ($PSBoundParameters.ContainsKey('HostName')) {
             try {
-                $HostName = Resolve-SVTFullHostname $HostName $Hardware -ErrorAction Stop
+                $HostName = Resolve-SVTFullHostName $HostName $Hardware.HostName -ErrorAction Stop
             }
             catch {
                 throw $_.Exception.Message
             }
         }
         else {
-            $HostName = $Hardware | Select-Object -ExpandProperty Hostname
+            $HostName = $Hardware | Select-Object -ExpandProperty HostName
         }
     }
 
@@ -3337,7 +3366,7 @@ function Get-SVTdisk {
                     MediaType       = $_.media_type
                     DrivePosition   = $_.drive_position
                     HostStorageKit  = $Kit
-                    Hostname        = $ThisHost
+                    HostName        = $ThisHost
                 }
             } # end foreach disk
         } #end foreach host
@@ -3351,7 +3380,7 @@ function Get-SVTdisk {
     Displays capacity information for a number of useful metrics, such as
     Free space, used capacity, compression ratio and efficiency ratio over time
     for a specified SimpliVity node.
-.PARAMETER Hostname
+.PARAMETER HostName
     The SimpliVity node you want to show capacity information for
 .PARAMETER OffsetHour
     Offset in hours from now.
@@ -3421,7 +3450,7 @@ function Get-SVTcapacity {
         $Allhost = Get-SVThost
         if ($PSBoundParameters.ContainsKey('HostName')) {
             try {
-                $HostName = Resolve-SVTFullHostname $HostName $Allhost -ErrorAction Stop
+                $HostName = Resolve-SVTFullHostName $HostName $Allhost.HostName -ErrorAction Stop
             }
             catch {
                 throw $_.Exception.Message
@@ -3610,8 +3639,8 @@ function Remove-SVThost {
 
      Note: Once the shutdown is executed on the specified host, this command will reconnect to another 
      operational virtual controller in the Federation, using the same credentials, if there is one.
-.PARAMETER Hostname
-    Specify the hostname running the OmniStack virtual controller to shutdown
+.PARAMETER HostName
+    Specify the host name running the OmniStack virtual controller to shutdown
 .EXAMPLE
     PS C:\> Start-SVTshutdown -HostName <Name of SimpliVity host>
 
@@ -3662,7 +3691,7 @@ function Start-SVTshutdown {
         Measure-Object | Select-Object -ExpandProperty Count
 
         $Allhost | Where-Object ClusterName -eq $ThisCluster | ForEach-Object {
-            Write-Verbose "Current state of host $($_.Hostname) in cluster $ThisCluster is $($_.State)" 
+            Write-Verbose "Current state of host $($_.HostName) in cluster $ThisCluster is $($_.State)" 
         }
     }
     catch {
@@ -3671,11 +3700,11 @@ function Start-SVTshutdown {
 
     # Exit if the virtual controller is already off
     if ($ThisHost.State -ne 'ALIVE') {
-        throw "The HPE Omnistack Virtual Controller on $($ThisHost.Hostname) is not running"
+        throw "The HPE Omnistack Virtual Controller on $($ThisHost.HostName) is not running"
     } 
 
     if ($NextHost) {
-        Write-Verbose "This command will reconnect to $($NextHost.Hostname) following the shutdown of the virtual controller on $($ThisHost.Hostname)"
+        Write-Verbose "This command will reconnect to $($NextHost.HostName) following the shutdown of the virtual controller on $($ThisHost.HostName)"
     }
     else {
         Write-Verbose "This is the last operational HPE Omnistack Virtual Controller in the federation, reconnect not possible"
@@ -3683,9 +3712,9 @@ function Start-SVTshutdown {
 
     # Connect to the target virtual controller, using the existing credentials saved to $SVTconnection
     try {
-        Write-Verbose "Connecting to $($ThisHost.VirtualControllerName) on host $($ThisHost.Hostname)..."
+        Write-Verbose "Connecting to $($ThisHost.VirtualControllerName) on host $($ThisHost.HostName)..."
         Connect-SVT -OVC $ThisHost.ManagementIP -Credential $SVTconnection.Credential | Out-Null
-        Write-Verbose "Successfully connected to $($ThisHost.VirtualControllerName) on host $($ThisHost.Hostname)"
+        Write-Verbose "Successfully connected to $($ThisHost.VirtualControllerName) on host $($ThisHost.HostName)"
     }
     catch {
         throw $_.Exception.Message
@@ -3699,7 +3728,7 @@ function Start-SVTshutdown {
     }
 
     # Only execute the command if confirmed. Using -Whatif will report only
-    if ($PSCmdlet.ShouldProcess("$($ThisHost.Hostname)", "Shutdown virtual controller in cluster $ThisCluster")) {
+    if ($PSCmdlet.ShouldProcess("$($ThisHost.HostName)", "Shutdown virtual controller in cluster $ThisCluster")) {
         try {
             $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $ThisHost.HostId + '/shutdown_virtual_controller'
             $Body = @{ 'ha_wait' = $true } | ConvertTo-Json
@@ -3726,14 +3755,14 @@ function Start-SVTshutdown {
             }
 
             Write-Output "Shutting down the last virtual controller in the $ThisCluster cluster " +
-            "now ($($ThisHost.Hostname))"  
+            "now ($($ThisHost.HostName))"  
         }
 
         if ($NextHost) {
             try {
-                Write-Verbose "Reconnecting to $($NextHost.VirtualControllerName) on $($NextHost.Hostname)..."
+                Write-Verbose "Reconnecting to $($NextHost.VirtualControllerName) on $($NextHost.HostName)..."
                 Connect-SVT -OVC $NextHost.ManagementIP -Credential $SVTconnection.Credential | Out-Null
-                Write-Verbose "Successfully reconnected to $($NextHost.VirtualControllerName) on $($NextHost.Hostname)"
+                Write-Verbose "Successfully reconnected to $($NextHost.VirtualControllerName) on $($NextHost.HostName)"
 
                 $OVCrunning = $true
                 Write-Verbose "Wait to allow the storage IP to failover to an operational virtual controller. This may take a long time if the host is running virtual machines."
@@ -3741,7 +3770,7 @@ function Start-SVTshutdown {
                     Write-verbose "Waiting 30 seconds, do not issue additional shutdown commands until this operation completes..."
                     Start-Sleep -Seconds 30
                     
-                    $OVCstate = Get-SVThost -HostName $($ThisHost.Hostname) | 
+                    $OVCstate = Get-SVThost -HostName $($ThisHost.HostName) | 
                     Select-Object -ExpandProperty State
 
                     if ($OVCstate -eq "FAULTY") {
@@ -3749,7 +3778,7 @@ function Start-SVTshutdown {
                     }
                 } while ($OVCrunning)
 
-                Write-Output "Successfully shutdown the virtual controller on $($ThisHost.Hostname)"
+                Write-Output "Successfully shutdown the virtual controller on $($ThisHost.HostName)"
             }
             catch {
                 throw $_.Exception.Message
@@ -3791,8 +3820,8 @@ function Start-SVTshutdown {
 .EXAMPLE
     PS C:\> '10.10.57.59','10.10.57.61' | Get-SVTshutdownStatus
 
-    Hostname is passed in them the pipeline by value. Same as:
-    Get-SVTshutdownStatus -Hostname '10.10.57.59','10.10.57.61'
+    HostName is passed in them the pipeline by value. Same as:
+    Get-SVTshutdownStatus -HostName '10.10.57.59','10.10.57.61'
 .INPUTS
     System.String
     HPE.SimpliVity.Host
@@ -3818,7 +3847,7 @@ function Get-SVTshutdownStatus {
         $Allhost = Get-SVThost
         if ($PSBoundParameters.ContainsKey('HostName')) {
             try {
-                $HostName = Resolve-SVTFullHostname $HostName $Allhost -ErrorAction Stop
+                $HostName = Resolve-SVTFullHostName $HostName $Allhost.HostName -ErrorAction Stop
             }
             catch {
                 throw $_.Exception.Message
@@ -3830,8 +3859,8 @@ function Get-SVTshutdownStatus {
     }
 
     process {
-        foreach ($ThisHostName in $Hostname) {
-            $ThisHost = $Allhost | Where-Object Hostname -eq $ThisHostName
+        foreach ($ThisHostName in $HostName) {
+            $ThisHost = $Allhost | Where-Object HostName -eq $ThisHostName
 
             try {
                 Connect-SVT -OVC $ThisHost.ManagementIP -Credential $SVTconnection.Credential -ErrorAction Stop | 
@@ -3877,10 +3906,10 @@ function Get-SVTshutdownStatus {
 
     Note, once executed, you'll need to reconnect back to a surviving OVC, using Connect-SVT to continue
     using the HPE SimpliVity cmdlets.
-.PARAMETER Hostname
-    Specify the Hostname running the OmniStack virtual controller to cancel the shutdown task on
+.PARAMETER HostName
+    Specify the HostName running the OmniStack virtual controller to cancel the shutdown task on
 .EXAMPLE
-    PS C:\> Stop-SVTshutdown -Hostname Host01
+    PS C:\> Stop-SVTshutdown -HostName Host01
 .INPUTS
     System.String
     HPE.SimpliVity.Host
@@ -3914,10 +3943,10 @@ function Stop-SVTshutdown {
     }
 
     process {
-        foreach ($ThisHostName in $Hostname) {
+        foreach ($ThisHostName in $HostName) {
             # grab this host object from the collection
-            $ThisHost = $Allhost | Where-Object Hostname -eq $ThisHostName
-            Write-Verbose $($ThisHost | Select-Object Hostname, HostId)
+            $ThisHost = $Allhost | Where-Object HostName -eq $ThisHostName
+            Write-Verbose $($ThisHost | Select-Object HostName, HostId)
 
             # Now connect to this host, using the existing credentials saved to global variable
             Connect-SVT -OVC $ThisHost.ManagementIP -Credential $SVTconnection.Credential | Out-Null
@@ -3962,6 +3991,10 @@ function Stop-SVTshutdown {
     PS C:\>Get-SVTcluster -Name Prod01
 
     Shows information about the specified cluster
+.EXAMPLE
+    PS C:\>Get-SVTcluster cluster1,cluster2
+
+    Shows information about the specified clusters
 .INPUTS
     System.String
 .OUTPUTS
@@ -3973,7 +4006,7 @@ function Get-SVTcluster {
     param (
         [Parameter(Mandatory = $false, Position = 0)]
         [Alias("Name")]
-        [System.String]$ClusterName
+        [System.String[]]$ClusterName
     )
 
     $Header = @{
@@ -3984,6 +4017,7 @@ function Get-SVTcluster {
     $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters?show_optional_fields=true&case=insensitive'
 
     if ($PSBoundParameters.ContainsKey('ClusterName')) {
+        $ClusterName = $ClusterName -join ','
         $Uri += '&name=' + $ClusterName
     }
 
@@ -3995,7 +4029,7 @@ function Get-SVTcluster {
     }
 
     if ($PSBoundParameters.ContainsKey('ClusterName') -and -not $response.omnistack_clusters.name) {
-        throw "Specified cluster $ClusterName not found"
+        throw "Specified cluster(s) $ClusterName not found"
     }
 
     $Response.omnistack_clusters | ForEach-Object {
@@ -4035,7 +4069,7 @@ function Get-SVTcluster {
             IwoEnabled               = $_.iwo_enabled
             CapacitySavingsGB        = '{0:n0}' -f ($_.capacity_savings / 1gb)
             AllocatedCapacityGB      = '{0:n0}' -f ($_.allocated_capacity / 1gb)
-            StoredVMdataGB           = '{0:n0}' -f ($_.stored_virtual_machine_data / 1gb)
+            StoredVmDataGB           = '{0:n0}' -f ($_.stored_virtual_machine_data / 1gb)
             RemoteBackupCapacityGB   = '{0:n0}' -f ($_.remote_backup_capacity / 1gb)
             FreeSpaceGB              = '{0:n0}' -f ($_.free_space / 1gb)
         }
@@ -4056,6 +4090,12 @@ function Get-SVTcluster {
 .EXAMPLE
     PS C:\>Get-SVTthroughput
 
+    Displays the throughput information for the first cluster in the Federation, (alphabetically,
+    by name)
+.EXAMPLE
+    PS C:\>Get-SVTthroughput -Cluster Prod01
+
+    Displays the throughput information for the specified cluster
 .INPUTS
     None
 .OUTPUTS
@@ -4065,8 +4105,9 @@ function Get-SVTcluster {
 function Get-SVTthroughput {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0)]
-        [System.String]$ClusterName,
+        [Parameter(Mandatory = $false, Position = 0)]
+        [System.String]$ClusterName = (Get-SVTcluster | 
+            Sort-Object ClusterName | Select-Object -ExpandProperty ClusterName -First 1),
 
         [Parameter(Mandatory = $false, Position = 1)]
         [System.Int32]$Hour = 12,
@@ -4320,13 +4361,13 @@ function Get-SVTclusterConnected {
 
     Shows all policy rules for all backup policies
 .EXAMPLE
-    PS C:\> Get-SVTpolicy -PolicyName Silver
+    PS C:\> Get-SVTpolicy -PolicyName Silver,Gold
 
-    Shows the rules from the specified backup policy
+    Shows the rules from the specified backup policies
 .EXAMPLE
     PS C:\> Get-SVTpolicy | Where RetentionDay -eq 7
 
-    Show policy rules that have a 7 day retention
+    Show all policy rules that have a 7 day retention
 .INPUTS
     System.String
 .OUTPUTS
@@ -4338,7 +4379,7 @@ function Get-SVTpolicy {
     param (
         [Parameter(Mandatory = $false, Position = 0)]
         [Alias("Name")]
-        [System.String]$PolicyName,
+        [System.String[]]$PolicyName,
 
         [Parameter(Mandatory = $false, Position = 1)]
         [System.Int32]$RuleNumber
@@ -4351,7 +4392,8 @@ function Get-SVTpolicy {
 
     $Uri = $global:SVTconnection.OVC + '/api/policies?case=insensitive'
     if ($PSBoundParameters.ContainsKey('PolicyName')) {
-        $Uri += '&name=' + $PolicyName
+        $PolicyList = $PolicyName -join ','
+        $Uri += '&name=' + $PolicyList
     }
 
     try {
@@ -4362,11 +4404,11 @@ function Get-SVTpolicy {
     } 
 
     if ($PSBoundParameters.ContainsKey('PolicyName') -and -not $Response.policies.Name) {
-        throw "Specified policy $PolicyName not found"
+        throw "Specified policies(s) $PolicyList not found"
     }
 
     $Response.policies | ForEach-Object {
-        $PolicyName = $_.name
+        $Policy = $_.name
         $PolicyId = $_.id
         $PolicyClusterGroupIds = $_.cluster_group_ids
         if ($_.rules) {
@@ -4376,7 +4418,7 @@ function Get-SVTpolicy {
                 if (-not $PSBoundParameters.ContainsKey('RuleNumber') -or $RuleNumber -eq $_.number) {
                     [PSCustomObject]@{
                         PSTypeName        = 'HPE.SimpliVity.Policy'
-                        PolicyName        = $PolicyName
+                        PolicyName        = $Policy
                         PolicyId          = $PolicyId
                         ClusterGroupIds   = $PolicyClusterGroupIds
                         DestinationId     = $_.destination_id
@@ -4400,7 +4442,7 @@ function Get-SVTpolicy {
             # Policy exists but it has no rules. This is often the case for the default policy
             [PSCustomObject]@{
                 PSTypeName = 'HPE.SimpliVity.Policy'
-                PolicyName = $PolicyName
+                PolicyName = $Policy
                 PolicyId   = $PolicyId
             }
         }
@@ -5038,7 +5080,7 @@ function Rename-SVTpolicy {
 .PARAMETER PolicyName
     The policy to delete
 .EXAMPLE
-    PS C:\> Get-SVTvm | Select VMname, PolicyName
+    PS C:\> Get-SVTvm | Select VmName, PolicyName
     PS C:\> Get-SVTdatastore | Select DatastoreName, PolicyName
     PS C:\> Remove-SVTpolicy -PolicyName Silver
 
@@ -5350,7 +5392,7 @@ function Get-SVTpolicyScheduleReport {
     parameters to limit the objects returned. Also accepts output from Get-SVThost as input.
 
     Verbose is automatically turned on to show more information about what this command is doing.
-.PARAMETER VMname
+.PARAMETER VmName
     Display information for the specified virtual machine
 .PARAMETER VmId
     Display information for the specified virtual machine ID
@@ -5358,7 +5400,9 @@ function Get-SVTpolicyScheduleReport {
     Display information for virtual machines on the specified datastore
 .PARAMETER ClusterName
     Display information for virtual machines on the specified cluster
-.PARAMETER Hostname
+.PARAMETER PolicyName
+    Display information for virtual machines that have the specified backup policy assigned
+.PARAMETER HostName
     Display information for virtual machines on the specified host
 .PARAMETER State
     Display information for virtual machines with the specified state
@@ -5369,30 +5413,31 @@ function Get-SVTpolicyScheduleReport {
 
     Shows all virtual machines in the Federation with state "ALIVE", which is the default state
 .EXAMPLE
-    PS C:\> Get-SVTvm -VMname Server2016-01
+    PS C:\> Get-SVTvm -VmName Server2016-01
     PS C:\> Get-SVTvm -Name Server2016-01
     PS C:\> Get-SVTvm Server2016-01
 
-    All three commands perform the same action- show information about the specified virtual machines with 
+    All three commands perform the same action - show information about the specified virtual machine(s) with 
     state "ALIVE", which is the default state
 
-    The first command uses the paramater name; the second uses an alias for VMname; the third uses positional
+    The first command uses the paramater name; the second uses an alias for VmName; the third uses positional
     parameter, which accepts a VM name.
 .EXAMPLE
-    PS C:\> Get-SVTvm -State Deleted
+    PS C:\> Get-SVTvm -State DELETED
+    PS C:\> Get-SVTvm -State ALIVE,REMOVED,DELETED
 
-    Shows all virtual machines in the Federation with state "DELETED"
+    Shows all virtual machines in the Federation with the specified state(s)
 .EXAMPLE
-    PS C:\> Get-SVTvm -DatastoreName DS01
+    PS C:\> Get-SVTvm -DatastoreName DS01,DS02
 
-    Shows all virtual machines residing on the specified datastore"
+    Shows all virtual machines residing on the specified datastore(s)
 .EXAMPLE
-    PS C:\> Get-SVTvm | Out-GridView -Passthru | Export-CSV FilteredVMList.CSV
+    PS C:\> Get-SVTvm VM1,VM2,VM3 | Out-GridView -Passthru | Export-CSV FilteredVmList.CSV
 
     Exports the specified VM information to Out-GridView to allow filtering and then exports
     this to a CSV
 .EXAMPLE
-    PS C:\> Get-SVTvm -Hostname esx04 | Select-Object Name, SizeGB, Policy, HAstatus
+    PS C:\> Get-SVTvm -HostName esx04 | Select-Object Name, SizeGB, Policy, HAstatus
 
     Show the VMs from the specified host. Show the selected properties only.
 .INPUTS
@@ -5404,24 +5449,27 @@ Known issues:
 OMNI-69918 - GET calls for virtual machine objects may result in OutOfMemortError when exceeding 8000 objects
 #>
 function Get-SVTvm {
-    [CmdletBinding(DefaultParameterSetName = 'ByVMname')]
+    [CmdletBinding(DefaultParameterSetName = 'ByVmName')]
     param (
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByVMname')]
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByVmName')]
         [Alias("Name")]
-        [System.String]$VMname,
+        [System.String[]]$VmName,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ById')]
         [Alias("Id")]
-        [System.String]$VmId,
+        [System.String[]]$VmId,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
-        [System.String]$DatastoreName,
+        [System.String[]]$DatastoreName,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
-        [System.String]$ClusterName,
+        [System.String[]]$ClusterName,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByPolicyName')]
+        [System.String]$PolicyName,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ByHostName')]
-        [System.String]$HostName,
+        [System.String]$HostName, # API only accepts one host id
 
         [Parameter(Mandatory = $false)]
         [ValidateSet("ALIVE", "DELETED", "REMOVED")]
@@ -5448,17 +5496,24 @@ function Get-SVTvm {
     # Get hosts so we can convert HostId to the more useful HostName in the virtual machine object
     $Allhost = Get-SVThost
 
-    if ($PSBoundParameters.ContainsKey('VMname')) {
-        $Uri += "&name=$VMname"
+    if ($PSBoundParameters.ContainsKey('VmName')) {
+        $VmName = $VmName -join ','
+        $Uri += "&name=$VmName"
     }
 
     if ($PSBoundParameters.ContainsKey('VmId')) {
+        $VmId = $VmId -join ','
         $Uri += "&id=$VmId"
+    }
+
+    if ($PSBoundParameters.ContainsKey('PolicyName')) {
+        $PolicyName = $PolicyName -join ','
+        $Uri += "&policy_name=$PolicyName"
     }
     
     if ($PSBoundParameters.ContainsKey('HostName')) {
         try {
-            $HostName = Resolve-SVTFullHostname $HostName $Allhost
+            $HostName = Resolve-SVTFullHostName $HostName $Allhost.HostName
         }
         catch {
             throw $_.Exception.Message
@@ -5468,13 +5523,14 @@ function Get-SVTvm {
     }
 
     if ($PSBoundParameters.ContainsKey('ClusterName')) {
+        $ClusterName = $ClusterName -join ','
         $Uri += "&omnistack_cluster_name=$ClusterName"
     }
 
     if ($PSBoundParameters.ContainsKey('DataStoreName')) {
+        $DatastoreName = $DatastoreName -join ','
         $Uri += "&datastore_name=$DataStoreName"
     }
-
 
     try {
         $Response = Invoke-SVTrestMethod -Uri "$Uri" -Header $Header -Method Get -ErrorAction Stop
@@ -5483,20 +5539,20 @@ function Get-SVTvm {
         throw $_.Exception.Message
     }
 
-    $VMCount = $Response.count
-    if ($VMCount -gt $Limit) {
-        Write-Warning "There are $VMCount matching virtual machines, but limited to displaying only $Limit. Either increase -Limit or use more restrictive parameters"
+    $VmCount = $Response.count
+    if ($VmCount -gt $Limit) {
+        Write-Warning "There are $VmCount matching virtual machines, but limited to displaying only $Limit. Either increase -Limit or use more restrictive parameters"
     }
     else {
-        Write-Verbose "There are $VMCount matching virtual machines"
+        Write-Verbose "There are $VmCount matching virtual machines"
     }
 
-    if ($PSBoundParameters.ContainsKey('VMname') -and -not $response.virtual_machines.name) {
-        throw "Specified VM $VMname not found"
+    if ($PSBoundParameters.ContainsKey('VmName') -and -not $response.virtual_machines.name) {
+        throw "Specified virtual machine(s) $VmName not found"
     }
 
-    if ($PSBoundParameters.ContainsKey('VMId') -and -not $response.virtual_machines.name) {
-        throw "Specified VM ID $VMId not found"
+    if ($PSBoundParameters.ContainsKey('VmId') -and -not $response.virtual_machines.name) {
+        throw "Specified virtual machine ID(s) $VmId not found"
     }
 
     $Response.virtual_machines | ForEach-Object {
@@ -5513,7 +5569,7 @@ function Get-SVTvm {
             $DeletedDate = $null
         }
 
-        $ThisHost = $Allhost | Where-Object HostID -eq $_.host_id | Select-Object -ExpandProperty Hostname
+        $ThisHost = $Allhost | Where-Object HostID -eq $_.host_id | Select-Object -ExpandProperty HostName
 
         [PSCustomObject]@{
             PSTypeName               = 'HPE.SimpliVity.VirtualMachine'
@@ -5527,7 +5583,7 @@ function Get-SVTvm {
             HostName                 = $ThisHost
             HostId                   = $_.host_id
             HypervisorId             = $_.hypervisor_object_id
-            VMname                   = $_.name
+            VmName                   = $_.name
             DatastoreId              = $_.datastore_id
             ReplicaSet               = $_.replica_set
             DataCenterId             = $_.compute_cluster_parent_hypervisor_object_id
@@ -5540,7 +5596,7 @@ function Get-SVTvm {
             HypervisorManagementName = $_.hypervisor_management_system_name
             HAstatus                 = $_.ha_status
             HAresyncProgress         = $_.ha_resynchronization_progress
-            HypervisorVMpowerState   = $_.hypervisor_virtual_machine_power_state
+            HypervisorVmPowerState   = $_.hypervisor_virtual_machine_power_state
         }
     } # foreach VM
 }
@@ -5550,13 +5606,13 @@ function Get-SVTvm {
     Display the primary and secondary replica locations for HPE SimpliVity virtual machines
 .DESCRIPTION
     Display the primary and secondary replica locations for HPE SimpliVity virtual machines
-.PARAMETER VMname
+.PARAMETER VmName
     Display information for the specified virtual machine
 .PARAMETER DatastoreName
     Display information for virtual machines on the specified datastore
 .PARAMETER ClusterName
     Display information for virtual machines on the specified cluster
-.PARAMETER Hostname
+.PARAMETER HostName
     Display information for virtual machines on the specified host
 .EXAMPLE
     PS C:\>Get-SVTvmReplicaSet
@@ -5569,17 +5625,17 @@ function Get-SVTvm {
 .NOTES
 #>
 function Get-SVTvmReplicaSet {
-    [CmdletBinding(DefaultParameterSetName = 'ByVM')]
+    [CmdletBinding(DefaultParameterSetName = 'ByVm')]
     param (
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByVM')]
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByVm')]
         [Alias("Name")]
-        [System.String]$VMname,
+        [System.String[]]$VmName,
 
         [Parameter(Mandatory = $true, ParameterSetName = 'ByDatastore')]
-        [System.String]$DataStoreName,
+        [System.String[]]$DataStoreName,
 
         [Parameter(Mandatory = $true, ParameterSetName = 'ByCluster')]
-        [System.String]$ClusterName,
+        [System.String[]]$ClusterName,
 
         [Parameter(Mandatory = $true, ParameterSetName = 'ByHost')]
         [System.String]$HostName
@@ -5588,25 +5644,25 @@ function Get-SVTvmReplicaSet {
     begin {
         $Allhost = Get-SVThost
 
-        if ($PSBoundParameters.ContainsKey('VMname')) {
-            $VMobj = Get-SVTvm -VMname $VMname
+        if ($PSBoundParameters.ContainsKey('VmName')) {
+            $VmObj = Get-SVTvm -VmName $VmName
         }
         elseif ($PSBoundParameters.ContainsKey('DataStoreName')) {
-            $VMobj = Get-SVTvm -DataStoreName $DataStoreName
+            $VmObj = Get-SVTvm -DataStoreName $DataStoreName
         }
         elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
-            $VMobj = Get-SVTvm -ClusterName $ClusterName
+            $VmObj = Get-SVTvm -ClusterName $ClusterName
         }
         elseif ($PSBoundParameters.ContainsKey('HostName')) {
-            $VMobj = Get-SVTvm -HostName $HostName
+            $VmObj = Get-SVTvm -HostName $HostName
         }
         else {
-            $VMobj = Get-SVTvm  # default is all VMs
+            $VmObj = Get-SVTvm  # default is all VMs
         }
     }
 
     process {
-        foreach ($VM in $VMobj) {
+        foreach ($VM in $VmObj) {
             $PrimaryId = $VM.ReplicaSet | Where-Object role -eq 'PRIMARY' | 
             Select-Object -ExpandProperty id
 
@@ -5621,7 +5677,7 @@ function Get-SVTvmReplicaSet {
             
             [PSCustomObject]@{
                 PSTypeName  = 'HPE.SimpliVity.ReplicaSet'
-                VMname      = $VM.VMname
+                VmName      = $VM.VmName
                 State       = $VM.State
                 HAstatus    = $VM.HAstatus
                 ClusterName = $VM.ClusterName
@@ -5638,7 +5694,7 @@ function Get-SVTvmReplicaSet {
     Clone a Virtual Machine hosted on SimpliVity storage
 .DESCRIPTION
     This cmdlet will clone the specified virtual machine, using the new name provided.
-.PARAMETER VMname
+.PARAMETER VmName
     Specify the VM to clone
 .PARAMETER CloneName
     Specify the name of the new clone
@@ -5649,22 +5705,22 @@ function Get-SVTvmReplicaSet {
     3. VSS - Create application consistent backups using Microsoft VSS in the guest operating system. Refer 
     to the admin guide for requirements and supported applications
 .EXAMPLE
-    PS C:\> New-SVTclone -VMname MyVM1
+    PS C:\> New-SVTclone -VmName MyVm1
 
-    Create a clone with the default name 'MyVM1-clone-200212102304', where the suffix is a date stamp in 
+    Create a clone with the default name 'MyVm1-clone-200212102304', where the suffix is a date stamp in 
     the form 'yyMMddhhmmss'
 .EXAMPLE
-    PS C:\> New-SVTclone -VMname Server2016-01 -CloneName Server2016-Clone
-    PS C:\> New-SVTclone -VMname Server2016-01 -CloneName Server2016-Clone -ConsistencyType NONE
+    PS C:\> New-SVTclone -VmName Server2016-01 -CloneName Server2016-Clone
+    PS C:\> New-SVTclone -VmName Server2016-01 -CloneName Server2016-Clone -ConsistencyType NONE
 
     Both commands do the same thing, they create an application consistent clone of the specified 
     virtual machine, using a snapshot
 .EXAMPLE
-    PS C:\> New-SVTclone -VMname RHEL8-01 -CloneName RHEL8-01-New -ConsistencyType DEFAULT
+    PS C:\> New-SVTclone -VmName RHEL8-01 -CloneName RHEL8-01-New -ConsistencyType DEFAULT
 
     Create a crash-consistent clone of the specified virtual machine
 .EXAMPLE
-    PS C:\> New-SVTclone -VMname Server2016-06 -CloneName Server2016-Clone -ConsistencyType VSS
+    PS C:\> New-SVTclone -VmName Server2016-06 -CloneName Server2016-Clone -ConsistencyType VSS
 
     Creates an application consistent clone of the specified Windows VM, using a VSS snapshot. The clone
     will fail for None-Windows virtual machines.
@@ -5679,11 +5735,11 @@ function New-SVTclone {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
-        [System.String]$VMname,
+        [System.String]$VmName,
 
         [Parameter(Mandatory = $false, Position = 1)]
         [Alias("Name")]
-        [System.String]$CloneName = "$VMname-clone-$(Get-Date -Format 'yyMMddhhmmss')",
+        [System.String]$CloneName = "$VmName-clone-$(Get-Date -Format 'yyMMddhhmmss')",
 
         [Parameter(Mandatory = $false, Position = 3)]
         [ValidateSet('DEFAULT', 'VSS', 'NONE')]
@@ -5697,9 +5753,9 @@ function New-SVTclone {
     }
 
     try {
-        $VmId = Get-SVTvm -VMname $VMname -ErrorAction Stop | Select-Object -ExpandProperty VmId
+        $VmId = Get-SVTvm -VmName $VmName -ErrorAction Stop | Select-Object -ExpandProperty VmId
         $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/clone'
-        Write-Verbose "Creating a clone of $VMname called $CloneName"
+        Write-Verbose "Creating a clone of $VmName called $CloneName"
     }
     catch {
         throw $_.Exception.Message
@@ -5749,20 +5805,20 @@ function New-SVTclone {
            attempting to move the same VM again
         5. If moving VM(s) out of the current cluster, DRS rules (created by the Intelligent Workload Optimizer) will vMotion the moved VM(s)
            to the destination
-.PARAMETER VMname
+.PARAMETER VmName
     The name(s) of the virtual machines you'd like to move
 .PARAMETER DatastoreName
     The destination datastore
 .EXAMPLE
-    PS C:\>Move-SVTVM -VMname MyVM -Datastore DR-DS01
+    PS C:\>Move-SVTvm -VmName MyVm -Datastore DR-DS01
 
     Moves the specified VM to the specified datastore
 .EXAMPLE
-    PS C:\>"VM1", "VM2" | Move-SVTVM -Datastore DS03
+    PS C:\>"VM1", "VM2" | Move-SVTvm -Datastore DS03
 
     Moves the two VMs to the specified datastore
 .EXAMPLE
-    PS C:\>Get-VM | Where-Object VMname -match "WEB" | Move-SVTVM -Datastore DS03
+    PS C:\>Get-VM | Where-Object VmName -match "WEB" | Move-SVTvm -Datastore DS03
     PS C:\>Get-SVTtask
 
     Move VM(s) with "Web" in their name to the specified datastore. Use Get-SVTtask to monitor the progress of the move task(s)
@@ -5779,7 +5835,7 @@ function Move-SVTvm {
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
             ValueFromPipelinebyPropertyName = $true)]
         [Alias("Name")]
-        [System.String]$VMname,
+        [System.String]$VmName,
 
         [Parameter(Mandatory = $true, Position = 1)]
         [System.String]$DataStoreName
@@ -5800,16 +5856,16 @@ function Move-SVTvm {
         }
     }
     process {
-        foreach ($VM in $VMname) {
+        foreach ($VM in $VmName) {
             try {
                 # Getting VM name within the loop. Getting all VMs in the begin block might be a problem 
                 # with a large number of VMs
-                $VMobj = Get-SVTvm -VMname $VM -ErrorAction Stop
+                $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
 
-                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VMObj.VmId + '/move'
+                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + '/move'
 
                 $Body = @{
-                    'virtual_machine_name'     = $VMObj.VMname
+                    'virtual_machine_name'     = $VmObj.VmName
                     'destination_datastore_id' = $DatastoreId
                 } | ConvertTo-Json
                 Write-Verbose $Body
@@ -5848,10 +5904,10 @@ function Move-SVTvm {
 
     Note: This command requires a specific version in the content-type passed to the REST API.
     Upgrades to SimpliVity may require the version to be adjusted.
-.PARAMETER VMname
+.PARAMETER VmName
     The virtual machine name to stop
 .EXAMPLE
-    PS C:\>Stop-SVTvm -VMname MyVM
+    PS C:\>Stop-SVTvm -VmName MyVm
 
     Stops the VM. Not recommended for production workloads
 .INPUTS
@@ -5867,7 +5923,7 @@ function Stop-SVTvm {
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
             ValueFromPipelinebyPropertyName = $true)]
         [Alias("Name")]
-        [System.String]$VMname
+        [System.String]$VmName
     )
 
     begin {
@@ -5879,11 +5935,11 @@ function Stop-SVTvm {
     }
 
     process {
-        foreach ($VM in $VMname) {
+        foreach ($VM in $VmName) {
             try {
                 # Getting VM name within the loop. Getting all VMs in the begin block might be a problem with a large number of VMs
-                $VMobj = Get-SVTvm -VMname $VM -ErrorAction Stop
-                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VMobj.VmId + '/power_off'
+                $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
+                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + '/power_off'
             }
             catch {
                 throw $_.Exception.Message
@@ -5914,14 +5970,14 @@ function Stop-SVTvm {
 
     Note: This command requires a specific version in the content-type passed to the REST API.
     Upgrades to SimpliVity may require the version to be adjusted.
-.PARAMETER VMname
+.PARAMETER VmName
     The virtual machine name to start
 .EXAMPLE
-    PS C:\>Start-SVTvm -VMname MyVM
+    PS C:\>Start-SVTvm -VmName MyVm
 
     Starts the VM
 .EXAMPLE
-    PS C:\>Get-SVTvm -ClusterName DR01 | Start-SVTvm -VMname MyVM
+    PS C:\>Get-SVTvm -ClusterName DR01 | Start-SVTvm -VmName MyVm
 
     Starts the VMs in the specified cluster
 .INPUTS
@@ -5937,7 +5993,7 @@ function Start-SVTvm {
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
             ValueFromPipelinebyPropertyName = $true)]
         [Alias("Name")]
-        [System.String]$VMname
+        [System.String]$VmName
     )
 
     begin {
@@ -5949,12 +6005,12 @@ function Start-SVTvm {
     }
 
     process {
-        foreach ($VM in $VMname) {
+        foreach ($VM in $VmName) {
             try {
                 # Getting VM name within the loop. Getting all VMs in the begin block might be a problem 
                 # with a large number of VMs
-                $VMobj = Get-SVTvm -VMname $VM -ErrorAction Stop
-                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VMobj.VmId + '/power_on'
+                $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
+                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + '/power_on'
             }
             catch {
                 throw $_.Exception.Message
@@ -5984,7 +6040,7 @@ function Start-SVTvm {
     Sets a new HPE SimpliVity backup policy on a virtual machine. When a VM is first created, it inherits the
     backup policy set on the datastore it is first created on. Use this command to explicitly reset the backup
     policy for a given VM.
-.PARAMETER VMname
+.PARAMETER VmName
     The VM that will get a new backup policy setting
 .PARAMETER PolicyName
     The name of the backup policy to be used
@@ -5997,7 +6053,7 @@ function Start-SVTvm {
 
     Using positional parameters to apply a new backup policy to the VM
 .EXAMPLE
-    Set-SVTvmPolicy -VMname VM01 -PolicyName Silver
+    Set-SVTvmPolicy -VmName VM01 -PolicyName Silver
 
     Using named parameters to apply a new backup policy to the VM
 .INPUTS
@@ -6016,7 +6072,7 @@ function Set-SVTvmPolicy {
 
         [Parameter(Mandatory = $true, Position = 1, ValueFromPipeline = $true, 
             ValueFromPipelinebyPropertyName = $true)]
-        [System.String]$VMname
+        [System.String]$VmName
     )
 
     begin {
@@ -6038,12 +6094,12 @@ function Set-SVTvmPolicy {
 
     }
     process {
-        foreach ($VM in $VMname) {
+        foreach ($VM in $VmName) {
             try {
                 # Getting a specific VM name within the loop here deliberately. Getting all VMs in the 
                 # begin block might be a problem on systems with a large number of VMs.
-                $VMobj = Get-SVTvm -VMname $VM -ErrorAction Stop
-                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VMobj.VmId + '/set_policy'
+                $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
+                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + '/set_policy'
             }
             catch {
                 throw $_.Exception.Message

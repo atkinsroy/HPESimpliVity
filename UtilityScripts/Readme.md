@@ -2,7 +2,7 @@ This folder contains PowerShell scripts that utilise the HPESimpliVity module.
 
 ## CreateClone.ps1
 
-Clone multiple VMs or clone one VM multple times or both. This script accepts one or more VMs from the pipline and will clone it/them one or more times. Clones are created on the same datastore as the original, but they can be moved to a new datastore or across SimpliVity clusters using the Move-SVTvm command. Clones are named the same as the source VM with a dash and a unique 2 digit number, starting from '-01'.
+Clone multiple VMs or clone one VM multiple times or both. This script accepts one or more VMs from the pipline and will clone it/them one or more times. Clones are created on the same datastore as the original, but they can be moved to a new datastore or across SimpliVity clusters using the Move-SVTvm command. Clones are named the same as the source VM with a dash and a unique 2 digit number, starting from '-01'.
 
 Use:
 ```powershell
