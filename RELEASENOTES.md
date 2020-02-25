@@ -8,6 +8,8 @@
     PS C:\> Get-SVTbackup -VmName Vm1,Vm2,Vm3
     PS C:\> Get-SVThost Host1,Host2,Host3
 ````
+Note: multi-value parameters do not work for Get-SVTbackup when connected to an OVC; they do work when connected to an MVA.
+
 * Added a new -PolicyName parameter to Get-SVTvm.
 * Added a new utility script called CreateClone.ps1. This script will clone multiple VMs or clone one VM multiple times or both at once.
 * Bug fixes.
