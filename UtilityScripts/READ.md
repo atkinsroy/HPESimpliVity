@@ -1,4 +1,4 @@
-This folder contains PowerShell scripts that utilise the HPESimpliVity module.
+This folder contains PowerShell scripts that utilise the HPEsimpliVity module.
 
 ## CreateClone.ps1
 
