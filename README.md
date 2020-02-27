@@ -115,7 +115,7 @@ and then in your script, import the credential:
 
 The API has some documented and undocumented issues:
 * OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation
-* OMNI-46361: REST API GET opertions for backup objects and sorting filtering constraints. Comma separated list of values for filtering is not supported. Some properties do not support case insensitive filter option. The HPE SimpliVity module does not allow you to enter multiple values for filtering options, as per the recommendation. This issue does not appear to effect connections made to Management Virtual Appliances. For example, the following commands all work when connected to an MVA:
+* OMNI-46361: REST API GET opertions for backup objects and sorting filtering constraints. Comma separated list of values for filtering is not supported. Some properties do not support case insensitive filter option. This issue does not appear to effect connections made to Management Virtual Appliances. For example, the following commands all work when connected to an MVA:
 
 ````powershell
     PS C:\>  Get-SVTbackup -VmName Vm1,Vm2,Vm3
