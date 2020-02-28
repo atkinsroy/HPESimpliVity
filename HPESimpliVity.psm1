@@ -243,7 +243,7 @@ function Invoke-SVTrestMethod {
                     }
                 }
             }
-            elseif ($_.Exception.Message -match "The host name could not be parsed") {
+            elseif ($_.Exception.Message -match "The hostname could not be parsed") {
                 throw "Runtime error: You must first log in using Connect-SVT"
             }
             else {
