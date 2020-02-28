@@ -111,9 +111,11 @@ begin {
     $VerbosePreference = 'Continue'
     if ($NumberOfClones -gt 1) {
         Write-Verbose "When cloning the same VM(s) multiple times using -NumberOfClones, clones are performed one at a time"
+        $AllowedTask = 1
     }
     else {
         Write-Verbose "When cloning multiple VMs, a maximum of four clone tasks can run at a time"
+        $AllowedTask = 4
     }
 
     # Enumerate all VMs first - confirm clone name is unique
@@ -122,13 +124,6 @@ begin {
     }
     catch {
         throw $_.Exception.Message
-    }
-
-    if ($NumberOfClones -gt 1) {
-        $AllowedTask = 1
-    }
-    else {
-        $AllowedTask = 4
     }
 }
 process {
