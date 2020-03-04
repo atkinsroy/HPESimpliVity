@@ -64,7 +64,7 @@ Note: The new HPE StoreOnce Catalyst datastore must be added via the StoreOnce m
 
 # Version 1.1.4
 
-* Added -Chart parameter to the Get-SVTmetric and Get-SVTcapacity cmdlets - Note this will only work with Windows PowerShell 5.1. PowerShell Core (6.0) doesn't support Microsoft Chart Controls. For example:
+* Added -Chart parameter to the Get-SVTmetric and Get-SVTcapacity cmdlets. For example:
 
 ```powershell
     PS C:\> Get-SVThost | Select-Object -First 1 | Get-SVTmetric -Hour 48 -Chart
