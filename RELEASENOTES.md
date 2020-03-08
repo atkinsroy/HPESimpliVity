@@ -1,6 +1,6 @@
 # Version 2.0.28
 
-* Removed -ApplicationConsistent switch from the policy and backup commands. If ConsistencyType is NONE, then application_consistent is false. For all other consistency types (DEFAULT and VSS), application_consistent is true. This removes confusion, with multiple parameters doing similar things.
+* Removed -ApplicationConsistent switch from the policy and backup commands. Application consistency is assumed to be false if ConsistencyType is set to NONE. For all other consistency types (DEFAULT and VSS), application consistency is true. This removes confusion, with multiple parameters doing similar things.
 * Added multi-value support for most "Get" commands, where supported by the API. For example, 
 
 ````powershell
