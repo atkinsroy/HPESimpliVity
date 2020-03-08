@@ -2,7 +2,7 @@
 
 This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage a HPE SimpliVity federation. It works by connecting to any HPE OmniStack Virtual Controller in your environment.
 
-All cmdlets are written as advanced cmdlets, with extensive comment based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records to 500 when returning virtual machines and backup objects.
+All cmdlets are written as advanced cmdlets, with extensive comment based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records when returning virtual machines and backup objects.
 
 Most "Get" commands provide too many properties to show at once, so default display properties are shown. All properties are still accessible, by piping to Format-List or Select-Object -property *
 
@@ -67,7 +67,7 @@ Get-SVTvmReplicaSet | Get-SVTdisk
 
 ## Requirements
 
-* PowerShell V5.1 and above. (note that the chart features do not work with PowerShell Core 6.0 or PowerShell 7.0)
+* PowerShell V5.1 and above. (note: the chart features do not work with PowerShell Core 6.0 or PowerShell 7.0)
 * The IP address and the credentials of an authorized OmniStack user account.
 * Tested with HPE SimpliVity V4.0.0. The module should be compatible with older versions, but has not been tested. 
 
