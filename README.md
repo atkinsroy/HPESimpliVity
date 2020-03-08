@@ -4,7 +4,7 @@ This PowerShell module utilizes the HPE SimpliVity REST API to display informati
 
 All cmdlets are written as advanced cmdlets, with extensive comment based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records when returning virtual machines and backup objects.
 
-Most "Get" commands display default properties; use Format-List or Select-Object -property *. For example:
+Most "Get" commands display default properties; use Format-List or Select-Object to show the  all. For example:
 ```powershell
     PS C:\> Connect-SVT -OVC 192.168.1.11 -Credential $Cred
     PS C:\> Get-SVThost
