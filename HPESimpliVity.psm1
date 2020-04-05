@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.28'
+$HPESimplivityVersion = '2.1.1'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -4432,7 +4432,9 @@ function Get-SVTpolicy {
                         MaxBackup         = $_.max_backups
                         Day               = $_.days
                         RuleId            = $_.id
-                        RetentionDay      = [math]::Round($_.retention / 1440)
+                        RetentionDay      = [math]::Round($_.retention / 1440) #Retention is in minutes
+                        RetentionHour     = [math]::Round($_.retention / 60) #Retention is in minutes
+                        RetentionMinute   = $_.retention
                         ExternalStoreName = $_.external_store_name
                     }
                 } # end if
@@ -4534,6 +4536,8 @@ function New-SVTpolicy {
     Must be between 1 and 1440 minutes (24 hours).
 .PARAMETER RetentionDay
     Specifies the retention, in days.
+.PARAMETER RetentionHour
+    Specifies the retention, in hours. This parameter takes precedence if RetentionDay is also specified.
 .PARAMETER ConsistencyType
     Available options are:
     1. NONE - This is the default and creates a crash consistent backup
@@ -4560,7 +4564,12 @@ function New-SVTpolicy {
 
     Adds a new rule to the specified policy to run backups on the specified weekdays and retain backup for a week.
 .EXAMPLE
-    PS C:\>New-SVTpolicyRule -PolicyName Silver -Last -ClusterName Prod `
+    PS C:\>New-SVTpolicyRule -PolicyName ShortTerm -RetentionHour 4 -FrequencyMin 60 -StartTime 09:00 -EndTime 17:00
+
+    Add a new rule to a policy called ShortTerm, to backup once per hour during office hours and retain the
+    backup for 4 hours. (Note: -RetentionHour takes precendence over -RetentionDay if both are specified)
+.EXAMPLE
+    PS C:\>New-SVTpolicyRule -PolicyName Silver -LastDay -ClusterName Prod `
         -RetentionDay 30 -ConsistencyType VSS
 
     Adds a new rule to the specified policy to run an application consistent backup on the last day 
@@ -4604,6 +4613,9 @@ function New-SVTpolicyRule {
 
         [Parameter(Mandatory = $false, Position = 6)]
         [System.Int32]$RetentionDay = 1,
+
+        [Parameter(Mandatory = $false, Position = 6)]
+        [System.Int32]$RetentionHour,
 
         [Parameter(Mandatory = $false, Position = 7)]
         [ValidateSet('NONE', 'DEFAULT', 'VSS')]  #'FAILEDVSS', 'NOT_APPLICABLE'
@@ -4679,15 +4691,22 @@ function New-SVTpolicyRule {
         $TargetDay = 'all'
     }
 
-    if ($StartTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
+    if ($StartTime -notmatch '^([01]\d|2[0-3]):?([0-5]\d)$') {
         throw "Start time invalid. It must be in the form 00:00 (24 hour time). e.g. -StartTime 06:00"
     }
-    if ($EndTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
+    if ($EndTime -notmatch '^([01]\d|2[0-3]):?([0-5]\d)$') {
         throw "End time invalid. It must be in the form 00:00 (24 hour time). e.g. -EndTime 23:30"
     }
 
-    # The new HTML5 client doesn't expose application consistent tick box - application_consistent must be
-    # true if consitency_type is VSS or DEFAULT. Otherwise the API sets it to NONE.
+    if ($PSBoundParameters.ContainsKey('RetentionHour')) {
+        $Retention = $RetentionHour * 60  #Retention is in minutes
+    }
+    else {
+        $Retention = $RetentionDay * 1440 #Retention is in minutes
+    }
+ 
+    # The plugin doesn't expose application consistent tick box - application_consistent must be
+    # true if consistency_type is VSS or DEFAULT. Otherwise the API sets it to NONE.
     $ConsistencyType = $ConsistencyType.ToUpper()
     if ($ConsistencyType -eq 'NONE') {
         $ApplicationConsistent = $false
@@ -4698,7 +4717,7 @@ function New-SVTpolicyRule {
 
     $Body += @{
         'frequency'              = $FrequencyMin
-        'retention'              = $RetentionDay * 1440  # Retention is in minutes
+        'retention'              = $Retention
         'days'                   = $TargetDay
         'start_time'             = $StartTime
         'end_time'               = $EndTime
@@ -4761,6 +4780,9 @@ function New-SVTpolicyRule {
 .PARAMETER RetentionDay
     Specifies the backup retention, in days.
     If not set, the existing policy rule setting is used
+.PARAMETER RetentionHour
+    Specifies the backup retention, in hours. This parameter takes precedence if RetentionDay is also specified.
+    If not set, the existing policy rule setting is used
 .PARAMETER ConsistencyType
     Available options are:
     1. NONE - This is the default and creates a crash consistent backup
@@ -4775,15 +4797,22 @@ function New-SVTpolicyRule {
     Updates rule number 2 in the specified policy with a new weekday policy. start and finish times. This command 
     inherits the existing retention, frequency, and application consistency settings from the existing rule.
 .EXAMPLE
-    PS C:\>Update-SVTPolicyRule -Policy Bronze -RuleNumber 1 -Last
-    PS C:\>Update-SVTPolicyRule Bronze 1 -Last
+    PS C:\>Update-SVTPolicyRule -Policy Bronze -RuleNumber 1 -LastDay
+    PS C:\>Update-SVTPolicyRule Bronze 1 -LastDay
     
     Both commands update rule 1 in the specified policy with a new day. All other settings are inherited from
     the existing backup policy rule.
 .EXAMPLE
-    PS C:\>Update-SVTPolicyRule Silver 3 -MonthDay 1,7,14,21
+    PS C:\>Update-SVTPolicyRule Silver 3 -MonthDay 1,7,14,21 -RetentionDay 30
 
-    Updates the existing rule 3 in the specified policy to perform backups four times a month on the specified days.
+    Updates the existing rule 3 in the specified policy to perform backups four times a month on the specified 
+    days and retains the backup for 30 days.
+.EXAMPLE
+    PS C:\>Update-SVTPolicyRule Gold 1 -All -RetentionHour 1 -FrequencyMin 20 -StartTime 9:00 -EndTime 17:00
+
+    Updates the existing rule 1 in the Gold policy to backup 3 times per hour every day during office hours and 
+    retain each backup for 1 hour. (Note: -RetentionHour takes precedence over -RetentionDay if both are 
+    specified).
 .INPUTS
     System.String
 .OUTPUTS
@@ -4825,7 +4854,10 @@ function Update-SVTpolicyRule {
         [System.String]$FrequencyMin,
 
         [Parameter(Mandatory = $false, Position = 6)]
-        [System.Int32]$RetentionDay, 
+        [System.Int32]$RetentionDay,
+
+        [Parameter(Mandatory = $false, Position = 6)]
+        [System.Int32]$RetentionHour,
 
         [Parameter(Mandatory = $false, Position = 7)]
         [ValidateSet('NONE', 'DEFAULT', 'VSS', 'FAILEDVSS', 'NOT_APPLICABLE')]
@@ -4873,7 +4905,7 @@ function Update-SVTpolicyRule {
     }
 
     if ($PSBoundParameters.ContainsKey('StartTime')) {
-        if ($StartTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
+        if ($StartTime -notmatch '^([01]\d|2[0-3]):?([0-5]\d)$') {
             throw "Start time invalid. It must be in the form 00:00 (24 hour time). e.g. -StartTime 06:00"
         }
     }
@@ -4883,7 +4915,7 @@ function Update-SVTpolicyRule {
     }
 
     if ($PSBoundParameters.ContainsKey('EndTime')) {
-        if ($EndTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
+        if ($EndTime -notmatch '^([01]\d|2[0-3]):?([0-5]\d)$') {
             throw "End time invalid. It must be in the form 00:00 (24 hour time). e.g. -EndTime 23:30"
         }
     }
@@ -4897,9 +4929,15 @@ function Update-SVTpolicyRule {
         Write-Verbose "Inheriting existing backup frequency of $FrequencyMin minutes"
     }
 
-    if ( -not $PSBoundParameters.ContainsKey('RetentionDay')) {
-        $RetentionDay = $Policy | Select-Object -ExpandProperty RetentionDay
-        Write-Verbose "Inheriting existing retention of $RetentionDay days"
+    if ($PSBoundParameters.ContainsKey('RetentionHour')) {
+        $Retention = $RetentionHour * 60  #Retention is in minutes
+    }
+    elseif ($PSBoundParameters.ContainsKey('RetentionDay')) {
+        $Retention = $RetentionDay * 1440 #Retention is in minutes
+    }
+    else {
+        $Retention = ($Policy | Select-Object -ExpandProperty RetentionMinute)
+        Write-Verbose "Inheriting existing retention of $Retention minutes"
     }
 
     if ( -not $PSBoundParameters.ContainsKey('ConsistencyType')) {
@@ -4919,7 +4957,7 @@ function Update-SVTpolicyRule {
 
     $Body = @{
         'frequency'              = $FrequencyMin
-        'retention'              = $RetentionDay * 1440  # Retention is in minutes
+        'retention'              = $Retention
         'days'                   = $TargetDay
         'start_time'             = $StartTime
         'end_time'               = $EndTime
