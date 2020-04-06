@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.1'
+$HPESimplivityVersion = '2.1.2'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -3123,51 +3123,53 @@ function Get-SVThost {
             $Date = $null
         }
         [PSCustomObject]@{
-            PSTypeName               = 'HPE.SimpliVity.Host'
-            PolicyEnabled            = $_.policy_enabled
-            ClusterId                = $_.omnistack_cluster_id
-            StorageMask              = $_.storage_mask
-            PotentialFeatureLevel    = $_.potential_feature_level
-            Type                     = $_.type
-            CurrentFeatureLevel      = $_.current_feature_level
-            HypervisorId             = $_.hypervisor_object_id
-            ClusterName              = $_.compute_cluster_name
-            ManagementIP             = $_.management_ip
-            FederationIP             = $_.federation_ip
-            VirtualControllerName    = $_.virtual_controller_name
-            FederationMask           = $_.federation_mask
-            Model                    = $_.model
-            DataCenterId             = $_.compute_cluster_parent_hypervisor_object_id
-            HostId                   = $_.id
-            StoreageMTU              = $_.storage_mtu
-            State                    = $_.state
-            UpgradeState             = $_.upgrade_state
-            FederationMTU            = $_.federation_mtu
-            CanRollback              = $_.can_rollback
-            StorageIP                = $_.storage_ip
-            ManagementMTU            = $_.management_mtu
-            Version                  = $_.version
-            HostName                 = $_.name
-            DataCenterName           = $_.compute_cluster_parent_name
-            HypervisorManagementIP   = $_.hypervisor_management_system
-            ManagementMask           = $_.management_mask
-            HypervisorManagementName = $_.hypervisor_management_system_name
-            HypervisorClusterId      = $_.compute_cluster_hypervisor_object_id
-            ClusterGroupIds          = $_.cluster_group_ids
-            Date                     = $Date
-            UsedLogicalCapacityGB    = '{0:n0}' -f ($_.used_logical_capacity / 1gb)
-            UsedCapacityGB           = '{0:n0}' -f ($_.used_capacity / 1gb)
-            CompressionRatio         = $_.compression_ratio
-            StoredUnCompressedDataGB = '{0:n0}' -f ($_.stored_uncompressed_data / 1gb)
-            StoredCompressedDataGB   = '{0:n0}' -f ($_.stored_compressed_data / 1gb)
-            EfficiencyRatio          = $_.efficiency_ratio
-            DeduplicationRatio       = $_.deduplication_ratio
-            LocalBackupCapacityGB    = '{0:n0}' -f ($_.local_backup_capacity / 1gb)
-            CapacitySavingsGB        = '{0:n0}' -f ($_.capacity_savings / 1gb)
-            AllocatedCapacityGB      = '{0:n0}' -f ($_.allocated_capacity / 1gb)
-            StoredVmDataGB           = '{0:n0}' -f ($_.stored_virtual_machine_data / 1gb)
-            RemoteBackupCapacityGB   = '{0:n0}' -f ($_.remote_backup_capacity / 1gb)
-            FreeSpaceGB              = '{0:n0}' -f ($_.free_space / 1gb)
+            PSTypeName                = 'HPE.SimpliVity.Host'
+            PolicyEnabled             = $_.policy_enabled
+            ClusterId                 = $_.omnistack_cluster_id
+            StorageMask               = $_.storage_mask
+            PotentialFeatureLevel     = $_.potential_feature_level
+            Type                      = $_.type
+            CurrentFeatureLevel       = $_.current_feature_level
+            HypervisorId              = $_.hypervisor_object_id
+            ClusterName               = $_.compute_cluster_name
+            ManagementIP              = $_.management_ip
+            FederationIP              = $_.federation_ip
+            VirtualControllerName     = $_.virtual_controller_name
+            FederationMask            = $_.federation_mask
+            Model                     = $_.model
+            DataCenterId              = $_.compute_cluster_parent_hypervisor_object_id
+            HostId                    = $_.id
+            StoreageMTU               = $_.storage_mtu
+            State                     = $_.state
+            UpgradeState              = $_.upgrade_state
+            FederationMTU             = $_.federation_mtu
+            CanRollback               = $_.can_rollback
+            StorageIP                 = $_.storage_ip
+            ManagementMTU             = $_.management_mtu
+            Version                   = $_.version
+            HostName                  = $_.name
+            DataCenterName            = $_.compute_cluster_parent_name
+            HypervisorManagementIP    = $_.hypervisor_management_system
+            ManagementMask            = $_.management_mask
+            HypervisorManagementName  = $_.hypervisor_management_system_name
+            HypervisorClusterId       = $_.compute_cluster_hypervisor_object_id
+            ClusterGroupIds           = $_.cluster_group_ids
+            Date                      = $Date
+            UsedLogicalCapacityGB     = '{0:n0}' -f ($_.used_logical_capacity / 1gb)
+            UsedCapacityGB            = '{0:n0}' -f ($_.used_capacity / 1gb)
+            CompressionRatio          = $_.compression_ratio
+            StoredUnCompressedDataGB  = '{0:n0}' -f ($_.stored_uncompressed_data / 1gb)
+            StoredCompressedDataGB    = '{0:n0}' -f ($_.stored_compressed_data / 1gb)
+            EfficiencyRatio           = $_.efficiency_ratio
+            DeduplicationRatio        = $_.deduplication_ratio
+            LocalBackupCapacityGB     = '{0:n0}' -f ($_.local_backup_capacity / 1gb)
+            CapacitySavingsGB         = '{0:n0}' -f ($_.capacity_savings / 1gb)
+            AllocatedCapacityGB       = '{0:n0}' -f ($_.allocated_capacity / 1gb)
+            StoredVmDataGB            = '{0:n0}' -f ($_.stored_virtual_machine_data / 1gb)
+            RemoteBackupCapacityGB    = '{0:n0}' -f ($_.remote_backup_capacity / 1gb)
+            FreeSpaceGB               = '{0:n0}' -f ($_.free_space / 1gb)
+            AvailabilityZoneEffective = $_.availability_zone_effective
+            AvailabilityZonePlanned   = $_.availability_zone_planned
         }
     }
 }
@@ -3700,6 +3702,7 @@ function Start-SVTshutdown {
 
     # Exit if the virtual controller is already off
     if ($ThisHost.State -ne 'ALIVE') {
+        $ThisHost.State
         throw "The HPE Omnistack Virtual Controller on $($ThisHost.HostName) is not running"
     } 
 
@@ -3754,8 +3757,7 @@ function Start-SVTshutdown {
                 throw $_.Exception.Message
             }
 
-            Write-Output "Shutting down the last virtual controller in the $ThisCluster cluster " +
-            "now ($($ThisHost.HostName))"  
+            Write-Output "Shutting down the last virtual controller in the $ThisCluster cluster now ($($ThisHost.HostName))"  
         }
 
         if ($NextHost) {
