@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.2'
+$HPESimplivityVersion = '2.1.3'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -3030,6 +3030,150 @@ function New-SVTexternalStore {
 
 }
 
+<#
+.SYNOPSIS
+    Unregisters (removes) an external datastore from the specified HPE SimpliVity cluster
+.DESCRIPTION
+    Unregisters an external datastore. Removes the external store as a backup destination for the cluster.
+    Backups remain on the external store, but they can no longer be managed by HPE SimpliVity.
+
+    External Stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped 
+    backups to HPE SimpliVity. Once unregistered, the Catalyst store remains on the StoreOnce appliance but
+    is inaccessible to HPE SimpliVity.
+.PARAMETER ExternalStoreName
+    External datastore name. This is the pre-existing Catalyst store name on HPE StoreOnce
+.PARAMETER ClusterName
+    The HPE SimpliVity cluster name to associate this external store. Once created, the external store is
+    available to all clusters in the cluster group
+.EXAMPLE
+    PS C:\>Remove-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ClusterName SVTcluster
+
+    Unregisters (removes) the external datastore called StoreOnce-Data03 from the specified 
+    HPE SimpliVity Cluster
+.INPUTS
+    system.string
+.OUTPUTS
+    HPE.SimpliVity.Task
+.NOTES
+    This command works with HPE SimpliVity 4.0.1 and above
+#>
+function Remove-SVTexternalStore {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [Alias("Name")]
+        [System.String]$ExternalStoreName,
+
+        [Parameter(Mandatory = $true, Position = 1)]
+        [System.String]$ClusterName
+    )
+
+    $Header = @{
+        'Authorization' = "Bearer $($global:SVTconnection.Token)"
+        'Accept'        = 'application/json'
+        'Content-Type'  = 'application/vnd.simplivity.v1.14+json'
+    }
+    
+    $Uri = $global:SVTconnection.OVC + '/api/external_stores/unregister'
+
+    try {
+        $ClusterId = Get-SVTcluster -ClusterName $ClusterName | Select-Object -ExpandProperty ClusterId
+    }
+    catch {
+        $_.Exception.Message
+    }
+    
+    $Body = @{
+        'name'                 = $ExernalStoreName
+        'omnistack_cluster_id' = $ClusterID
+    } | ConvertTo-Json
+    Write-Verbose $Body
+
+    try {
+        $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+    }
+    catch {
+        throw $_.Exception.Message
+    }
+    $Task
+    $global:SVTtask = $Task
+    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+}
+
+<#
+.SYNOPSIS
+    Updates the IP address and credentials for the external store appliance (HPE StoreOnce)
+.DESCRIPTION
+    Updates an existing registered external store with new management IP and credentials. This command
+    should be used if the credentials on the StoreOnce appliance are changed.
+
+    External Stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped 
+    backups to HPE SimpliVity.
+.PARAMETER ExternalStoreName
+    External datastore name. This is the pre-existing Catalyst store name on HPE StoreOnce
+.PARAMETER ManagementIP
+    The IP Address of the external store appliance
+.PARAMETER Username
+    The username associated with the external datastore. HPE SimpliVity uses this to authenticate and 
+    access the external datastore
+.PARAMETER Userpass
+    The password for the specified username
+.EXAMPLE
+    PS C:\>Set-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ManagementIP 192.168.10.202 
+        -Username SVT_service -Userpass Password123
+
+    Resets the external datastore credentials and management IP address
+.INPUTS
+    system.string
+.OUTPUTS
+    HPE.SimpliVity.Task
+.NOTES
+    This command works with HPE SimpliVity 4.0.1 and above
+#>
+function Set-SVTexternalStore {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [Alias("Name")]
+        [System.String]$ExternalStoreName,
+
+        [Parameter(Mandatory = $true, Position = 2)]
+        [System.String]$ManagementIP,
+
+        [Parameter(Mandatory = $true, Position = 3)]
+        [System.String]$Username,
+
+        [Parameter(Mandatory = $true, Position = 4)]
+        [System.String]$Userpass
+    )
+
+    $Header = @{
+        'Authorization' = "Bearer $($global:SVTconnection.Token)"
+        'Accept'        = 'application/json'
+        'Content-Type'  = 'application/vnd.simplivity.v1.15+json'
+    }
+    
+    $Uri = $global:SVTconnection.OVC + '/api/external_stores/update_credentials'
+
+    $Body = @{
+        'management_ip' = $ManagementIP
+        'name'          = $ExernalStoreName
+        'password'      = $Userpass
+        'username'      = $Username
+    } | ConvertTo-Json
+    Write-Verbose $Body
+
+    try {
+        $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+    }
+    catch {
+        throw $_.Exception.Message
+    }
+    $Task
+    $global:SVTtask = $Task
+    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+}
+
 #endregion Datastore
 
 #region Host
@@ -3124,12 +3268,14 @@ function Get-SVThost {
         }
         [PSCustomObject]@{
             PSTypeName                = 'HPE.SimpliVity.Host'
+            ClusterFeatureLevel       = $_.cluster_feature_level
             PolicyEnabled             = $_.policy_enabled
-            ClusterId                 = $_.omnistack_cluster_id
+            HypervisorClusterId       = $_.compute_cluster_hypervisor_object_id
             StorageMask               = $_.storage_mask
             PotentialFeatureLevel     = $_.potential_feature_level
             Type                      = $_.type
             CurrentFeatureLevel       = $_.current_feature_level
+            ClusterId                 = $_.omnistack_cluster_id
             HypervisorId              = $_.hypervisor_object_id
             ClusterName               = $_.compute_cluster_name
             ManagementIP              = $_.management_ip
@@ -3145,6 +3291,7 @@ function Get-SVThost {
             FederationMTU             = $_.federation_mtu
             CanRollback               = $_.can_rollback
             StorageIP                 = $_.storage_ip
+            ClusterGroupIds           = $_.cluster_group_ids
             ManagementMTU             = $_.management_mtu
             Version                   = $_.version
             HostName                  = $_.name
@@ -3152,8 +3299,6 @@ function Get-SVThost {
             HypervisorManagementIP    = $_.hypervisor_management_system
             ManagementMask            = $_.management_mask
             HypervisorManagementName  = $_.hypervisor_management_system_name
-            HypervisorClusterId       = $_.compute_cluster_hypervisor_object_id
-            ClusterGroupIds           = $_.cluster_group_ids
             Date                      = $Date
             UsedLogicalCapacityGB     = '{0:n0}' -f ($_.used_logical_capacity / 1gb)
             UsedCapacityGB            = '{0:n0}' -f ($_.used_capacity / 1gb)
