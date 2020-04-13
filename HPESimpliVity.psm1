@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.3'
+$HPESimplivityVersion = '2.1.4'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -3010,7 +3010,7 @@ function New-SVTexternalStore {
     $Body = @{
         'management_ip'        = $ManagementIP
         'management_port'      = $ManagementPort
-        'name'                 = $ExernalStoreName
+        'name'                 = $ExternalStoreName
         'omnistack_cluster_id' = $ClusterID
         'password'             = $Userpass
         'storage_port'         = $StoragePort
@@ -3071,7 +3071,7 @@ function Remove-SVTexternalStore {
     $Header = @{
         'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'        = 'application/json'
-        'Content-Type'  = 'application/vnd.simplivity.v1.14+json'
+        'Content-Type'  = 'application/vnd.simplivity.v1.15+json'
     }
     
     $Uri = $global:SVTconnection.OVC + '/api/external_stores/unregister'
@@ -3084,7 +3084,7 @@ function Remove-SVTexternalStore {
     }
     
     $Body = @{
-        'name'                 = $ExernalStoreName
+        'name'                 = $ExternalStoreName
         'omnistack_cluster_id' = $ClusterID
     } | ConvertTo-Json
     Write-Verbose $Body
@@ -3157,7 +3157,7 @@ function Set-SVTexternalStore {
 
     $Body = @{
         'management_ip' = $ManagementIP
-        'name'          = $ExernalStoreName
+        'name'          = $ExternalStoreName
         'password'      = $Userpass
         'username'      = $Username
     } | ConvertTo-Json
@@ -4733,42 +4733,42 @@ function New-SVTpolicyRule {
         [Parameter(Mandatory = $true, Position = 0)]
         [System.String]$PolicyName,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByAllDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByAllDay')]
         [switch]$All,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByWeekDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByWeekDay')]
         [array]$WeekDay,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByMonthDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByMonthDay')]
         [array]$MonthDay,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByLastDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByLastDay')]
         [switch]$LastDay,
 
-        [Parameter(Mandatory = $false, Position = 2)]
+        [Parameter(Mandatory = $false)]
         [System.String]$DestinationName,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Mandatory = $false)]
         [System.String]$StartTime = '00:00',
 
-        [Parameter(Mandatory = $false, Position = 4)]
+        [Parameter(Mandatory = $false)]
         [System.String]$EndTime = '00:00',
 
-        [Parameter(Mandatory = $false, Position = 5)]
+        [Parameter(Mandatory = $false)]
         [ValidateRange(1, 1440)]
         [System.String]$FrequencyMin = 1440, # Default is once per day
 
-        [Parameter(Mandatory = $false, Position = 6)]
+        [Parameter(Mandatory = $false)]
         [System.Int32]$RetentionDay = 1,
 
-        [Parameter(Mandatory = $false, Position = 6)]
+        [Parameter(Mandatory = $false)]
         [System.Int32]$RetentionHour,
 
-        [Parameter(Mandatory = $false, Position = 7)]
+        [Parameter(Mandatory = $false)]
         [ValidateSet('NONE', 'DEFAULT', 'VSS')]  #'FAILEDVSS', 'NOT_APPLICABLE'
         [System.String]$ConsistencyType = 'NONE',
 
-        [Parameter(Mandatory = $false, Position = 8)]
+        [Parameter(Mandatory = $false)]
         [switch]$ReplaceRules
     )
 
@@ -4978,35 +4978,35 @@ function Update-SVTpolicyRule {
         [Parameter(Mandatory = $true, Position = 1)]
         [System.String]$RuleNumber,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByAllDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByAllDay')]
         [switch]$All,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByWeekDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByWeekDay')]
         [array]$WeekDay,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByMonthDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByMonthDay')]
         [array]$MonthDay,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByLastDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByLastDay')]
         [switch]$LastDay,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Mandatory = $false)]
         [System.String]$StartTime,
 
-        [Parameter(Mandatory = $false, Position = 4)]
+        [Parameter(Mandatory = $false)]
         [System.String]$EndTime,
 
-        [Parameter(Mandatory = $false, Position = 5)]
+        [Parameter(Mandatory = $false)]
         [ValidateRange(1, 1440)]
         [System.String]$FrequencyMin,
 
-        [Parameter(Mandatory = $false, Position = 6)]
+        [Parameter(Mandatory = $false)]
         [System.Int32]$RetentionDay,
 
-        [Parameter(Mandatory = $false, Position = 6)]
+        [Parameter(Mandatory = $false)]
         [System.Int32]$RetentionHour,
 
-        [Parameter(Mandatory = $false, Position = 7)]
+        [Parameter(Mandatory = $false)]
         [ValidateSet('NONE', 'DEFAULT', 'VSS', 'FAILEDVSS', 'NOT_APPLICABLE')]
         [System.String]$ConsistencyType
     )
