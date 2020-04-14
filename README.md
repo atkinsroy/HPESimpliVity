@@ -1,6 +1,6 @@
  # HPE SimpliVity PowerShell Module
 
-This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage a HPE SimpliVity federation. It works by connecting to any HPE OmniStack Virtual Controller in your environment. With the release of HPE SimpliVity V4.0, you can now also connect to a Management Virtual Appliance, which is recommended.
+This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage a HPE SimpliVity federation. It works by connecting to any HPE OmniStack virtual controller in your environment. With the release of HPE SimpliVity V4.0.0, you can now also connect to a management virtual appliance, which is recommended.
 
 All cmdlets are written as advanced cmdlets, with comment based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records when returning virtual machines and backup objects.
 

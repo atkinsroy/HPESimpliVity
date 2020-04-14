@@ -18,7 +18,7 @@ ModuleVersion = '2.1.4'
 CompatiblePSEditions = 'Desktop'
 
 # ID used to uniquely identify this module
-GUID = '502845a3-4d0d-48ca-a217-42c1eb7a1be2'
+GUID = '8b979ebb-ce25-4ef3-955e-b0e722e5bd43'
 
 # Author of this module
 Author = 'Hewlett Packard Enterprise'

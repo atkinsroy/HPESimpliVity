@@ -2934,7 +2934,7 @@ function Get-SVTexternalStore {
     HPE SimpliVity cluster, but are subsequently available to all clusters in the cluster group to which 
     the specified cluster is a member.
 
-    External Stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped 
+    External stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped 
     backups to HPE SimpliVity. The external datastore must be created and configured appropriately to allow 
     the registration to successfully complete.
 .PARAMETER ExternalStoreName
@@ -3037,7 +3037,7 @@ function New-SVTexternalStore {
     Unregisters an external datastore. Removes the external store as a backup destination for the cluster.
     Backups remain on the external store, but they can no longer be managed by HPE SimpliVity.
 
-    External Stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped 
+    External stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped 
     backups to HPE SimpliVity. Once unregistered, the Catalyst store remains on the StoreOnce appliance but
     is inaccessible to HPE SimpliVity.
 .PARAMETER ExternalStoreName
