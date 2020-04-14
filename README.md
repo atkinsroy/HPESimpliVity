@@ -35,7 +35,7 @@ Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
 The module contains 56 exported cmdlets, divided into the following feature categories:
 
-Datastore | Backup Policy | Backups
+Datastore | Backup Policy | Backup
 --- | --- | ---
 Get-SVTdatastore | Suspend-SVTpolicy | Stop-SVTbackup
 New-SVTdatastore | Rename-SVTpolicy | Rename-SVTbackup
@@ -50,7 +50,7 @@ New-SVTexternalStore | Get-SVTpolicyScheduleReport
 Set-SVTexternalStore
 Remove-SVTexternalStore
 
-Cluster & Utility | Host | VM
+Cluster & Utility | Host | Virtual Machine
 --- | --- | ---
 Get-SVTcluster | Get-SVThost | Get-SVTvm
 Get-SVTclusterConnected | Get-SVThardware | Move-SVTvm
