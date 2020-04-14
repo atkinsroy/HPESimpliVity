@@ -2,7 +2,7 @@
 
 This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage a HPE SimpliVity federation. It works by connecting to any HPE OmniStack Virtual Controller in your environment. With the release of HPE SimpliVity V4.0, you can now also connect to a Management Virtual Appliance, which is recommended.
 
-All cmdlets are written as advanced cmdlets, with extensive comment based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records when returning virtual machines and backup objects.
+All cmdlets are written as advanced cmdlets, with comment based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records when returning virtual machines and backup objects.
 
 Most "Get" commands display default properties; use Format-List or Select-Object to show the  all. For example:
 ```powershell
@@ -26,48 +26,47 @@ Most "Get" commands display default properties; use Format-List or Select-Object
     .
     .
 ```
-## Update V2.0.28 new features
+## Update V2.1.4 new features
 
-* Supports the new features in HPE SimpliVity 4.0.0. Specifically, the ability to add and show external store information (HPE StoreOnce is currently supported) and the ability to backup/restore to/from external stores. 
-* Added support for multiple value parameters to most of the "GET" commands. This works best when connected to a Management Virtual Appliance (MVA) rather than an OmniStack Virtual Controller (OVC). (See known issues below)
-* Added support for new HPE SimpliVity hardware models.
+* Supports the new features in HPE SimpliVity 4.0.1. Specifically, the ability to delete external stores and reset the credentials of external stores 
+* Added support to create and update backup policies with a rentention specified in hours. The ability to specify rentention in days still exists. 
 
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
-The module contains 54 exported cmdlets, divided into the following feature categories:
+The module contains 56 exported cmdlets, divided into the following feature categories:
 
-Backups | Backup Policy | Datastore & Cluster
+Datastore | Backup Policy | Backups
 --- | --- | ---
-Stop-SVTbackup | Suspend-SVTpolicy | Get-SVTcluster
-Rename-SVTbackup | Rename-SVTpolicy | Get-SVTclusterConnected
-Lock-SVTbackup | Resume-SVTpolicy | Get-SVTdatastore
-Remove-SVTbackup | New-SVTpolicy | Publish-SVTdatastore
-New-SVTbackup | Remove-SVTpolicy | Remove-SVTdatastore
-Copy-SVTbackup | Get-SVTpolicy | Resize-SVTdatastore
-Get-SVTbackup | New-SVTpolicyRule | New-SVTdatastore 
-Set-SVTbackupRetention | Update-SVTpolicyRule | Unpublish-SVTdatastore
-Update-SVTbackupUniqueSize | Remove-SVTpolicyRule | Get-SVTdatastoreComputeNode
-&nbsp; | Get-SVTpolicyScheduleReport | Set-SVTdatastorePolicy
-&nbsp; | &nbsp; | Get-SVTexternalStore
-&nbsp; | &nbsp; | New-SVTexternalStore
+Get-SVTdatastore | Suspend-SVTpolicy | Stop-SVTbackup
+New-SVTdatastore | Rename-SVTpolicy | Rename-SVTbackup
+Remove-SVTdatastore | Resume-SVTpolicy | Lock-SVTbackup
+Resize-SVTdatastore | New-SVTpolicy | Remove-SVTbackup
+Publish-SVTdatastore | Remove-SVTpolicy | New-SVTbackup
+Unpublish-SVTdatastore | Get-SVTpolicy | Copy-SVTbackup
+Get-SVTdatastoreComputeNode | New-SVTpolicyRule | Get-SVTbackup
+Set-SVTdatastorePolicy | Update-SVTpolicyRule | Set-SVTbackupRetention
+Get-SVTexternalStore | Remove-SVTpolicyRule | Update-SVTbackupUniqueSize
+New-SVTexternalStore | Get-SVTpolicyScheduleReport 
+Set-SVTexternalStore
+Remove-SVTexternalStore
 
-
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; VM &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Host &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; |  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Utility &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
----------------- | --- | ---
-New-SVTclone | Get-SVThardware | Connect-SVT
-Get-SVTvm | Get-SVThost | Get-SVTcapacity
-Start-SVTvm | Remove-SVThost | Get-SVTmetric
-Move-SVTvm | Start-SVTshutdown | Get-SVTtask
-Restore-SVTvm | Stop-SVTshutdown | Get-SVTtimezone
-Stop-SVTvm | Get-SVTshutdownStatus | Set-SVTtimezone
-Set-SVTvmPolicy | Get-SVTthroughput | Get-SVTversion
-Get-SVTvmReplicaSet | Get-SVTdisk
+Cluster & Utility | Host | VM
+--- | --- | ---
+Get-SVTcluster | Get-SVThost | Get-SVTvm
+Get-SVTclusterConnected | Get-SVThardware | Move-SVTvm
+Connect-SVT | Remove-SVThost | New-SVTclone
+Get-SVTcapacity | Start-SVTshutdown | Restore-SVTvm
+Get-SVTmetric | Stop-SVTshutdown | Start-SVTvm
+Get-SVTtask | Get-SVTshutdownStatus | Stop-SVTvm
+Get-SVTtimezone | Get-SVTthroughput | Set-SVTvmPolicy
+Set-SVTtimezone | Get-SVTdisk | Get-SVTvmReplicaSet
+Get-SVTversion
 
 ## Requirements
 
 * PowerShell V5.1 and above. (note: the chart features do not work with PowerShell Core 6.0 or PowerShell 7.0)
 * The IP address and the credentials of an authorized OmniStack user account.
-* Tested with HPE SimpliVity V4.0.0. The module should be compatible with older versions, but has not been tested. 
+* Tested with HPE SimpliVity V4.0.1. The module should be compatible with older versions, but has not been tested. 
 
 ## Installation
 
@@ -109,7 +108,7 @@ and then in your script, import the credential:
 
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
-## Known issues with V4.0.0 of the API (With HPESimpliVity 2.0.28)
+## Known issues with V4.0.1 of the API (With HPESimpliVity 2.1.4)
 
 The API has some documented and undocumented issues:
 * OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation
@@ -127,8 +126,5 @@ The API has some documented and undocumented issues:
 * Backups stored on external stores cannot be deleted if the VM has been deleted, with a "backup not found" error. This does not apply to backups stored on clusters. This restriction is specific to the API; the CLI command svt-backup-delete works as expected for external store backups.
 * the PUT /policies/\<policyid\>/rules/\<ruleid\> API call (implementmented in Update-SVTpolicyRule) doesn't work as expected in some circumstances. Changing a rules' destination is not supported (this is documented), but in addition, changing the consistancy type to anything other than NONE or DEFAULT doesn't work. If you attempt to change the consistenct type to VSS, for example, the command is ignored. In this scenario, a work around would be to delete the rule entirely from the policy using Remove-SVTpolicyRule and then use New-SVTpolicyRule to create a new rule with the desired destination, consistenecy type and other settings.
 * Using GET /backups with a specific cluster_id (implemented as Get-SVTbackup -DestinationName \<ClusterName\>) will result in both backups located on the specified cluster AND external stores being displayed. This issue only applies when connected to an OVC; calls to an MVA work as expected. In either case, filtering on an external store works as expected (e.g. Get-SVTbackup -DestinationName ExternalStore1)
-
-## Things to do
-* Test using PowerShell 7.0 (Windows and Linux)
 
 If you would like to keep up to date with changes, please subscribe to receive notifications.

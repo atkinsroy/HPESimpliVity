@@ -1,3 +1,11 @@
+# Version 2.1.4
+
+* Added support for the new features in HPE SimpliVity V4.0.1
+* Added two new commands, Set-SVTexternalStore and Remove-SVTexternalStore. The first command allows you to change the credentials used by the HPE StoreOnce appliance for the specified external store. The second command allows you to unregister the specified external store
+* Added a new parameter -RetentionHour to New-SVTpolicyRule and Update-SVTpolicyRule. You can now specify retention by day or by hour; if both are specified, hour takes precedence
+* Added RetentionHour and RetentionMinute properties to Get-SVTpolicy
+* Added AvailabilityZoneEffective and AvailabilityZonePlanned properties to Get-SVThost
+
 # Version 2.0.28
 
 * Removed -ApplicationConsistent switch from the policy and backup commands. Application consistency is assumed to be false if ConsistencyType is set to NONE. For all other consistency types (DEFAULT and VSS), application consistency is true. This removes confusion, with multiple parameters doing similar things.
@@ -10,19 +18,19 @@
 ````
 Note: multi-value parameters do not work for Get-SVTbackup when connected to an OVC; they do work when connected to an MVA.
 
-* Added a new -PolicyName parameter to Get-SVTvm.
-* Added a new utility script called CreateClone.ps1. This script will clone multiple VMs or clone one VM multiple times or both at once.
-* Bug fixes.
+* Added a new -PolicyName parameter to Get-SVTvm
+* Added a new utility script called CreateClone.ps1. This script will clone multiple VMs or clone one VM multiple times or both at once
+* Bug fixes
 
 # Version 2.0.24
 
 * Added support for new hardware models. Get-SVTdisk supports the new Gen 10 H and Gen 10 G models
-* Tested the HPEsimpliVity module with the new Management Virtual Appliance in V4.0.0.
-* Refactored the cmdlets that deal with external stores. Cmdlets now support a single parameter called -DestinationName rather than -ClusterName and -ExternalStoreName. This is a breaking change.
-* Added default parameters to New-SVTclone and Get-SVTclusterConnected cmdlets.
-* Refactored Get-SVTbackup to improve performance, specfically with the -Hour parameter.
-* Added additional new attributes provided by API to some cmdlets. 
-* Bug fixes.
+* Tested the HPEsimpliVity module with the new Management Virtual Appliance in V4.0.0
+* Refactored the cmdlets that deal with external stores. Cmdlets now support a single parameter called -DestinationName rather than -ClusterName and -ExternalStoreName. This is a breaking change
+* Added default parameters to New-SVTclone and Get-SVTclusterConnected cmdlets
+* Refactored Get-SVTbackup to improve performance, specfically with the -Hour parameter
+* Added additional new attributes provided by API to some cmdlets
+* Bug fixes
 
 
 # Version 2.0.16
@@ -36,14 +44,14 @@ Note: multi-value parameters do not work for Get-SVTbackup when connected to an 
 
 Note: Remove-SVTbackup and Restore-SVTvm work without change with backups stored on external stores, although restoring with the -RestoreToOrignal switch enabled is currently not supported with external store backups.
 
-Note: The new HPE StoreOnce Catalyst datastore must be added via the StoreOnce management console with appropriate permissions prior to registering it as a SimpliVity external store.
-* Added support for more meaningful run time errors, by determining the error message embedded in the body of the response from the API and passing this through in the cmdlets.
-* Hostname is now accepted as well as the fully qualified domain name for those cmdlets that accept the hostname parameter. Hostname can be entered in the form 'host' as well as 'host.domain.com'.
-* Refactored some of the cmdlets to simplify the code. Some cmdlets, like Get-SVTvm and New-SVTclone do not accept input from the pipeline any more. Get-SVTvm -Hostname 'host' can be used to filter on a specific hostname.
-* New-SVTclone now accepts a -CloneName parameter and will only perform a single clone operation on one VM. The previous functionality (cloning multiple VMs once, cloning one VM multiple times or both) will be moved to a utility script to be used in conjunction with the updated New-SVTclone cmdlet. 
+Note: The new HPE StoreOnce Catalyst datastore must be added via the StoreOnce management console with appropriate permissions prior to registering it as a SimpliVity external store
+* Added support for more meaningful run time errors, by determining the error message embedded in the body of the response from the API and passing this through in the cmdlets
+* Hostname is now accepted as well as the fully qualified domain name for those cmdlets that accept the hostname parameter. Hostname can be entered in the form 'host' as well as 'host.domain.com'
+* Refactored some of the cmdlets to simplify the code. Some cmdlets, like Get-SVTvm and New-SVTclone do not accept input from the pipeline any more. Get-SVTvm -Hostname 'host' can be used to filter on a specific hostname
+* New-SVTclone now accepts a -CloneName parameter and will only perform a single clone operation on one VM. The previous functionality (cloning multiple VMs once, cloning one VM multiple times or both) will be moved to a utility script to be used in conjunction with the updated New-SVTclone cmdlet
 * Renamed Set-SVTPolicyRule to New-SVTpolicyRule
-* Autosized columns added for most SimpliVity objects. For performance reasons, cmdlets that produce a lot of objects, like Get-SVTmetric and Get-SVTbackup are not autosized.
-* Added some additional properties to cluster objects related to the new supported Arbiter configurations available in V4.0.0. 
+* Autosized columns added for most SimpliVity objects. For performance reasons, cmdlets that produce a lot of objects, like Get-SVTmetric and Get-SVTbackup are not autosized
+* Added some additional properties to cluster objects related to the new supported Arbiter configurations available in V4.0.0
 * Bug fixes
 
 
@@ -55,11 +63,11 @@ Note: The new HPE StoreOnce Catalyst datastore must be added via the StoreOnce m
 ```powershell
     PS C:\> Get-SVThost -cluster <target cluster> | Foreach-Object {Start-SVTshutdown -HostName $_.Hostname -Confirm:$True}
 ```
-  In addition, the  command now has -Confirm and -Whatif parameters.
+  In addition, the  command now has -Confirm and -Whatif parameters
 
 * Added an automatic reconnect feature so that the session is reestablished and the token is updated following the inactivity timeout 
-* Dates for all cmdlets now support the locale on the local computer.
-* Fixed a bug with the Get-SVTBackup -Latest parameter. This command will now correctly show the latest backup per VM from the list of backup objects requested.
+* Dates for all cmdlets now support the locale on the local computer
+* Fixed a bug with the Get-SVTBackup -Latest parameter. This command will now correctly show the latest backup per VM from the list of backup objects requested
 * Updated the appearance of charts
 
 # Version 1.1.4
@@ -119,4 +127,4 @@ This is a sample capacity chart:
 
 # Version 1.1.0
 
-* First release written using version 3.7.7. Module contains most of the "get" cmdlets only.
+* First release written using version 3.7.7. The module contains most of the "get" cmdlets only

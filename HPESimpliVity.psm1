@@ -3,7 +3,7 @@
 #
 # Description:
 #   This module provides management cmdlets for HPE SimpliVity via the
-#   REST API. This module has been tested with both VMware and Hyper-V.
+#   REST API. This module has been tested with the VMware version only.
 #
 # Website:
 #   https://github.com/atkinsroy/HPESimpliVity
@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.0.28'
+$HPESimplivityVersion = '2.1.4'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -243,7 +243,7 @@ function Invoke-SVTrestMethod {
                     }
                 }
             }
-            elseif ($_.Exception.Message -match "The host name could not be parsed") {
+            elseif ($_.Exception.Message -match "The hostname could not be parsed") {
                 throw "Runtime error: You must first log in using Connect-SVT"
             }
             else {
@@ -3010,7 +3010,7 @@ function New-SVTexternalStore {
     $Body = @{
         'management_ip'        = $ManagementIP
         'management_port'      = $ManagementPort
-        'name'                 = $ExernalStoreName
+        'name'                 = $ExternalStoreName
         'omnistack_cluster_id' = $ClusterID
         'password'             = $Userpass
         'storage_port'         = $StoragePort
@@ -3028,6 +3028,150 @@ function New-SVTexternalStore {
     $global:SVTtask = $Task
     $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
 
+}
+
+<#
+.SYNOPSIS
+    Unregisters (removes) an external datastore from the specified HPE SimpliVity cluster
+.DESCRIPTION
+    Unregisters an external datastore. Removes the external store as a backup destination for the cluster.
+    Backups remain on the external store, but they can no longer be managed by HPE SimpliVity.
+
+    External Stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped 
+    backups to HPE SimpliVity. Once unregistered, the Catalyst store remains on the StoreOnce appliance but
+    is inaccessible to HPE SimpliVity.
+.PARAMETER ExternalStoreName
+    External datastore name. This is the pre-existing Catalyst store name on HPE StoreOnce
+.PARAMETER ClusterName
+    The HPE SimpliVity cluster name to associate this external store. Once created, the external store is
+    available to all clusters in the cluster group
+.EXAMPLE
+    PS C:\>Remove-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ClusterName SVTcluster
+
+    Unregisters (removes) the external datastore called StoreOnce-Data03 from the specified 
+    HPE SimpliVity Cluster
+.INPUTS
+    system.string
+.OUTPUTS
+    HPE.SimpliVity.Task
+.NOTES
+    This command works with HPE SimpliVity 4.0.1 and above
+#>
+function Remove-SVTexternalStore {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [Alias("Name")]
+        [System.String]$ExternalStoreName,
+
+        [Parameter(Mandatory = $true, Position = 1)]
+        [System.String]$ClusterName
+    )
+
+    $Header = @{
+        'Authorization' = "Bearer $($global:SVTconnection.Token)"
+        'Accept'        = 'application/json'
+        'Content-Type'  = 'application/vnd.simplivity.v1.15+json'
+    }
+    
+    $Uri = $global:SVTconnection.OVC + '/api/external_stores/unregister'
+
+    try {
+        $ClusterId = Get-SVTcluster -ClusterName $ClusterName | Select-Object -ExpandProperty ClusterId
+    }
+    catch {
+        $_.Exception.Message
+    }
+    
+    $Body = @{
+        'name'                 = $ExternalStoreName
+        'omnistack_cluster_id' = $ClusterID
+    } | ConvertTo-Json
+    Write-Verbose $Body
+
+    try {
+        $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+    }
+    catch {
+        throw $_.Exception.Message
+    }
+    $Task
+    $global:SVTtask = $Task
+    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+}
+
+<#
+.SYNOPSIS
+    Updates the IP address and credentials for the external store appliance (HPE StoreOnce)
+.DESCRIPTION
+    Updates an existing registered external store with new management IP and credentials. This command
+    should be used if the credentials on the StoreOnce appliance are changed.
+
+    External Stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped 
+    backups to HPE SimpliVity.
+.PARAMETER ExternalStoreName
+    External datastore name. This is the pre-existing Catalyst store name on HPE StoreOnce
+.PARAMETER ManagementIP
+    The IP Address of the external store appliance
+.PARAMETER Username
+    The username associated with the external datastore. HPE SimpliVity uses this to authenticate and 
+    access the external datastore
+.PARAMETER Userpass
+    The password for the specified username
+.EXAMPLE
+    PS C:\>Set-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ManagementIP 192.168.10.202 
+        -Username SVT_service -Userpass Password123
+
+    Resets the external datastore credentials and management IP address
+.INPUTS
+    system.string
+.OUTPUTS
+    HPE.SimpliVity.Task
+.NOTES
+    This command works with HPE SimpliVity 4.0.1 and above
+#>
+function Set-SVTexternalStore {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [Alias("Name")]
+        [System.String]$ExternalStoreName,
+
+        [Parameter(Mandatory = $true, Position = 2)]
+        [System.String]$ManagementIP,
+
+        [Parameter(Mandatory = $true, Position = 3)]
+        [System.String]$Username,
+
+        [Parameter(Mandatory = $true, Position = 4)]
+        [System.String]$Userpass
+    )
+
+    $Header = @{
+        'Authorization' = "Bearer $($global:SVTconnection.Token)"
+        'Accept'        = 'application/json'
+        'Content-Type'  = 'application/vnd.simplivity.v1.15+json'
+    }
+    
+    $Uri = $global:SVTconnection.OVC + '/api/external_stores/update_credentials'
+
+    $Body = @{
+        'management_ip' = $ManagementIP
+        'name'          = $ExternalStoreName
+        'password'      = $Userpass
+        'username'      = $Username
+    } | ConvertTo-Json
+    Write-Verbose $Body
+
+    try {
+        $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+    }
+    catch {
+        throw $_.Exception.Message
+    }
+    $Task
+    $global:SVTtask = $Task
+    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
 }
 
 #endregion Datastore
@@ -3123,51 +3267,54 @@ function Get-SVThost {
             $Date = $null
         }
         [PSCustomObject]@{
-            PSTypeName               = 'HPE.SimpliVity.Host'
-            PolicyEnabled            = $_.policy_enabled
-            ClusterId                = $_.omnistack_cluster_id
-            StorageMask              = $_.storage_mask
-            PotentialFeatureLevel    = $_.potential_feature_level
-            Type                     = $_.type
-            CurrentFeatureLevel      = $_.current_feature_level
-            HypervisorId             = $_.hypervisor_object_id
-            ClusterName              = $_.compute_cluster_name
-            ManagementIP             = $_.management_ip
-            FederationIP             = $_.federation_ip
-            VirtualControllerName    = $_.virtual_controller_name
-            FederationMask           = $_.federation_mask
-            Model                    = $_.model
-            DataCenterId             = $_.compute_cluster_parent_hypervisor_object_id
-            HostId                   = $_.id
-            StoreageMTU              = $_.storage_mtu
-            State                    = $_.state
-            UpgradeState             = $_.upgrade_state
-            FederationMTU            = $_.federation_mtu
-            CanRollback              = $_.can_rollback
-            StorageIP                = $_.storage_ip
-            ManagementMTU            = $_.management_mtu
-            Version                  = $_.version
-            HostName                 = $_.name
-            DataCenterName           = $_.compute_cluster_parent_name
-            HypervisorManagementIP   = $_.hypervisor_management_system
-            ManagementMask           = $_.management_mask
-            HypervisorManagementName = $_.hypervisor_management_system_name
-            HypervisorClusterId      = $_.compute_cluster_hypervisor_object_id
-            ClusterGroupIds          = $_.cluster_group_ids
-            Date                     = $Date
-            UsedLogicalCapacityGB    = '{0:n0}' -f ($_.used_logical_capacity / 1gb)
-            UsedCapacityGB           = '{0:n0}' -f ($_.used_capacity / 1gb)
-            CompressionRatio         = $_.compression_ratio
-            StoredUnCompressedDataGB = '{0:n0}' -f ($_.stored_uncompressed_data / 1gb)
-            StoredCompressedDataGB   = '{0:n0}' -f ($_.stored_compressed_data / 1gb)
-            EfficiencyRatio          = $_.efficiency_ratio
-            DeduplicationRatio       = $_.deduplication_ratio
-            LocalBackupCapacityGB    = '{0:n0}' -f ($_.local_backup_capacity / 1gb)
-            CapacitySavingsGB        = '{0:n0}' -f ($_.capacity_savings / 1gb)
-            AllocatedCapacityGB      = '{0:n0}' -f ($_.allocated_capacity / 1gb)
-            StoredVmDataGB           = '{0:n0}' -f ($_.stored_virtual_machine_data / 1gb)
-            RemoteBackupCapacityGB   = '{0:n0}' -f ($_.remote_backup_capacity / 1gb)
-            FreeSpaceGB              = '{0:n0}' -f ($_.free_space / 1gb)
+            PSTypeName                = 'HPE.SimpliVity.Host'
+            ClusterFeatureLevel       = $_.cluster_feature_level
+            PolicyEnabled             = $_.policy_enabled
+            HypervisorClusterId       = $_.compute_cluster_hypervisor_object_id
+            StorageMask               = $_.storage_mask
+            PotentialFeatureLevel     = $_.potential_feature_level
+            Type                      = $_.type
+            CurrentFeatureLevel       = $_.current_feature_level
+            ClusterId                 = $_.omnistack_cluster_id
+            HypervisorId              = $_.hypervisor_object_id
+            ClusterName               = $_.compute_cluster_name
+            ManagementIP              = $_.management_ip
+            FederationIP              = $_.federation_ip
+            VirtualControllerName     = $_.virtual_controller_name
+            FederationMask            = $_.federation_mask
+            Model                     = $_.model
+            DataCenterId              = $_.compute_cluster_parent_hypervisor_object_id
+            HostId                    = $_.id
+            StoreageMTU               = $_.storage_mtu
+            State                     = $_.state
+            UpgradeState              = $_.upgrade_state
+            FederationMTU             = $_.federation_mtu
+            CanRollback               = $_.can_rollback
+            StorageIP                 = $_.storage_ip
+            ClusterGroupIds           = $_.cluster_group_ids
+            ManagementMTU             = $_.management_mtu
+            Version                   = $_.version
+            HostName                  = $_.name
+            DataCenterName            = $_.compute_cluster_parent_name
+            HypervisorManagementIP    = $_.hypervisor_management_system
+            ManagementMask            = $_.management_mask
+            HypervisorManagementName  = $_.hypervisor_management_system_name
+            Date                      = $Date
+            UsedLogicalCapacityGB     = '{0:n0}' -f ($_.used_logical_capacity / 1gb)
+            UsedCapacityGB            = '{0:n0}' -f ($_.used_capacity / 1gb)
+            CompressionRatio          = $_.compression_ratio
+            StoredUnCompressedDataGB  = '{0:n0}' -f ($_.stored_uncompressed_data / 1gb)
+            StoredCompressedDataGB    = '{0:n0}' -f ($_.stored_compressed_data / 1gb)
+            EfficiencyRatio           = $_.efficiency_ratio
+            DeduplicationRatio        = $_.deduplication_ratio
+            LocalBackupCapacityGB     = '{0:n0}' -f ($_.local_backup_capacity / 1gb)
+            CapacitySavingsGB         = '{0:n0}' -f ($_.capacity_savings / 1gb)
+            AllocatedCapacityGB       = '{0:n0}' -f ($_.allocated_capacity / 1gb)
+            StoredVmDataGB            = '{0:n0}' -f ($_.stored_virtual_machine_data / 1gb)
+            RemoteBackupCapacityGB    = '{0:n0}' -f ($_.remote_backup_capacity / 1gb)
+            FreeSpaceGB               = '{0:n0}' -f ($_.free_space / 1gb)
+            AvailabilityZoneEffective = $_.availability_zone_effective
+            AvailabilityZonePlanned   = $_.availability_zone_planned
         }
     }
 }
@@ -3700,6 +3847,7 @@ function Start-SVTshutdown {
 
     # Exit if the virtual controller is already off
     if ($ThisHost.State -ne 'ALIVE') {
+        $ThisHost.State
         throw "The HPE Omnistack Virtual Controller on $($ThisHost.HostName) is not running"
     } 
 
@@ -3754,8 +3902,7 @@ function Start-SVTshutdown {
                 throw $_.Exception.Message
             }
 
-            Write-Output "Shutting down the last virtual controller in the $ThisCluster cluster " +
-            "now ($($ThisHost.HostName))"  
+            Write-Output "Shutting down the last virtual controller in the $ThisCluster cluster now ($($ThisHost.HostName))"  
         }
 
         if ($NextHost) {
@@ -4432,7 +4579,9 @@ function Get-SVTpolicy {
                         MaxBackup         = $_.max_backups
                         Day               = $_.days
                         RuleId            = $_.id
-                        RetentionDay      = [math]::Round($_.retention / 1440)
+                        RetentionDay      = [math]::Round($_.retention / 1440) #Retention is in minutes
+                        RetentionHour     = [math]::Round($_.retention / 60) #Retention is in minutes
+                        RetentionMinute   = $_.retention
                         ExternalStoreName = $_.external_store_name
                     }
                 } # end if
@@ -4534,6 +4683,8 @@ function New-SVTpolicy {
     Must be between 1 and 1440 minutes (24 hours).
 .PARAMETER RetentionDay
     Specifies the retention, in days.
+.PARAMETER RetentionHour
+    Specifies the retention, in hours. This parameter takes precedence if RetentionDay is also specified.
 .PARAMETER ConsistencyType
     Available options are:
     1. NONE - This is the default and creates a crash consistent backup
@@ -4560,7 +4711,12 @@ function New-SVTpolicy {
 
     Adds a new rule to the specified policy to run backups on the specified weekdays and retain backup for a week.
 .EXAMPLE
-    PS C:\>New-SVTpolicyRule -PolicyName Silver -Last -ClusterName Prod `
+    PS C:\>New-SVTpolicyRule -PolicyName ShortTerm -RetentionHour 4 -FrequencyMin 60 -StartTime 09:00 -EndTime 17:00
+
+    Add a new rule to a policy called ShortTerm, to backup once per hour during office hours and retain the
+    backup for 4 hours. (Note: -RetentionHour takes precendence over -RetentionDay if both are specified)
+.EXAMPLE
+    PS C:\>New-SVTpolicyRule -PolicyName Silver -LastDay -ClusterName Prod `
         -RetentionDay 30 -ConsistencyType VSS
 
     Adds a new rule to the specified policy to run an application consistent backup on the last day 
@@ -4577,39 +4733,42 @@ function New-SVTpolicyRule {
         [Parameter(Mandatory = $true, Position = 0)]
         [System.String]$PolicyName,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByAllDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByAllDay')]
         [switch]$All,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByWeekDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByWeekDay')]
         [array]$WeekDay,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByMonthDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByMonthDay')]
         [array]$MonthDay,
 
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'ByLastDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByLastDay')]
         [switch]$LastDay,
 
-        [Parameter(Mandatory = $false, Position = 2)]
+        [Parameter(Mandatory = $false)]
         [System.String]$DestinationName,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Mandatory = $false)]
         [System.String]$StartTime = '00:00',
 
-        [Parameter(Mandatory = $false, Position = 4)]
+        [Parameter(Mandatory = $false)]
         [System.String]$EndTime = '00:00',
 
-        [Parameter(Mandatory = $false, Position = 5)]
+        [Parameter(Mandatory = $false)]
         [ValidateRange(1, 1440)]
         [System.String]$FrequencyMin = 1440, # Default is once per day
 
-        [Parameter(Mandatory = $false, Position = 6)]
+        [Parameter(Mandatory = $false)]
         [System.Int32]$RetentionDay = 1,
 
-        [Parameter(Mandatory = $false, Position = 7)]
+        [Parameter(Mandatory = $false)]
+        [System.Int32]$RetentionHour,
+
+        [Parameter(Mandatory = $false)]
         [ValidateSet('NONE', 'DEFAULT', 'VSS')]  #'FAILEDVSS', 'NOT_APPLICABLE'
         [System.String]$ConsistencyType = 'NONE',
 
-        [Parameter(Mandatory = $false, Position = 8)]
+        [Parameter(Mandatory = $false)]
         [switch]$ReplaceRules
     )
 
@@ -4679,15 +4838,22 @@ function New-SVTpolicyRule {
         $TargetDay = 'all'
     }
 
-    if ($StartTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
+    if ($StartTime -notmatch '^([01]\d|2[0-3]):?([0-5]\d)$') {
         throw "Start time invalid. It must be in the form 00:00 (24 hour time). e.g. -StartTime 06:00"
     }
-    if ($EndTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
+    if ($EndTime -notmatch '^([01]\d|2[0-3]):?([0-5]\d)$') {
         throw "End time invalid. It must be in the form 00:00 (24 hour time). e.g. -EndTime 23:30"
     }
 
-    # The new HTML5 client doesn't expose application consistent tick box - application_consistent must be
-    # true if consitency_type is VSS or DEFAULT. Otherwise the API sets it to NONE.
+    if ($PSBoundParameters.ContainsKey('RetentionHour')) {
+        $Retention = $RetentionHour * 60  #Retention is in minutes
+    }
+    else {
+        $Retention = $RetentionDay * 1440 #Retention is in minutes
+    }
+ 
+    # The plugin doesn't expose application consistent tick box - application_consistent must be
+    # true if consistency_type is VSS or DEFAULT. Otherwise the API sets it to NONE.
     $ConsistencyType = $ConsistencyType.ToUpper()
     if ($ConsistencyType -eq 'NONE') {
         $ApplicationConsistent = $false
@@ -4698,7 +4864,7 @@ function New-SVTpolicyRule {
 
     $Body += @{
         'frequency'              = $FrequencyMin
-        'retention'              = $RetentionDay * 1440  # Retention is in minutes
+        'retention'              = $Retention
         'days'                   = $TargetDay
         'start_time'             = $StartTime
         'end_time'               = $EndTime
@@ -4761,6 +4927,9 @@ function New-SVTpolicyRule {
 .PARAMETER RetentionDay
     Specifies the backup retention, in days.
     If not set, the existing policy rule setting is used
+.PARAMETER RetentionHour
+    Specifies the backup retention, in hours. This parameter takes precedence if RetentionDay is also specified.
+    If not set, the existing policy rule setting is used
 .PARAMETER ConsistencyType
     Available options are:
     1. NONE - This is the default and creates a crash consistent backup
@@ -4775,15 +4944,22 @@ function New-SVTpolicyRule {
     Updates rule number 2 in the specified policy with a new weekday policy. start and finish times. This command 
     inherits the existing retention, frequency, and application consistency settings from the existing rule.
 .EXAMPLE
-    PS C:\>Update-SVTPolicyRule -Policy Bronze -RuleNumber 1 -Last
-    PS C:\>Update-SVTPolicyRule Bronze 1 -Last
+    PS C:\>Update-SVTPolicyRule -Policy Bronze -RuleNumber 1 -LastDay
+    PS C:\>Update-SVTPolicyRule Bronze 1 -LastDay
     
     Both commands update rule 1 in the specified policy with a new day. All other settings are inherited from
     the existing backup policy rule.
 .EXAMPLE
-    PS C:\>Update-SVTPolicyRule Silver 3 -MonthDay 1,7,14,21
+    PS C:\>Update-SVTPolicyRule Silver 3 -MonthDay 1,7,14,21 -RetentionDay 30
 
-    Updates the existing rule 3 in the specified policy to perform backups four times a month on the specified days.
+    Updates the existing rule 3 in the specified policy to perform backups four times a month on the specified 
+    days and retains the backup for 30 days.
+.EXAMPLE
+    PS C:\>Update-SVTPolicyRule Gold 1 -All -RetentionHour 1 -FrequencyMin 20 -StartTime 9:00 -EndTime 17:00
+
+    Updates the existing rule 1 in the Gold policy to backup 3 times per hour every day during office hours and 
+    retain each backup for 1 hour. (Note: -RetentionHour takes precedence over -RetentionDay if both are 
+    specified).
 .INPUTS
     System.String
 .OUTPUTS
@@ -4802,32 +4978,35 @@ function Update-SVTpolicyRule {
         [Parameter(Mandatory = $true, Position = 1)]
         [System.String]$RuleNumber,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByAllDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByAllDay')]
         [switch]$All,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByWeekDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByWeekDay')]
         [array]$WeekDay,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByMonthDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByMonthDay')]
         [array]$MonthDay,
 
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = 'ByLastDay')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByLastDay')]
         [switch]$LastDay,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Mandatory = $false)]
         [System.String]$StartTime,
 
-        [Parameter(Mandatory = $false, Position = 4)]
+        [Parameter(Mandatory = $false)]
         [System.String]$EndTime,
 
-        [Parameter(Mandatory = $false, Position = 5)]
+        [Parameter(Mandatory = $false)]
         [ValidateRange(1, 1440)]
         [System.String]$FrequencyMin,
 
-        [Parameter(Mandatory = $false, Position = 6)]
-        [System.Int32]$RetentionDay, 
+        [Parameter(Mandatory = $false)]
+        [System.Int32]$RetentionDay,
 
-        [Parameter(Mandatory = $false, Position = 7)]
+        [Parameter(Mandatory = $false)]
+        [System.Int32]$RetentionHour,
+
+        [Parameter(Mandatory = $false)]
         [ValidateSet('NONE', 'DEFAULT', 'VSS', 'FAILEDVSS', 'NOT_APPLICABLE')]
         [System.String]$ConsistencyType
     )
@@ -4873,7 +5052,7 @@ function Update-SVTpolicyRule {
     }
 
     if ($PSBoundParameters.ContainsKey('StartTime')) {
-        if ($StartTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
+        if ($StartTime -notmatch '^([01]\d|2[0-3]):?([0-5]\d)$') {
             throw "Start time invalid. It must be in the form 00:00 (24 hour time). e.g. -StartTime 06:00"
         }
     }
@@ -4883,7 +5062,7 @@ function Update-SVTpolicyRule {
     }
 
     if ($PSBoundParameters.ContainsKey('EndTime')) {
-        if ($EndTime -notmatch '^[0-2][0-9]:[0-5][0-9]$') {
+        if ($EndTime -notmatch '^([01]\d|2[0-3]):?([0-5]\d)$') {
             throw "End time invalid. It must be in the form 00:00 (24 hour time). e.g. -EndTime 23:30"
         }
     }
@@ -4897,9 +5076,15 @@ function Update-SVTpolicyRule {
         Write-Verbose "Inheriting existing backup frequency of $FrequencyMin minutes"
     }
 
-    if ( -not $PSBoundParameters.ContainsKey('RetentionDay')) {
-        $RetentionDay = $Policy | Select-Object -ExpandProperty RetentionDay
-        Write-Verbose "Inheriting existing retention of $RetentionDay days"
+    if ($PSBoundParameters.ContainsKey('RetentionHour')) {
+        $Retention = $RetentionHour * 60  #Retention is in minutes
+    }
+    elseif ($PSBoundParameters.ContainsKey('RetentionDay')) {
+        $Retention = $RetentionDay * 1440 #Retention is in minutes
+    }
+    else {
+        $Retention = ($Policy | Select-Object -ExpandProperty RetentionMinute)
+        Write-Verbose "Inheriting existing retention of $Retention minutes"
     }
 
     if ( -not $PSBoundParameters.ContainsKey('ConsistencyType')) {
@@ -4919,7 +5104,7 @@ function Update-SVTpolicyRule {
 
     $Body = @{
         'frequency'              = $FrequencyMin
-        'retention'              = $RetentionDay * 1440  # Retention is in minutes
+        'retention'              = $Retention
         'days'                   = $TargetDay
         'start_time'             = $StartTime
         'end_time'               = $EndTime
@@ -5166,7 +5351,10 @@ function Remove-SVTpolicy {
 .EXAMPLE
     PS C:\>Suspend-SVTpolicy -Federation
 
-    Suspends backup policies for the federation
+    Suspends backup policies for the entire federation
+
+    NOTE: This command will only work when connected to an OmniStack virtual controller, (not when connected
+    to a management virtual appliance)
 .EXAMPLE
     PS C:\>Suspend-SVTpolicy -ClusterName Prod
 
@@ -5260,6 +5448,9 @@ function Suspend-SVTpolicy {
     PS C:\>Resume-SVTpolicy -Federation
 
     Resumes backup policies for the federation
+
+    NOTE: This command will only work when connected to an OmniStack virtual controller, (not when connected
+    to a management virtual appliance)
 .EXAMPLE
     PS C:\>Resume-SVTpolicy -ClusterName Prod
 

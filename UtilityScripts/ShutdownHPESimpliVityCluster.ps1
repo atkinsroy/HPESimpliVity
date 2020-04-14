@@ -161,8 +161,7 @@ Function Write-Log {
     $MessageType = @("[INFO]", "[WARNING]", "[ERROR]")
     "$LogDate $($MessageType[$LogType]) $Message" | Add-Content -Path $Logfile
 
-    # Not using Start-Transcript to support the use of color in interactive sessions.
-    # Start-Transcript is used during virtual controller shutdown to capture verbose stream output 
+    # support the use of color in interactive sessions.
     $MessageColour = @("Green", "Yellow", "Red")
     Write-Host "$LogDate " -ForegroundColor Cyan -NoNewline
     Write-Host "$($MessageType[$LogType]) " -ForegroundColor $MessageColour[$LogType] -NoNewline
@@ -349,10 +348,7 @@ if ($Force) {
     try {
         $HostList | ForEach-Object {
             Write-Log "Shutting down the HPE Omnistack virtual controller on host $($_.Hostname)..."
-            # Using Start-Transcript capture verbose and error streams to log file.
-            Start-Transcript -Path $LogFile -Append | Out-Null
             $null = Start-SVTshutdown -HostName $_.Hostname -Confirm:$False -ErrorAction Stop
-            Stop-Transcript | Out-Null
             Write-Log "Successfully shutdown HPE Omnistack virtual controller on host $($_.Hostname)"
         }
     }
@@ -365,10 +361,7 @@ else {
     try {
         $HostList | Foreach-Object {
             Write-Log "Shutting down the HPE Omnistack virtual controller on host $($_.Hostname)..."
-            # Using Start-Transcript capture verbose and error streams to log file.
-            Start-Transcript -Path $LogFile -Append | Out-Null
             Start-SVTshutdown -HostName $_.Hostname -Whatif -ErrorAction Stop
-            Stop-Transcript | Out-Null
             Write-Log "Successfully shutdown HPE Omnistack virtual controller on host $($_.Hostname)"
         }
     }
