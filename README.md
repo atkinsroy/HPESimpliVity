@@ -50,7 +50,7 @@ New-SVTexternalStore | Get-SVTpolicyScheduleReport
 Set-SVTexternalStore
 Remove-SVTexternalStore
 
-Cluster & Utility &nbsp; | Host &nbsp; | Virtual Machine
+Cluster & Utility &nbsp; &nbsp; &nbsp; | Host &nbsp; &nbsp; &nbsp; | Virtual Machine
 --- | --- | ---
 Get-SVTcluster | Get-SVThost | Get-SVTvm
 Get-SVTclusterConnected | Get-SVThardware | Move-SVTvm
