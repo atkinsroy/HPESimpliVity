@@ -53,7 +53,7 @@ Set-SVTexternalStore
 Remove-SVTexternalStore
 
 Cluster & Utility | Host | VM
---- | --- | ---
+----- | ----- | -----
 Get-SVTcluster | Get-SVThost | Get-SVTvm
 Get-SVTclusterConnected | Get-SVThardware | Move-SVTvm
 Connect-SVT | Remove-SVThost | New-SVTclone
