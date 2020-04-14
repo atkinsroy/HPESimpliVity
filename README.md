@@ -37,33 +37,32 @@ Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
 The module contains 56 exported cmdlets, divided into the following feature categories:
 
-Datastore & Cluster | Backup Policy | Backups
+Datastore | Backup Policy | Backups
 --- | --- | ---
-Get-SVTcluster | Suspend-SVTpolicy | Stop-SVTbackup
-Get-SVTclusterConnected | Rename-SVTpolicy | Rename-SVTbackup
-Get-SVTdatastore | Resume-SVTpolicy | Lock-SVTbackup
-Publish-SVTdatastore | New-SVTpolicy | Remove-SVTbackup
-New-SVTbackup | Remove-SVTpolicy | Remove-SVTdatastore
-Resize-SVTdatastore | Get-SVTpolicy | Copy-SVTbackup
-New-SVTdatastore | New-SVTpolicyRule | Get-SVTbackup
-Unpublish-SVTdatastore | Update-SVTpolicyRule | Set-SVTbackupRetention
-Get-SVTdatastoreComputeNode | Remove-SVTpolicyRule | Update-SVTbackupUniqueSize
-Set-SVTdatastorePolicy | Get-SVTpolicyScheduleReport 
-Get-SVTexternalStore
-New-SVTexternalStore
+Get-SVTdatastore | Suspend-SVTpolicy | Stop-SVTbackup
+New-SVTdatastore | Rename-SVTpolicy | Rename-SVTbackup
+Remove-SVTdatastore | Resume-SVTpolicy | Lock-SVTbackup
+Resize-SVTdatastore | New-SVTpolicy | Remove-SVTbackup
+Publish-SVTdatastore | Remove-SVTpolicy | New-SVTbackup
+Unpublish-SVTdatastore | Get-SVTpolicy | Copy-SVTbackup
+Get-SVTdatastoreComputeNode | New-SVTpolicyRule | Get-SVTbackup
+Set-SVTdatastorePolicy | Update-SVTpolicyRule | Set-SVTbackupRetention
+Get-SVTexternalStore | Remove-SVTpolicyRule | Update-SVTbackupUniqueSize
+New-SVTexternalStore | Get-SVTpolicyScheduleReport 
 Set-SVTexternalStore
 Remove-SVTexternalStore
 
-VM | Host | Utility
+Cluster & Utility | Host | VM
 --- | --- | ---
-New-SVTclone | Get-SVThardware | Connect-SVT
-Get-SVTvm | Get-SVThost | Get-SVTcapacity
-Start-SVTvm | Remove-SVThost | Get-SVTmetric
-Move-SVTvm | Start-SVTshutdown | Get-SVTtask
-Restore-SVTvm | Stop-SVTshutdown | Get-SVTtimezone
-Stop-SVTvm | Get-SVTshutdownStatus | Set-SVTtimezone
-Set-SVTvmPolicy | Get-SVTthroughput | Get-SVTversion
-Get-SVTvmReplicaSet | Get-SVTdisk
+Get-SVTcluster | Get-SVThost | Get-SVTvm
+Get-SVTclusterConnected | Get-SVThardware | Move-SVTvm
+Connect-SVT | Remove-SVThost | New-SVTclone
+Get-SVTcapacity | Start-SVTshutdown | Restore-SVTvm
+Get-SVTmetric | Stop-SVTshutdown | Start-SVTvm
+Get-SVTtask | Get-SVTshutdownStatus | Stop-SVTvm
+Get-SVTtimezone | Get-SVTthroughput | Set-SVTvmPolicy
+Set-SVTtimezone | Get-SVTdisk | Get-SVTvmReplicaSet
+Get-SVTversion
 
 ## Requirements
 
