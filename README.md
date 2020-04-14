@@ -53,7 +53,7 @@ Set-SVTexternalStore
 Remove-SVTexternalStore
 
 Cluster & Utility | Host | VM
------ | ----- | -----
+--- | --- | ---
 Get-SVTcluster | Get-SVThost | Get-SVTvm
 Get-SVTclusterConnected | Get-SVThardware | Move-SVTvm
 Connect-SVT | Remove-SVThost | New-SVTclone
@@ -110,7 +110,7 @@ and then in your script, import the credential:
 
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
-## Known issues with V4.0.0 of the API (With HPESimpliVity 2.0.28)
+## Known issues with V4.0.1 of the API (With HPESimpliVity 2.1.4)
 
 The API has some documented and undocumented issues:
 * OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation
@@ -128,8 +128,5 @@ The API has some documented and undocumented issues:
 * Backups stored on external stores cannot be deleted if the VM has been deleted, with a backup not found error. This does not apply to backups stored on clusters. This restriction is specific to the API; the CLI command svt-backup-delete works as expected for external store backups.
 * the PUT /policies/\<policyid\>/rules/\<ruleid\> API call (implementmented in Update-SVTpolicyRule) doesn't work as expected in some circumstances. Changing a rules' destination is not supported (this is documented), but in addition, changing the consistancy type to anything other than NONE or DEFAULT doesn't work. If you attempt to change the consistenct type to VSS, for example, the command is ignored. In this scenario, a work around would be to delete the rule entirely from the policy using Remove-SVTpolicyRule and then use New-SVTpolicyRule to create a new rule with the desired destination, consistenecy type and other settings.
 * Using GET /backups with a specific cluster_id (implemented as Get-SVTbackup -DestinationName \<ClusterName\>) will result in backups located on the specified cluster AND external stores too. This issue only applies when connected to an OVC; calls to an MVA work as expected. In either case, filtering on an external store works as expected (e.g. Get-SVTbackup -DestinationName ExternalStore1)
-
-## Things to do
-* Test using PowerShell 7.0 (Windows and Linux)
 
 If you would like to keep up to date with changes, please subscribe to receive notifications.
