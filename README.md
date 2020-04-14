@@ -68,7 +68,7 @@ Get-SVTversion
 
 * PowerShell V5.1 and above. (note that the chart features do not work with PowerShell Core 6.0 or PowerShell 7.0)
 * The IP address and the credentials of an authorized OmniStack user account.
-* Tested with HPE SimpliVity V4.0.0. The module should be compatible with older versions, but has not been tested. 
+* Tested with HPE SimpliVity V4.0.1. The module should be compatible with older versions, but has not been tested. 
 
 ## Installation
 
