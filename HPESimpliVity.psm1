@@ -3,7 +3,7 @@
 #
 # Description:
 #   This module provides management cmdlets for HPE SimpliVity via the
-#   REST API. This module has been tested with both VMware and Hyper-V.
+#   REST API. This module has been tested with the VMware version only.
 #
 # Website:
 #   https://github.com/atkinsroy/HPESimpliVity

@@ -1,6 +1,6 @@
 # Version 2.1.4
 
-* Added support for new features in HPE SimpliVity V4.0.1
+* Added support for the new features in HPE SimpliVity V4.0.1
 * Added two new commands, Set-SVTexternalStore and Remove-SVTexternalStore. The first command allows you to change the credentials used by the HPE StoreOnce appliance for the specified external store. The second command allows you to unregister the specified external store
 * Added a new parameter -RetentionHour to New-SVTpolicyRule and Update-SVTpolicyRule. You can now specify retention by day or by hour; if both are specified, hour takes precedence
 * Added RetentionHour and RetentionMinute properties to Get-SVTpolicy

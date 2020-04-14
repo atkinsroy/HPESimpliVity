@@ -53,6 +53,7 @@ Get-SVTexternalStore
 New-SVTexternalStore
 Set-SVTexternalStore
 Remove-SVTexternalStore
+
 VM | Host | Utility
 --- | --- | ---
 New-SVTclone | Get-SVThardware | Connect-SVT
