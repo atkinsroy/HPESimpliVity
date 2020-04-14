@@ -5351,7 +5351,10 @@ function Remove-SVTpolicy {
 .EXAMPLE
     PS C:\>Suspend-SVTpolicy -Federation
 
-    Suspends backup policies for the federation
+    Suspends backup policies for the entire federation
+
+    NOTE: This command will only work when connected to an OmniStack virtual controller, (not when connected
+    to a management virtual appliance)
 .EXAMPLE
     PS C:\>Suspend-SVTpolicy -ClusterName Prod
 
@@ -5445,6 +5448,9 @@ function Suspend-SVTpolicy {
     PS C:\>Resume-SVTpolicy -Federation
 
     Resumes backup policies for the federation
+
+    NOTE: This command will only work when connected to an OmniStack virtual controller, (not when connected
+    to a management virtual appliance)
 .EXAMPLE
     PS C:\>Resume-SVTpolicy -ClusterName Prod
 

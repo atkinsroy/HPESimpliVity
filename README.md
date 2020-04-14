@@ -2,7 +2,7 @@
 
 This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage a HPE SimpliVity federation. It works by connecting to any HPE OmniStack Virtual Controller in your environment.
 
-All cmdlets are written as advanced cmdlets, with extensive comment based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records to 500 when returning virtual machines and backup objects.
+All cmdlets are written as advanced cmdlets, with comment based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records to 500 when returning virtual machines and backup objects.
 
 Most "Get" commands provide too many properties to show at once, so default display properties are shown. All properties are still accessible, by piping to Format-List or Select-Object -property *
 
@@ -28,34 +28,33 @@ For example:
     .
     .
 ```
-## Update V2.0.28 new features
+## Update V2.1.4 new features
 
-* Supports the new features in HPE SimpliVity 4.0.0. Specifically, the ability to add and show external store information (HPE StoreOnce is currently supported) and the ability to backup/restore to/from external stores. 
-* Added support for multiple value parameters to most of the "GET" commands. This works best when connected to a Management Virtual Appliance (MVA) rather than an OmniStack Virtual Controller (OVC). (See known issues below)
-* Added support for new HPE SimpliVity hardware models.
+* Supports the new features in HPE SimpliVity 4.0.1. Specifically, the ability to delete external stores and reset the credentials of external stores 
+* Added support to create and update backup policies with a rentention specified in hours. The ability to specify rentention in days still exists. 
 
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
-The module contains 54 exported cmdlets, divided into the following feature categories:
+The module contains 56 exported cmdlets, divided into the following feature categories:
 
-Backups | Backup Policy | Datastore & Cluster
+Datastore & Cluster | Backup Policy | Backups
 --- | --- | ---
-Stop-SVTbackup | Suspend-SVTpolicy | Get-SVTcluster
-Rename-SVTbackup | Rename-SVTpolicy | Get-SVTclusterConnected
-Lock-SVTbackup | Resume-SVTpolicy | Get-SVTdatastore
-Remove-SVTbackup | New-SVTpolicy | Publish-SVTdatastore
+Get-SVTcluster | Suspend-SVTpolicy | Stop-SVTbackup
+Get-SVTclusterConnected | Rename-SVTpolicy | Rename-SVTbackup
+Get-SVTdatastore | Resume-SVTpolicy | Lock-SVTbackup
+Publish-SVTdatastore | New-SVTpolicy | Remove-SVTbackup
 New-SVTbackup | Remove-SVTpolicy | Remove-SVTdatastore
-Copy-SVTbackup | Get-SVTpolicy | Resize-SVTdatastore
-Get-SVTbackup | New-SVTpolicyRule | New-SVTdatastore 
-Set-SVTbackupRetention | Update-SVTpolicyRule | Unpublish-SVTdatastore
-Update-SVTbackupUniqueSize | Remove-SVTpolicyRule | Get-SVTdatastoreComputeNode
-&nbsp; | Get-SVTpolicyScheduleReport | Set-SVTdatastorePolicy
-&nbsp; | &nbsp; | Get-SVTexternalStore
-&nbsp; | &nbsp; | New-SVTexternalStore
-
-
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; VM &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Host &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; |  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Utility &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
----------------- | --- | ---
+Resize-SVTdatastore | Get-SVTpolicy | Copy-SVTbackup
+New-SVTdatastore | New-SVTpolicyRule | Get-SVTbackup
+Unpublish-SVTdatastore | Update-SVTpolicyRule | Set-SVTbackupRetention
+Get-SVTdatastoreComputeNode | Remove-SVTpolicyRule | Update-SVTbackupUniqueSize
+Set-SVTdatastorePolicy | Get-SVTpolicyScheduleReport 
+Get-SVTexternalStore
+New-SVTexternalStore
+Set-SVTexternalStore
+Remove-SVTexternalStore
+VM | Host | Utility
+--- | --- | ---
 New-SVTclone | Get-SVThardware | Connect-SVT
 Get-SVTvm | Get-SVThost | Get-SVTcapacity
 Start-SVTvm | Remove-SVThost | Get-SVTmetric
