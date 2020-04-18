@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.4'
+$HPESimplivityVersion = '2.1.5'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -1061,7 +1061,7 @@ function Get-SVTcapacityChart {
     $ChartTitleFont = 'Arial, 13pt'
     $DateStamp = Get-Date -Format "yyMMddhhmmss"
 
-    $objectlist = $Capacity.HostName | Select-Object -Unique
+    $ObjectList = $Capacity.HostName | Select-Object -Unique
     foreach ($Instance in $ObjectList) {
         $Cap = $Capacity | Where-Object HostName -eq $Instance | Select-Object -Last 1
 
@@ -1114,13 +1114,13 @@ function Get-SVTcapacityChart {
 
         $Max = $DataSource.Values | Measure-Object -Maximum | Select-Object -ExpandProperty Maximum
         if ($Max -lt 10000) {
-            $Area1.AxisY.Interval = 500
-        }
-        elseif ($Max -lt 20000) {
             $Area1.AxisY.Interval = 1000
         }
-        else {
+        elseif ($Max -lt 20000) {
             $Area1.AxisY.Interval = 5000
+        }
+        else {
+            $Area1.AxisY.Interval = 20000
         }
         $Area1.AxisX.Interval = 1
         $Chart1.ChartAreas["ChartArea1"].AxisY.LabelStyle.Angle = 0
