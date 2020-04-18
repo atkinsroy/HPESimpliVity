@@ -49,7 +49,7 @@ Get-SVTexternalStore | Remove-SVTpolicyRule | Update-SVTbackupUniqueSize
 New-SVTexternalStore | Get-SVTpolicyScheduleReport 
 Set-SVTexternalStore
 Remove-SVTexternalStore
-#&nbsp;
+||&nbsp;
 **Cluster & Utility** | **Host** | **VM**
 Get-SVTcluster | Get-SVThost | Get-SVTvm
 Get-SVTclusterConnected | Get-SVThardware | Move-SVTvm
