@@ -29,7 +29,7 @@ Most "Get" commands display default properties; use Format-List or Select-Object
 ## Update V2.1.4 new features
 
 * Supports the new features in HPE SimpliVity 4.0.1. Specifically, the ability to delete external stores and reset the credentials of external stores 
-* Added support to create and update backup policies with a rentention specified in hours. The ability to specify rentention in days still exists. 
+* Added support to create and update backup policies with a rentention specified in hours. The ability to specify retention in days still exists. 
 
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
