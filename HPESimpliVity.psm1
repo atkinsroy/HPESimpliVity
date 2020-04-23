@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.5'
+$HPESimplivityVersion = '2.1.8'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -2315,6 +2315,290 @@ function Update-SVTbackupUniqueSize {
     }
 }
 
+<#
+.SYNOPSIS
+    Display the virtual disk, partition and file information from a SimpliVity backup
+.DESCRIPTION
+    This command will produce different output, depending on the parameters provided.
+    BackupId is a mandatory parameter and can be passed in from Get-SVTbackup 
+    
+    If no optional parameters are provided, or if VirtualDisk is not specified, the virtual disks contained 
+    in the backup are shown. If the virtual disk name is provided, the partitions within the specified virtual 
+    disk are shown. If the virtual disk and partition are provided, the files in the root path for the partition 
+    are shown. If all three optional parameters are provided, the specified backed up files are shown.
+
+    Notes:
+    1. This command only works on guests running Microsoft Windows
+    2. This command only works with native SimpliVity backups. (Backups on StoreOnce appliances do not work)
+    3. Virtual disk names and folder paths are case sensitive
+.PARAMETER BackupId
+    The Backup Id for the desired backup. Use Get-SVTbackup to output the required backup as input for this command
+.PARAMETER VirtualDisk
+    The virtual disk name contained within the backup, including file suffix (".vmdk")
+.PARAMETER PartitionNumber
+    The partition number within the specfied virtual disk
+.PARAMETER FilePath
+    The folder path for the backed up files
+.EXAMPLE
+    PS C:\>$Backup = Get-SVTbackup -VmName Server2016-01 -Latest
+    PS C:\>$Backup | Get-SVTfile
+
+    The first command identifies the latest backup of the specified VM. The second command displays the
+    virtual disks contained within the backup
+.EXAMPLE
+    PS C:\>$Backup = Get-SVTbackup | Where DestinationName -eq SVTcluster | Select -First 1
+    PS C:\>$Backup | Get-SVTfile -VirtualDisk Server2016-01.vmdk
+
+    The first command identifies the latest backup of the specified VM. The second command displays the
+    partitions within the specified virtual disk. Virtual disk names are case sensitive
+.EXAMPLE 
+    PS C:\> Get-SVTfile -BackupId 5f5f7f06-a485-42eb-b4c0-0b509609c8fb -VirtualDisk Server2016-01.vmdk -PartitionNumber 4
+
+    Shows the backed up files at the root of the specified partition
+.EXAMPLE
+    PS C:\> Get-SVTfile -BackupId 5f5f7f06-a485-42eb-b4c0-0b509609c8fb Server2016-01.vmdk 4
+
+    Shows the backed up files at the root of the specified partition, using positional parameters
+.EXAMPLE
+    PS C:\> Get-SVTfile -BackupId 5f5f7f06-a485-42eb-b4c0-0b509609c8fb Server2016-01.vmdk 4 /Users/Administrator/Documents
+
+    Shows the specified backed up files within the specified partition, using positional parameters. File names
+    are case sensitive.
+.EXAMPLE
+    PS C:\>$Backup = '5f5f7f06-a485-42eb-b4c0-0b509609c8fb'
+    PS C:\>$Backup | Get-SVTfile -VirtualDisk Server2016-01.vmdk -PartitionNumber 4 -FilePath '/Program Files'
+
+    The first command identifies the desired backup. The second command displays the specified backed up files using
+    named parameters. Quotes are used because the file path contains a space. File names are case sensitive.
+.INPUTS
+    System.String
+    HPE.SimpliVity.Backup
+.OUTPUTS
+    HPE.SimpliVity.VirtualDisk
+    HPE.SimpliVity.Partition
+    HPE.SimpliVity.File
+.NOTES
+#>
+function Get-SVTfile {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, 
+            ValueFromPipelinebyPropertyName = $true)]
+        [System.String]$BackupId,
+
+        [Parameter(Mandatory = $false, Position = 0)]
+        [System.String]$VirtualDisk,
+
+        [Parameter(Mandatory = $false, Position = 1)]
+        [System.String]$PartitionNumber,
+
+        [Parameter(Mandatory = $false, Position = 2)]
+        [System.String]$FilePath
+    )
+
+    begin {
+        $Header = @{
+            'Authorization' = "Bearer $($global:SVTconnection.Token)"
+            'Accept'        = 'application/json'
+        }
+        $LocalFormat = Get-SVTLocalDateFormat
+    }
+
+    process {
+        foreach ($BkpId in $BackupId) {
+            # User specifies the virtual disk, partition and the file path. In this case, show the specified 
+            # files within the backup
+            if ('VirtualDisk' -in $PSBoundParameters.Keys -and 'PartitionNumber' -in $PSBoundParameters.Keys) {
+                if ('FilePath' -in $PSBoundParameters.Keys) {
+                    $Folder = $FilePath #-replace '/', '%2F'
+                } 
+                else {
+                    #File path was not specified, so show the root path ('/')
+                    $Folder = '/' #'%2F'
+                }
+                $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/virtual_disk_partition_files' +
+                '?virtual_disk=' + $VirtualDisk + '&partition_number=' + $PartitionNumber +
+                '&file_path=' + $Folder
+                try {
+                    $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
+                    $Response.virtual_disk_partition_files | ForEach-Object {
+                        if ($_.last_modified -as [datetime]) {
+                            $LastModified = Get-Date -Date $_.last_modified -Format $LocalFormat
+                        }
+                        else {
+                            $LastModified = $null
+                        } 
+                        [PSCustomObject]@{
+                            PSTypeName           = 'HPE.SimpliVity.File'
+                            BackupId             = $BkpId
+                            VirtualDisk          = $VirtualDisk
+                            PartitionNumber      = $PartitionNumber
+                            FileName             = $_.name
+                            Directory            = [bool]$_.directory
+                            SymbolicLink         = [bool]$_.symbolic_link
+                            SizeMB               = '{0:n0}' -f ($_.size / 1mb)
+                            LastModified         = $LastModified
+                            FileRestoreAvailable = [bool]$_.file_level_restore_available
+                            FilePath             = [PSCustomObject]@{BackupId = $BkpId; Path = "$VirtualDisk/$PartitionNumber$Folder" }
+                        }
+                    }
+                    continue
+                }
+                catch {
+                    throw $_.Exception.Message
+                }
+            }
+
+            # The user specifies virtual disk only. In this case, show the available partitions on the 
+            # virtual disk within the specified backup
+            if ($PSBoundParameters.ContainsKey('VirtualDisk')) {
+                $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/virtual_disk_partitions' +
+                '?virtual_disk=' + $VirtualDisk
+                try {
+                    $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
+                    $Response.partitions | ForEach-Object {
+                        [PSCustomObject]@{
+                            PSTypeName      = 'HPE.SimpliVity.Partition'
+                            BackupId        = $BkpId
+                            PartitionNumber = $_.partition_number
+                            SizeMB          = '{0:n0}' -f ($_.size / 1mb)
+                            DiskType        = $_.disk_type
+                            Mountable       = [bool]$_.mountable
+                        }
+                    }
+                    continue
+                }
+                catch {
+                    throw $_.Exception.Message
+                }
+            }
+
+            # The user does not specify any optional parameters. In this case show the available virtual disks
+            # within the specified backup
+            else {
+                $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/virtual_disks'
+                try {
+                    $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
+                    $Response.virtual_disks | ForEach-Object {
+                        [PSCustomObject]@{
+                            PSTypeName  = 'HPE.SimpliVity.VirtualDisk'
+                            BackupId    = $BkpId
+                            VirtualDisk = $_
+                        }
+                    }
+                }
+                catch {
+                    throw $_.Exception.Message
+                }
+            }
+        } # end foreach
+    } #end process
+}
+
+<#
+.SYNOPSIS
+    Restore files from a SimpliVity backup to a specified virtual machine.
+.DESCRIPTION
+    This command will restore files from a backup and restore them into an ISO file that is then connected
+    to the specified virtual machine.
+    
+    Notes:
+    1. This command only works on guests running Microsoft Windows.
+    2. The DVD drive on the target virtual machine must be disconnected, otherwise the restore will fail
+    3. This command relies on the input from Get-SVTfile to pass in a valid backup file list to restore
+    4. Whilst it is possible to use Get-SVTfile to list files in multiple backups, this command will only restore
+    files from the first backup passed in. Files in subsequent backups are ignored.
+    5. Folder size matters. The restore will fail if file sizes exceed a DVD capacity. Restores for files exceeding
+    200MB will be quite slow. In this sitation, its faster to restore the entire virtual machine and recover the 
+    required files that way. 
+.PARAMETER VmName
+    The target virtual machine. Ensure the DVD drive is disconnected
+.PARAMETER FilePath
+    An array containing the backup ID and the full file path of the directory to recover. This consists of
+    the virtual disk name, partition and file/folder name. The Get-SVTfile provides this parameter in the expected
+    form.
+
+.EXAMPLE
+    PS C:\> $Backup = Get-SVTbackup -VmName Server2016-01 -Latest
+    PS C:\> $File = $Backup | Get-SVTfile -VirtualDisk Server2016-01.vmdk -PartitionNumber 4 -FilePath '/Program Files'
+    PS C:\> $File | Restore-SVTfile -VmName Server2016-02
+
+    The first command identifies the desired backup. 
+    The second command enumerates the files from the specified virtual disk, partition and file path in the backup
+    The third command restores the files to an ISO and then connects this to the specified VM
+.INPUTS
+    System.String
+    HPE.SimpliVity.Backup
+.OUTPUTS
+    HPE.SimpliVity.Task
+.NOTES
+#>
+function Restore-SVTfile {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [System.String]$VmName,
+
+        [Parameter(Mandatory = $true, ValueFromPipelinebyPropertyName = $true)]
+        [System.Object]$FilePath
+    )
+
+    begin {
+        $Header = @{
+            'Authorization' = "Bearer $($global:SVTconnection.Token)"
+            'Accept'        = 'application/json'
+            'Content-Type'  = 'application/vnd.simplivity.v1.14+json'
+        }
+        $PrevBackupId = $null
+        $FileList = @()
+        
+        try {
+            $VMid = Get-SVTvm -VmName $VmName -ErrorAction Stop | Select-Object -ExpandProperty VMid
+        }
+        catch {
+            throw $_.Exception.Message
+        }
+    }
+
+    process {
+        foreach ($Restore in $FilePath) {
+            if (-Not $PrevBackupId) {
+                $PrevBackupId = $Restore.BackupId
+            }
+
+            if ($Restore.BackupId -eq $PrevBackupId) {
+                if ($Restore.Path -notin $FileList) {
+                    $FileList += $Restore.Path
+                }
+            }
+            else {
+                Write-Warning "Restore-SVTfile will only restore files from the first backup passed in"
+            }
+        }
+    }
+
+    end {
+        $Uri = $global:SVTconnection.OVC + '/api/backups/' + $Restore.BackupId + '/restore_files' 
+        $Body = @{
+            'virtual_machine_id' = $VMid
+            'paths'              = $FileList
+        } | ConvertTo-Json
+        Write-Verbose $Body
+        
+        try {
+            $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+        }
+        catch {
+            throw $_.Exception.Message
+        }
+        [array]$AllTask += $Task
+        $Task
+        
+        $global:SVTtask = $AllTask
+        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    }
+}
+
 #endregion Backup
 
 #region Datastore
@@ -2371,7 +2655,7 @@ function Get-SVTdatastore {
         throw $_.Exception.Message
     }
 
-    if ($PSBoundParameters.ContainsKey('DatastoreName') -and -not $response.datastores.name) {
+    if ($PSBoundParameters.ContainsKey('DatastoreName') -and -not $Response.datastores.name) {
         throw "Specified datastore(s) $DatastoreName not found"
     }
 
@@ -2908,7 +3192,7 @@ function Get-SVTexternalStore {
         throw $_.Exception.Message
     }
 
-    if ($PSBoundParameters.ContainsKey('ExternalStoreName') -and -not $response.external_stores.name) {
+    if ($PSBoundParameters.ContainsKey('ExternalStoreName') -and -not $Response.external_stores.name) {
         throw "Specified external datastore(s) $ExternalStoreName not found"
     }
 
@@ -4175,7 +4459,7 @@ function Get-SVTcluster {
         throw $_.Exception.Message
     }
 
-    if ($PSBoundParameters.ContainsKey('ClusterName') -and -not $response.omnistack_clusters.name) {
+    if ($PSBoundParameters.ContainsKey('ClusterName') -and -not $Response.omnistack_clusters.name) {
         throw "Specified cluster(s) $ClusterName not found"
     }
 
@@ -5738,11 +6022,11 @@ function Get-SVTvm {
         Write-Verbose "There are $VmCount matching virtual machines"
     }
 
-    if ($PSBoundParameters.ContainsKey('VmName') -and -not $response.virtual_machines.name) {
+    if ($PSBoundParameters.ContainsKey('VmName') -and -not $Response.virtual_machines.name) {
         throw "Specified virtual machine(s) $VmName not found"
     }
 
-    if ($PSBoundParameters.ContainsKey('VmId') -and -not $response.virtual_machines.name) {
+    if ($PSBoundParameters.ContainsKey('VmId') -and -not $Response.virtual_machines.name) {
         throw "Specified virtual machine ID(s) $VmId not found"
     }
 
