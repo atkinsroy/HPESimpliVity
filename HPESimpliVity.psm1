@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.8'
+$HPESimplivityVersion = '2.1.10'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -1202,85 +1202,120 @@ function Get-SVTmodel {
 .SYNOPSIS
     Display information about HPE SimpliVity backups.
 .DESCRIPTION
-    Show backup information from the HPE SimpliVity Federation. By default, SimpliVity backups from the 
+    Show backup information from the HPE SimpliVity Federation. Without any parameters, SimpliVity backups from the 
     last 24 hours are shown, but this can be overridden by specifying the -Hour parameter. Alternatively, 
-    specify VM name, Cluster name, or Datacenter name (with or without -Hour) to filter backups appropriately.
+    specify any of the other parameters to see a full list (up to -limit).
 
-    You can use the -Latest parameter to display (one of) the latest backups for each VM. (Be careful, a 
-    policy may have more than one rule to backup to different destinations - only one of the backups is shown).
+    By default the limit is set to show 500 backups, as per the HPE recommended value, this can be set to a 
+    maximum of 3000.
 
-    Use the -Limit parameter to limit the number of backups shown. There is a known issue where setting the
-    limit above 3000 can result in out of memory errors, so the -Limit parameter can currently be set between
-    1 and 3000. The recommended default of 500 is used. A warning is displayed if the number of backups in 
-    the environment exceeds the limit for a specific Get-SVTbackup command.
-
-    Verbose is automatically turned on to show more information about what this command is doing.
+    -All will display all backups, regardless of limit. Be careful, this command will return ALL backups by calling
+    the API multiple times (uses an offset value with limit set to 3000). It is recommended to use the -All 
+    parameter with some other parameters to limit the output.
 .PARAMETER VmName
-    Show backups for the specified virtual machine only.
+    Show all backups for the specified virtual machine. By default a limit of 500 backups are shown, but
+    this can be increased.
+.PARAMETER ClusterName
+    Show all backups sourced from a specified HPE SimpliVity cluster name. By default a limit of 500 backups 
+    are shown, but this can be increased.
 .PARAMETER DataStoreName
-    Show backups located on the specified Simplivity datastore only.
+    Show all backups sourced from a specified SimpliVity datastore. By default a limit of 500 backups 
+    are shown, but this can be increased.
 .PARAMETER DestinationName
-    Show backups located on the specified HPE SimpliVity cluster name or external datastore name only.
+    Show backups located on the specified destination HPE SimpliVity cluster name or external datastore name. 
+    By default a limit of 500 backups are shown, but this can be increased.
 .PARAMETER BackupName
-    Show backups for the specified backup name only.
+    Show backups with the specified backup name only.
 .PARAMETER BackupId
     Show backups with the specified backup ID only.
+.PARAMETER BackupState
+    Show backups with the specified state.
+.PARAMETER BackupType
+    Show backups with the specified type.
 .PARAMETER All
-    Show all backups. The maximum limit of 3000 is assumed, so this command might take a while depending 
-    on the number of backups in the environment.
-.PARAMETER Latest
-    Show (one of) the latest backups for every unique virtual machine. If a policy has two rules, for example,
-    one with a local destination and one with remote a cluster destination, only one of these backups are shown.
+    Show all backups. By default backups from the last 24 hours only are displayed. The maximum limit of 3000 
+    is assumed, so this command might take a while depending on the number of backups in the environment.
+.PARAMETER Date
+    Display backups created on the specified date.This takes precedence over all other date related parameters.
+.PARAMETER CreatedAfter
+    Display backups created after the specified date. This parameter is ignored if -Date is also specified.
+.PARAMETER CreatedBefore
+    Display backup created before the specified date. This parameter is ignored if -Date is also specified.
+.PARAMETER ExpiresAfter
+    Display backups that expire after the specified date. This parameter is ignored if -Date is also specified.
+.PARAMETER ExpiresBefore
+    Display backup that expire before the specified date. This parameter is ignored if -Date is also specified.
 .PARAMETER Hour
-    The number of hours preceding to report on. By default, the last 24 hours of backups are shown.
+    Display backups created within the specified last number of hours. By default, backups from the last 24 hours 
+    are shown. This parameter is ignored when any other date related parameter is also specified.
 .EXAMPLE
     PS C:\> Get-SVTbackup
 
-    Show the last 24 hours of backups from the SimpliVity Federation
+    Show the last 24 hours of backups from the SimpliVity Federation.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -Hour 48 | 
+    PS C:\> Get-SVTbackup -Date 04/04/2020
+
+    Show all backups from the specified date, up to the default limit of 500 backups.
+.EXAMPlE
+    PS C:\> Get-SVTbackup -CreatedAfter "04/04/2020 10:00am" -CreatedBefore "04/04/2020 02:00pm"
+
+    Show backups created between the specified dates/times. (using local date/time format). Limited to 500 backups
+    by default.
+.EXAMPlE
+    PS C:\> Get-SVTbackup -ExpiresAfter "04/04/2020" -ExpiresBefore "05/04/2020" -Limit 100
+
+    Show backups that will expire between the specified dates/times. (using local date/time format). Limited to 
+    display a maximum of 100 backups.
+.EXAMPLE
+    PS C:\> Get-SVTbackup -Hour 48 -Limit 1000 | 
         Select-Object VmName, DataStoreName, SentMB, UniqueSizeMB | Format-Table -Autosize
 
-    Show backups up to 48 hours old and select specific properties to display
-.EXAMPLE
-    PS C:\> Get-SVTbackup -Name '2019-05-05T00:00:00-04:00'
-
-    Shows the backup(s) with the specified backup name
+    Show backups up to 48 hours old and display specific properties. Limited to display a maximum of 1000 backups.
 .EXAMPLE
     PS C:\> Get-SVTbackup -All
 
-    Shows all backups. This might take a while to complete (limit is set to the maximum 3000, which overrides 
-    a specified limit)
+    Shows all backups with no limit. This command will take a ling time to complete. This command uses a maximum 
+    of limit of 3000 and an offset to call the API multiple times until all backups are returned. It is 
+    recommended that other parameters are used to restrict the number of backups returned.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -Latest
-    PS C:\> Get-SVTbackup -Datastore Datastore1 -Latest
-    PS C:\> Get-SVTbackup -DestinationName StoreOnce-Data01 -Latest
+    PS C:\> Get-SVTbackup -Datastore DS01 -All
 
-    The first command shows the latest backup for every VM in the Federation
-    The second command shows the latest backup for every VM located on the specified datastore
-    The third command shows the latest backup for each VM with a backup on the specified destination (either a
-    SimpliVity cluster or an external store)
+    Shows all backups for the specified Datastore with no limit. This command will take a long time to complete.
 .EXAMPLE
     PS C:\> Get-SVTbackup -VmName Vm1,Vm2
-    PS C:\> Get-SVTbackup -VmName Vm1,Vm2 -Hour 2
+    PS C:\> Get-SVTbackup -VmName Vm1,Vm2,Vm3 -Hour 2
 
     The first command shows backups for the specified VMs only, up to the default limit of 500 backups
-    The second command shows the latest 2 hours of backups for the specified VMs
+    The second command shows the last 2 hours of backups for the specified VMs
 .EXAMPLE
-    PS C:\> Get-SVTbackup -Datastore DS01,DS02 -Limit 3000
+    PS C:\> Get-SVTbackup -VMname VM1 -BackupName '2019-04-26T16:00:00+10:00'
+
+    Display the backup for the specified virtual machine in the specified backup
+.EXAMPLE
+    PS C:\> Get-SVTbackup -VMname VM1 -BackupName '2019-05-05T00:00:00-04:00' -DestinationName SVTcluster
+
+    If you have backup policies with more than one rule, further refine the filter by specifying the destination
+    SimpliVity cluster or external store.
+.EXAMPLE
+    PS C:\> Get-SVTbackup -Datastore DS01,DS02 -Limit 1000
 
     Shows all backups on the specified SimpliVity datastores, up to the specified limit
 .EXAMPLE
-    PS C:\> Get-SVTbackup -DestinationName cluster1 -Limit 100
+    PS C:\> Get-SVTbackup -ClusterName cluster1 -Limit 100
 
-    Show the latest 100 backups for all VMs located on the specified cluster.
+    Show the last 100 backups for all VMs located on the specified cluster.
+.EXAMPLE
+    PS C:\> Get-SVTbackup -DestinationName cluster1
+
+    Show backups located on the specified cluster or external store.
 
     Note: You can specify multiple destinations, but they must all be of the same type. i.e. SimpliVity clusters
     or external stores.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -DestinationName StoreOnce-Data02,StoreOnce-Data03 -Hour 2
+    PS C:\> Get-SVTbackup -DestinationName StoreOnce-Data02,StoreOnce-Data03 -ExpireAfter 31/12/2020
 
-    Shows backups that are up to 2 hours old on the specified external datastores.
+    Shows backups on the specified external datastores that will expire after the specified date (using local 
+    date/time format)
 .INPUTS
     System.String
 .OUTPUTS
@@ -1289,47 +1324,88 @@ function Get-SVTmodel {
 Known issues with the REST API Get operations for Backup objects:
 OMNI-53190 REST API Limit recommendation for REST GET backup object calls
 OMNI-46361 REST API GET operations for backup objects and sorting and filtering constraints
-Filtering on a cluster destination also displays exernal store backups. This issue applies to OVCs only, not MVAs 
+Filtering on a cluster destination also displays exernal store backups. This issue applies when connected to 
+Omnistack virtual controllers only. It works as expected when connected to  
 #>
 function Get-SVTbackup {
-    [CmdletBinding(DefaultParameterSetName = 'ByHour')]
+    [CmdletBinding(DefaultParameterSetName = 'ByVmName')]
     param (
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByVmName')]
         [System.String[]]$VmName,
 
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByDatastoreName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [System.String[]]$Clustername,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
         [System.String[]]$DatastoreName,
 
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByDestinationName')]
-        [System.String[]]$DestinationName,
-
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByBackupName')]
-        [Alias("Name")]
-        [System.String[]]$BackupName,
-
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ByBackupId')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByBackupId')]
         [Alias("Id")]
         [System.String[]]$BackupId,
 
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'AllBackup')]
-        [switch]$All,
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [System.String[]]$DestinationName,
 
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByVmName')]
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByDatastoreName')]
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByDestinationName')]
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ByHour')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [Alias("Name")]
+        [System.String[]]$BackupName,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [ValidateSet("PROTECTED", "SAVING", "FAILED")]
+        [System.String[]]$BackupState,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [ValidateSet("POLICY", "MANUAL")]
+        [System.String[]]$BackupType,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [System.String]$Date,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [System.String]$CreatedAfter,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [System.String]$CreatedBefore,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [System.String]$ExpiresAfter,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [System.String]$ExpiresBefore,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
         [ValidateRange(1, 175400)]   # up to 20 years
         [System.String]$Hour,
 
-        [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByVmName')]
-        [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByDatastoreName')]
-        [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByDestinationName')]
-        [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'AllBackup')]
-        [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ByHour')]
-        [switch]$Latest,
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [switch]$All,
 
         # HPE recommends 500 default, 3000 maximum (OMNI-53190)
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
         [ValidateRange(1, 3000)]
         [System.Int32]$Limit = 500
     )
@@ -1339,34 +1415,38 @@ function Get-SVTbackup {
         'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'        = 'application/json'
     }
-    $BackupObject = @()
     $LocalFormat = Get-SVTLocalDateFormat
+    $Offset = 0
 
-    # Offset is problematic with the /backups API. Using 0 to avoid inconsistent results.
-    # Case sensitivity is problematic with /backups API. Some properties do not support 
-    # case insensitive filter, so assuming case sensitive for all
-    $Uri = "$($global:SVTconnection.OVC)/api/backups?case=sensitive&offset=0"
+    # Case sensitivity is problematic with /backups API. Some properties do not support case insensitive 
+    # filter, so assuming case sensitive for all.
+    $Uri = "$($global:SVTconnection.OVC)/api/backups?case=sensitive"
 
-    # Filter backup objects. The /backups API has known issue where you can only filter on 1 property 
-    # for a given filter (OMNI-46361).
     if ($PSBoundParameters.ContainsKey('All')) {
-        $Message = "Assuming maximum recommended limit of 3000 with the -All parameter. " +
-        "This command may take a long time to complete"
-        Write-Verbose $Message
-        $Limit = 3000              # used in warning message later
+        $Message = 'This command may take a long time to complete. Consider using other parameters with ' +
+        '-All to limit output'
+        Write-Warning $Message
+        # Limit is used in warning message later
+        $Limit = 3000
         $Uri += "&limit=$Limit"
     }
     else {
+        # Using default (500) or some user specified limit (1-3000)
         $Uri += "&limit=$Limit"
     }
 
     if ($PSBoundParameters.ContainsKey('VmName')) {
-        Write-Verbose "VM names are currently case sensitive"
+        Write-Verbose "VM names are case sensitive"
         $VmName = $VmName -join ','
         $Uri += "&virtual_machine_name=$VmName"
     }
+    if ($PSBoundParameters.ContainsKey('ClusterName')) {
+        Write-Verbose "Cluster names are case sensitive"
+        $ClusterName = $ClusterName -join ','
+        $Uri += "&omnistack_cluster_name=$ClusterName"
+    }
     if ($PSBoundParameters.ContainsKey('DatastoreName')) {
-        Write-Verbose "Datastore names are currently case sensitive"
+        Write-Verbose "Datastore names are case sensitive"
         $DatastoreName = $DatastoreName -join ','
         $Uri += "&datastore_name=$DatastoreName"
     }
@@ -1387,7 +1467,7 @@ function Get-SVTbackup {
         }
     }
     if ($PSBoundParameters.ContainsKey('BackupName')) {
-        Write-Verbose "Backup names are currently case sensitive. Incomplete backup names are matched" 
+        Write-Verbose "Backup names are case sensitive. Incomplete backup names are matched" 
         $BackupName = ($BackupName -join '*,') + '*'  # Note the Asterix
         $Uri += "&name=$($BackupName -replace '\+', '%2B')"
     }
@@ -1395,20 +1475,68 @@ function Get-SVTbackup {
         $BackupId = $BackupId -join ','
         $Uri += "&id=$BackupId"
     }
-
+    if ($PSBoundParameters.ContainsKey('BackupState')) {
+        $BackupState = ($BackupState).ToUpper() -join ','
+        $Uri += "&state=$BackupState"
+    }
+    if ($PSBoundParameters.ContainsKey('BackupType')) {
+        $BackupType = ($BackupType).ToUpper() -join ','
+        $Uri += "&type=$BackupType"
+    }
+    if ($PSBoundParameters.ContainsKey('Date')) {
+        # Date takes precedence over all other date related parameters.
+        $StartDate = Get-Date -Date "$Date"
+        $EndDate = (Get-Date -Date $StartDate).AddMinutes(1439)
+        $After = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+        $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
+        $Uri += "&created_before=$Before&created_after=$After"
+    }
+    if ($PSBoundParameters.ContainsKey('CreatedAfter') -and -not $PSBoundParameters.ContainsKey('Date')) {
+        $StartDate = Get-Date -Date "$CreatedAfter"
+        $After = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+        $Uri += "&created_after=$After"
+    }
+    if ($PSBoundParameters.ContainsKey('CreatedBefore') -and -not $PSBoundParameters.ContainsKey('Date')) {
+        $EndDate = Get-Date -Date "$CreatedBefore"
+        $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
+        $Uri += "&created_before=$Before"
+    }
+    if ($PSBoundParameters.ContainsKey('ExpiresAfter') -and -not $PSBoundParameters.ContainsKey('Date')) {
+        $StartDate = Get-Date -Date "$ExpiresAfter"
+        $After = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+        $Uri += "&expires_after=$After"
+    }
+    if ($PSBoundParameters.ContainsKey('ExpiresBefore') -and -not $PSBoundParameters.ContainsKey('Date')) {
+        $EndDate = Get-Date -Date "$ExpiresBefore"
+        $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
+        $Uri += "&expires_before=$Before"
+    }
     if ($PSBoundParameters.ContainsKey('Hour')) {
-        $StartDate = (Get-Date).AddHours(-$Hour)
-        $CreatedAfter = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
-        $Uri += "&created_after=$CreatedAfter"
+        # Ignore -Hour if any other date related parameter is specified
+        $ParamList = @('Date', 'CreatedAfter', 'CreatedBefore', 'ExpiresAfter', 'ExpiresBefore')
+        $ParamFound = $false
+        foreach ($Param in $ParamList) {
+            if ($Param -in $PSBoundParameters.Keys) {
+                $ParamFound = $true
+            }
+        }
+        if (-not $ParamFound) {
+            $StartDate = (Get-Date).AddHours(-$Hour)
+            $CreatedAfter = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+            $Uri += "&created_after=$CreatedAfter"
         
-        $Message = "Displaying backups from the last $Hour hours, " +
-        "(created after $(Get-date $StartDate -Format $LocalFormat)), limited to $limit backups"
-        Write-Verbose $Message
+            $Message = "Displaying backups from the last $Hour hours, " +
+            "(created after $(Get-date $StartDate -Format $LocalFormat)), limited to $limit backups"
+            Write-Verbose $Message
+        }
     }
     else {
-        # -Hour not specified. We want to show the last 24 hours by default. The user can specify -latest
-        # and/or -limit and this still applies. Ignore this 'default' filter if any other parameter is specified.
-        $ParamList = 'All', 'VmName', 'DatastoreName', 'DestinationName', 'BackupName', 'BackupId'
+        # -Hour not specified. Show the last 24 hours by default, but only when no other parameters are specified.
+        # This approach is safer than counting passed in parameters - the user may specify -verbose or other common
+        # parameters, which would affect the behavior. -Limit is allowed.
+        $ParamList = @('VmName', 'ClusterName', 'DatastoreName', 'BackupId', 'DestinationName', 
+            'BackupName', 'BackupState', 'BackupType', 'All', 'Date', 'CreatedAfter', 'CreatedBefore', 
+            'ExpiresAfter', 'ExpiresBefore')
         $ParamFound = $false
         foreach ($Param in $ParamList) {
             if ($Param -in $PSBoundParameters.Keys) {
@@ -1420,117 +1548,121 @@ function Get-SVTbackup {
             $CreatedAfter = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
             $Uri += "&created_after=$CreatedAfter"
         
-            $Message = "Displaying backups from the last 24 hours, " +
+            $Message = "Displaying backups from the last 24 hours, $(($PSBoundParameters.Keys).Count)" +
             "(created after $(Get-date $StartDate -Format $LocalFormat)), limited to $limit backups"
             Write-Verbose $Message
         }
     }
 
-    try {
-        $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
-    }
-    catch {
-        throw $_.Exception.Message
-    }
+    do {
+        $ThisUri = $Uri + "&offset=$Offset"
+        try {
+            $Response = Invoke-SVTrestMethod -Uri $ThisUri -Header $Header -Method Get -ErrorAction Stop
+        }
+        catch {
+            throw $_.Exception.Message
+        }
 
-    $BackupCount = $Response.count
-    if ($BackupCount -gt $Limit) {
-        $Message = "There are $BackupCount matching backups, but limited to displaying only $Limit. " +
-        "Either increase -Limit or use more restrictive parameters"
-        Write-Warning $Message 
-    }
-    else {
-        Write-Verbose "There are $BackupCount matching backups"
-    }
-
-    if ($PSBoundParameters.ContainsKey('BackupName') -and -not $Response.Backups.Name) {
-        throw "Specified backup name(s) $BackupName not found"
-    }
-
-    if ($PSBoundParameters.ContainsKey('BackupId') -and -not $Response.Backups.Name) {
-        throw "Specified backup ID(s) $BackupId not found"
-    }
-
-    if ($PSBoundParameters.ContainsKey('VmName') -and -not $Response.Backups.Name) {
-        throw "Backups for specified virtual machine(s) $VmName not found"
-    }
-
-    $Response.backups | ForEach-Object {
-        if ($_.created_at -as [datetime]) {
-            $CreateDate = Get-Date -Date $_.created_at -Format $LocalFormat
+        $BackupCount = $Response.Count
+        if ($PSBoundParameters.ContainsKey('All')) {
+            # Increment Offset by 3000 for next loop
+            $Offset += $Limit
+            Write-Verbose "$BackupCount backups, offset is now $Offset"
         }
         else {
-            $CreateDate = $null
-        }
-        if ($_.unique_size_timestamp -as [DateTime]) {
-            $UniqueSizeDate = Get-Date -Date $_.unique_size_timestamp -Format $LocalFormat
-        }
-        else {
-            $UniqueSizeDate = $null
+            # -All not specified, so drop out after 1 loop
+            $Offset = $BackupCount + 1
+
+            if ($BackupCount -gt $Limit) {
+                $Message = "There are $BackupCount matching backups, but limited to displaying $Limit only. " +
+                "Either increase -Limit or use more restrictive parameters"
+                Write-Warning $Message 
+            }
+            else {
+                Write-Verbose "There are $BackupCount matching backups"
+            }
         }
 
-        if ($_.expiration_time -as [Datetime]) {
-            $ExpirationDate = Get-Date -Date $_.expiration_time -Format $LocalFormat
+        if ($PSBoundParameters.ContainsKey('VmName') -and -not $Response.Backups.Name) {
+            throw "Backups for specified virtual machine(s) $VmName not found"
         }
-        else {
-            $ExpirationDate = $null
+        if ($PSBoundParameters.ContainsKey('ClusterName') -and -not $Response.Backups.Name) {
+            throw "Backups with specified cluster $ClusterName not found"
+        }
+        if ($PSBoundParameters.ContainsKey('DatastoreName') -and -not $Response.Backups.Name) {
+            throw "Backups with specified datastore $DatastoreName not found"
+        }
+        if ($PSBoundParameters.ContainsKey('DestinationName') -and -not $Response.Backups.Name) {
+            throw "Backups with specified destination $DestinationName not found"
+        }
+        if ($PSBoundParameters.ContainsKey('BackupName') -and -not $Response.Backups.Name) {
+            throw "Specified backup name(s) $BackupName not found"
+        }
+        if ($PSBoundParameters.ContainsKey('BackupId') -and -not $Response.Backups.Name) {
+            throw "Specified backup ID(s) $BackupId not found"
         }
 
-        if ($_.omnistack_cluster_name) {
-            $Destination = $_.omnistack_cluster_name
-        }
-        else {
-            $Destination = $_.external_store_name
-        }
+        $Response.backups | ForEach-Object {
+            if ($_.created_at -as [datetime]) {
+                $CreateDate = Get-Date -Date $_.created_at -Format $LocalFormat
+            }
+            else {
+                $CreateDate = $null
+            }
+            if ($_.unique_size_timestamp -as [DateTime]) {
+                $UniqueSizeDate = Get-Date -Date $_.unique_size_timestamp -Format $LocalFormat
+            }
+            else {
+                $UniqueSizeDate = $null
+            }
 
-        $CustomObject = [PSCustomObject]@{
-            PSTypeName        = 'HPE.SimpliVity.Backup'
-            VmName            = $_.virtual_machine_name
-            CreateDate        = $CreateDate
-            ConsistencyType   = $_.consistency_type
-            BackupType        = $_.type
-            DataStoreName     = $_.datastore_name
-            VmId              = $_.virtual_machine_id
-            AppConsistent     = $_.application_consistent
-            ParentId          = $_.compute_cluster_parent_hypervisor_object_id
-            ExternalStoreName = $_.external_store_name
-            BackupId          = $_.id
-            BackupState       = $_.state
-            ClusterId         = $_.omnistack_cluster_id
-            VmType            = $_.virtual_machine_type
-            SentCompleteDate  = $_.sent_completion_time
-            UniqueSizeMB      = [single]('{0:n0}' -f ($_.unique_size_bytes / 1mb))
-            ClusterGroupIDs   = $_.cluster_group_ids
-            UniqueSizeDate    = $UniqueSizeDate
-            ExpiryDate        = $ExpirationDate
-            ClusterName       = $_.omnistack_cluster_name
-            SentMB            = [single]('{0:n0}' -f ($_.sent / 1mb))
-            SizeGB            = [single]('{0:n2}' -f ($_.size / 1gb))
-            VmState           = $_.virtual_machine_state
-            BackupName        = $_.name
-            DatastoreId       = $_.datastore_id
-            DataCenterName    = $_.compute_cluster_parent_name
-            HypervisorType    = $_.hypervisor_type
-            SentDuration      = [System.Int32]$_.sent_duration
-            DestinationName   = $Destination
-        }
-        $BackupObject += $CustomObject
-    } #end foreach backup object
+            if ($_.expiration_time -as [Datetime]) {
+                $ExpirationDate = Get-Date -Date $_.expiration_time -Format $LocalFormat
+            }
+            else {
+                $ExpirationDate = $null
+            }
 
-    # Finally, if -Latest is specified, just display the latest backup of each VM (or more correctly, 
-    # ONE of the latest - its possible to have more than 1 rule in a policy to backup a VM to multiple 
-    # destinations at once).
-    if ($PSBoundParameters.ContainsKey('Latest')) {
-        Write-Verbose 'The -Latest parameter was specified, show only the latest backup of each VM from the requested backups'
-        $BackupObject | 
-        ForEach-Object { $_.CreateDate = [datetime]::ParseExact($_.CreateDate, $LocalFormat, $null); $_ } |
-        Group-Object VmName |
-    
-        ForEach-Object { $_.Group | Sort-Object CreateDate | Select-Object -Last 1 }
-    }
-    else {
-        $BackupObject
-    }
+            if ($_.omnistack_cluster_name) {
+                $Destination = $_.omnistack_cluster_name
+            }
+            else {
+                $Destination = $_.external_store_name
+            }
+
+            [PSCustomObject]@{
+                PSTypeName        = 'HPE.SimpliVity.Backup'
+                VmName            = $_.virtual_machine_name
+                CreateDate        = $CreateDate
+                ConsistencyType   = $_.consistency_type
+                BackupType        = $_.type
+                DataStoreName     = $_.datastore_name
+                VmId              = $_.virtual_machine_id
+                AppConsistent     = $_.application_consistent
+                ParentId          = $_.compute_cluster_parent_hypervisor_object_id
+                ExternalStoreName = $_.external_store_name
+                BackupId          = $_.id
+                BackupState       = $_.state
+                ClusterId         = $_.omnistack_cluster_id
+                VmType            = $_.virtual_machine_type
+                SentCompleteDate  = $_.sent_completion_time
+                UniqueSizeMB      = [single]('{0:n0}' -f ($_.unique_size_bytes / 1mb))
+                ClusterGroupIDs   = $_.cluster_group_ids
+                UniqueSizeDate    = $UniqueSizeDate
+                ExpiryDate        = $ExpirationDate
+                ClusterName       = $_.omnistack_cluster_name
+                SentMB            = [single]('{0:n0}' -f ($_.sent / 1mb))
+                SizeGB            = [single]('{0:n2}' -f ($_.size / 1gb))
+                VmState           = $_.virtual_machine_state
+                BackupName        = $_.name
+                DatastoreId       = $_.datastore_id
+                DataCenterName    = $_.compute_cluster_parent_name
+                HypervisorType    = $_.hypervisor_type
+                SentDuration      = [System.Int32]$_.sent_duration
+                DestinationName   = $Destination
+            }
+        } #end foreach backup object
+    } until ($offset -gt $BackupCount)
 }
 
 <#
@@ -1697,13 +1829,13 @@ function New-SVTbackup {
 .PARAMETER DatastoreName
     The destination datastore name
 .EXAMPLE
-    PS C:\> Get-SVTbackup -BackupName 2019-05-09T22:00:01-04:00 | Restore-SVTvm -RestoreToOriginal
+    PS C:\> Get-SVTbackup -BackupName 2019-05-09T22:00:00+10:00 | Restore-SVTvm -RestoreToOriginal
 
     Restores the virtual machine(s) in the specified backup to the original VM name(s)
 .EXAMPLE
-    PS C:\> Get-SVTbackup -VmName MyVm | Sort-Object CreateDate | Select-Object -Last 1 | Restore-SVTvm
+    PS C:\> Get-SVTbackup -VmName MyVm | Select-Object -Last 1 | Restore-SVTvm
 
-    Restores the latest backup of specified virtual machine, giving it the name of the original VM with a 
+    Restores the most recent backup of specified virtual machine, giving it the name of the original VM with a 
     data stamp appended
 .INPUTS
     System.String
@@ -1817,17 +1949,21 @@ function Restore-SVTvm {
 .PARAMETER BackupId
     The UID of the backup(s) to delete
 .EXAMPLE
-    PS C:\> Get-Backup -BackupName 2019-05-09T22:00:01-04:00 | Remove-SVTbackup
+    PS C:\> Get-SVTBackup -BackupName 2019-05-09T22:00:01-04:00 | Remove-SVTbackup
 
-    Deletes the backups with the specified backup name
+    Deletes the backups with the specified backup name.
 .EXAMPLE
-    PS C:\> Get-Backup -VmName MyVm -Hour 3 | Remove-SVTbackup
+    PS C:\> Get-SVTBackup -VmName MyVm -Hour 3 | Remove-SVTbackup
 
     Delete any backup that is at least 3 hours old for the specified virtual machine
 .EXAMPLE
-    PS C:\> Get-Backup | ? VmName -match "test" | Remove-SVTbackup
+    PS C:\> Get-SVTBackup | ? VmName -match "test" | Remove-SVTbackup
 
     Delete all backups for all virtual machines that have "test" in their name
+.EXAMPLE
+    PS C:\> Get-SVTbackup -CreatedBefore 01/01/2020 -Limit 3000 | Remove-SVTbackup
+
+    This command will remove backups older than the specified date.
 .INPUTS
     System.String
     HPE.SimpliVity.Backup
@@ -1835,10 +1971,10 @@ function Restore-SVTvm {
     HPE.SimpliVity.Task
 .NOTES
     This cmdlet uses the /api/backups/delete REST API POST call which creates a task to delete the specified 
-    backup. This call can accept multiple backup IDs, but its used here to delete one backup Id at a time. 
+    backup. This call accepts multiple backup IDs, and efficently removes multiple backups with a single task. 
     This also works for backups in remote clusters.
 
-    There is another specific DELETE call (/api/backups/<bkpId>) which works locally (i.e. if you're connected 
+    There is another specific DELETE call (/api/backups/<bkpId>) which only works locally (i.e. if you're connected 
     to an OVC where the backup resides), but this fails when trying to delete remote backups.
 #>
 function Remove-SVTbackup {
@@ -1855,27 +1991,27 @@ function Remove-SVTbackup {
             'Accept'        = 'application/json'
             'Content-Type'  = 'application/vnd.simplivity.v1.5+json'
         }
+        $RemoveList = @()
+        $Uri = $global:SVTconnection.OVC + '/api/backups/delete'
     }
 
     process {
         foreach ($BkpId in $BackupId) {
-            $Uri = $global:SVTconnection.OVC + '/api/backups/delete'
-
-            $Body = @{ 'backup_id' = @($BkpId) } | ConvertTo-Json
-            Write-Verbose $Body
-
-            try {
-                $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
-                $Task
-                [array]$AllTask += $Task
-            }
-            catch {
-                Write-Warning "$($_.Exception.Message), failed to remove backup with id $BkpId"
-            }
+            $RemoveList += $BkpId
         }
     }
 
     end {
+        $Body = @{ 'backup_id' = $RemoveList } | ConvertTo-Json
+        Write-Verbose $Body
+        try {
+            $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+            $Task
+            [array]$AllTask += $Task
+        }
+        catch {
+            Write-Warning "$($_.Exception.Message), failed to remove backup with id $BkpId"
+        }
         $global:SVTtask = $AllTask
         $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
     }
@@ -2265,9 +2401,9 @@ function Set-SVTbackupRetention {
 
     Starts a task to calculate the unique size of the specified backup(s)
 .EXAMPLE
-    PS:\> Get-SVTbackup -Latest | Update-SVTbackupUniqueSize
+    PS:\> Get-SVTbackup -Date 26/04/2020 | Update-SVTbackupUniqueSize
 
-    Starts a task per backup object to calculate the unique size of the latest backup for each local VM.
+    Starts a task per backup object to calculate the unique size of backups with the specified creation date.
 .INPUTS
     System.String
     HPE.SimpliVity.VirtualMachine
@@ -2340,21 +2476,21 @@ function Update-SVTbackupUniqueSize {
 .PARAMETER FilePath
     The folder path for the backed up files
 .EXAMPLE
-    PS C:\>$Backup = Get-SVTbackup -VmName Server2016-01 -Latest
+    PS C:\>$Backup = Get-SVTbackup -VmName Server2016-01 | Select-Object -First 1
     PS C:\>$Backup | Get-SVTfile
 
-    The first command identifies the latest backup of the specified VM. The second command displays the
-    virtual disks contained within the backup
+    The first command identifies the most recent backup of the specified VM.
+    The second command displays the virtual disks contained within the backup
 .EXAMPLE
-    PS C:\>$Backup = Get-SVTbackup | Where DestinationName -eq SVTcluster | Select -First 1
+    PS C:\>$Backup = Get-SVTbackup -VmName Server2016-02 -Date 26/04/2020  | Select -First 1
     PS C:\>$Backup | Get-SVTfile -VirtualDisk Server2016-01.vmdk
 
-    The first command identifies the latest backup of the specified VM. The second command displays the
-    partitions within the specified virtual disk. Virtual disk names are case sensitive
+    The first command identifies the most recent backup of the specified VM taken on a specific date. 
+    The second command displays the partitions within the specified virtual disk. Virtual disk names are case sensitive
 .EXAMPLE 
     PS C:\> Get-SVTfile -BackupId 5f5f7f06-a485-42eb-b4c0-0b509609c8fb -VirtualDisk Server2016-01.vmdk -PartitionNumber 4
 
-    Shows the backed up files at the root of the specified partition
+    Shows the contents of the root folder on the specifed partition inside the specified backup
 .EXAMPLE
     PS C:\> Get-SVTfile -BackupId 5f5f7f06-a485-42eb-b4c0-0b509609c8fb Server2016-01.vmdk 4
 
@@ -2366,7 +2502,7 @@ function Update-SVTbackupUniqueSize {
     are case sensitive.
 .EXAMPLE
     PS C:\>$Backup = '5f5f7f06-a485-42eb-b4c0-0b509609c8fb'
-    PS C:\>$Backup | Get-SVTfile -VirtualDisk Server2016-01.vmdk -PartitionNumber 4 -FilePath '/Program Files'
+    PS C:\>$Backup | Get-SVTfile -VirtualDisk Server2016-01.vmdk -PartitionNumber 4 -FilePath '/Log Files'
 
     The first command identifies the desired backup. The second command displays the specified backed up files using
     named parameters. Quotes are used because the file path contains a space. File names are case sensitive.
@@ -2499,8 +2635,8 @@ function Get-SVTfile {
 .SYNOPSIS
     Restore files from a SimpliVity backup to a specified virtual machine.
 .DESCRIPTION
-    This command will restore files from a backup and restore them into an ISO file that is then connected
-    to the specified virtual machine.
+    This command will restore files from a backup into an ISO file that is then connected to the specified 
+    virtual machine.
     
     Notes:
     1. This command only works on guests running Microsoft Windows.
@@ -2514,18 +2650,18 @@ function Get-SVTfile {
 .PARAMETER VmName
     The target virtual machine. Ensure the DVD drive is disconnected
 .PARAMETER FilePath
-    An array containing the backup ID and the full file path of the directory to recover. This consists of
-    the virtual disk name, partition and file/folder name. The Get-SVTfile provides this parameter in the expected
-    form.
+    An array containing the backup ID and the full path of the folder to recover. This consists of the virtual 
+    disk name, partition and folder name. The Get-SVTfile provides this parameter in the expected format, 
+    e.g. "/Server2016-01.vmdk/4/Users/Administrator/Documents".
 
 .EXAMPLE
-    PS C:\> $Backup = Get-SVTbackup -VmName Server2016-01 -Latest
-    PS C:\> $File = $Backup | Get-SVTfile -VirtualDisk Server2016-01.vmdk -PartitionNumber 4 -FilePath '/Program Files'
+    PS C:\> $Backup = Get-SVTbackup -VmName Server2016-01 -Name 2020-04-26T18:00:00+10:10
+    PS C:\> $File = $Backup | Get-SVTfile -VirtualDisk Server2016-01.vmdk -PartitionNumber 4 -FilePath '/Log Files'
     PS C:\> $File | Restore-SVTfile -VmName Server2016-02
 
     The first command identifies the desired backup. 
     The second command enumerates the files from the specified virtual disk, partition and file path in the backup
-    The third command restores the files to an ISO and then connects this to the specified VM
+    The third command restores those files to an ISO and then connects this to the specified virtual machine.
 .INPUTS
     System.String
     HPE.SimpliVity.Backup
@@ -4856,7 +4992,9 @@ function Get-SVTpolicy {
                         EndTime           = $_.end_time
                         DestinationName   = $_.destination_name
                         ConsistencyType   = $_.consistency_type
-                        FrequencyHour     = $_.frequency / 60
+                        FrequencyDay      = [math]::Round($_.frequency / 1440) #Frequency is in minutes
+                        FrequencyHour     = [math]::Round($_.frequency / 60)
+                        FrequencyMinute   = $_.frequency
                         AppConsistent     = $_.application_consistent
                         RuleNumber        = $_.number
                         StartTime         = $_.start_time
@@ -4864,7 +5002,7 @@ function Get-SVTpolicy {
                         Day               = $_.days
                         RuleId            = $_.id
                         RetentionDay      = [math]::Round($_.retention / 1440) #Retention is in minutes
-                        RetentionHour     = [math]::Round($_.retention / 60) #Retention is in minutes
+                        RetentionHour     = [math]::Round($_.retention / 60)
                         RetentionMinute   = $_.retention
                         ExternalStoreName = $_.external_store_name
                     }
