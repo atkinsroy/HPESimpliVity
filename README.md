@@ -8,15 +8,15 @@ Most "Get" commands display default properties; use Format-List or Select-Object
 ```powershell
     PS C:\> Connect-SVT -OVC 192.168.1.11 -Credential $Cred
     PS C:\> Get-SVThost
-    
-    HostName      DataCenterName    ClusterName   FreeSpaceGB    ManagementIP   StorageIP     FederationIP 
+
+    HostName      DataCenterName    ClusterName   FreeSpaceGB    ManagementIP   StorageIP     FederationIP
     --------      --------------    -----------   -----------    ------------   ---------     ------------
     srvr1.sg.com  SunGod            Production1         2,671    192.168.1.11   192.168.2.1   192.168.3.1
     srvr2.sg.com  SunGod            Production1         2,671    192.168.1.12   192.168.2.2   192.168.3.2
     srvr3.sg.com  SunGod            DR1                 2,671    192.170.1.11   192.170.2.1   192.170.3.1
-   
+
     PS C:\>Get-SVThost -HostName 192.168.1.1 | Select-Object *
-    
+
     PolicyEnabled            : True
     ClusterId                : 3baba7ec-6d02-4fb6-b510-5ce19cd9c1d0
     StorageMask              : 255.255.255.0
@@ -26,10 +26,14 @@ Most "Get" commands display default properties; use Format-List or Select-Object
     .
     .
 ```
-## Update V2.1.4 new features
+## Update V2.1.10 new features
 
-* Supports the new features in HPE SimpliVity 4.0.1. Specifically, the ability to delete external stores and reset the credentials of external stores 
-* Added support to create and update backup policies with a rentention specified in hours. The ability to specify rentention in days still exists. 
+* Supports the new features in HPE SimpliVity 4.0.1. Specifically, the ability to delete external stores and reset the credentials of external stores
+* Added support to create and update backup policies with a retention specified in hours. The ability to specify retention in days still exists.
+* Added Get-SVTfile and Restore-SVTfile to retrieve file information within SimpliVity backups and restore files from the command line.
+* Updated Get-SVTbackup with many more parameters, including -Date, -CreateAfter, -CreateBefore, -ExpiresAfter, -ExpiresBefore, -ClusterName, -BackupState and -BackupType. Improved the ability to specify multiple parameters to refine backup record filtering.
+* Updated the -All parameter for the Get-SVTbackup command to return all backup records. This bypasses the previous limitation of -Limit being set to 3000 and is achieved by making multiple calls to the API with an offset. This command can take a long time to finish; specifying additional parameters to restrict the output is recommended.
+* Updated Remove-SVTbackup to remove multiple backups using a single task. This is much more efficient even if you have a small number of backups to remove.
 
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
@@ -46,7 +50,7 @@ Unpublish-SVTdatastore | Get-SVTpolicy | Copy-SVTbackup
 Get-SVTdatastoreComputeNode | New-SVTpolicyRule | Get-SVTbackup
 Set-SVTdatastorePolicy | Update-SVTpolicyRule | Set-SVTbackupRetention
 Get-SVTexternalStore | Remove-SVTpolicyRule | Update-SVTbackupUniqueSize
-New-SVTexternalStore | Get-SVTpolicyScheduleReport 
+New-SVTexternalStore | Get-SVTpolicyScheduleReport
 Set-SVTexternalStore
 Remove-SVTexternalStore
 
@@ -66,7 +70,7 @@ Get-SVTversion
 
 * PowerShell V5.1 and above. (note: the chart features do not work with PowerShell Core 6.0 or PowerShell 7.0)
 * The IP address and the credentials of an authorized OmniStack user account.
-* Tested with HPE SimpliVity V4.0.1. The module should be compatible with older versions, but has not been tested. 
+* Tested with HPE SimpliVity V4.0.1. The module should be compatible with older versions, but has not been tested.
 
 ## Installation
 
@@ -97,7 +101,7 @@ The module is signed, so it will work with an execution policy set to Remote Sig
 Or, if you need to run commands in batch (non-interactively), save your credentials to a file first:
 
 ```powershell
-    PS C:\> $Cred = Get-Credential -Username 'administrator@vsphere.local' | Export-Clixml .\OVCcred.XML 
+    PS C:\> $Cred = Get-Credential -Username 'administrator@vsphere.local' | Export-Clixml .\OVCcred.XML
 ```
 and then in your script, import the credential:
 ```powershell
@@ -108,7 +112,7 @@ and then in your script, import the credential:
 
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
-## Known issues with V4.0.1 of the API (With HPESimpliVity 2.1.4)
+## Known issues with V4.0.1 of the API (With HPESimpliVity 2.1.10)
 
 The API has some documented and undocumented issues:
 * OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation

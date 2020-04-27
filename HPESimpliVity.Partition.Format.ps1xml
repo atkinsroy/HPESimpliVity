@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Configuration>
+    <ViewDefinitions>
+        <View>
+            <Name>SVTClusterTable</Name>
+            <ViewSelectedBy>
+                <TypeName>HPE.SimpliVity.Partition</TypeName>
+            </ViewSelectedBy>
+            <TableControl>
+                <AutoSize />
+                <TableHeaders>
+                    <TableColumnHeader>
+                        <Width>36</Width>
+                        <Alignment>left</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>15</Width>
+                        <Alignment>left</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>6</Width>
+                        <Alignment>right</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>8</Width>
+                        <Alignment>left</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>9</Width>
+                        <Alignment>left</Alignment>
+                    </TableColumnHeader>
+
+                </TableHeaders>
+                <TableRowEntries>
+                    <TableRowEntry>
+                        <TableColumnItems>
+                            <TableColumnItem>
+                                <PropertyName>BackupId</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>PartitionNumber</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>SizeMB</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>DiskType</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Mountable</PropertyName>
+                            </TableColumnItem>
+                        </TableColumnItems>
+                    </TableRowEntry>
+                </TableRowEntries>
+            </TableControl>
+        </View>
+    </ViewDefinitions>
+</Configuration>
