@@ -26,7 +26,7 @@ Most "Get" commands display default properties; use Format-List or Select-Object
     .
     .
 ```
-## Update V2.1.10 new features
+## Update V2.1.11 new features
 
 * Supports the new features in HPE SimpliVity 4.0.1. Specifically, the ability to delete external stores and reset the credentials of external stores 
 * Added support to create and update backup policies with a retention specified in hours. The ability to specify retention in days still exists.
@@ -111,7 +111,7 @@ and then in your script, import the credential:
 
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
-## Known issues with V4.0.1 of the API (With HPESimpliVity 2.1.10)
+## Known issues with V4.0.1 of the API (With HPESimpliVity 2.1.11)
 
 The API has some documented and undocumented issues:
 * OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation

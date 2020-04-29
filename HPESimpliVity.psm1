@@ -1320,8 +1320,8 @@ function Get-SVTmodel {
     PS C:\> Get-SVTbackup -ClusterName cluster1 -Limit 1 -Verbose
 
     The first command shows the most recent 100 backups for all VMs located on the specified cluster.
-    The second command shows a quick way to determine the number of backups on a cluster without showing all the
-    backups. The verbose message will always display the number of backups that meet the command criteria.
+    The second command shows a quick way to determine the number of backups on a cluster without showing them
+    all. The verbose message will always display the number of backups that meet the command criteria.
 .EXAMPLE
     PS C:\> Get-SVTbackup -DestinationName cluster1
 
