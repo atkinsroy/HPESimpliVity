@@ -1,3 +1,14 @@
+# Version 2.1.12
+
+* Added the ability to display backed up file information within HPE SimpliVity backups and to perform file-level restores from the command line, using two new commands; Get-SVTfile and Restore-SVTfile respectively.
+* Added the ability to set user credentials on virtual machines for Microsoft Volume Shadow Copy Service (VSS) bckups. This is implemented via a new command called Set-SVTvm.
+* A new parameter called -ImpactReportOnly has been added to several commands; Set-SVTvmPolicy, New-SVTpolicyRule, Update-SVTpolicyRule and Remove-SVTpolicyRule. Instead of making the change, the command displays a report that shows projected daily backup rates and new total retained backups given the frequency and retention settings if the change is subsequently made.
+* Updated Remove-SVTbackup to remove multiple backups using a single task. This is much more efficient even if you have a small number of backups to remove.
+* Updated Get-SVTbackup with many more parameters, i.e. -Date, -CreateAfter, -CreateBefore, -ExpiresAfter, -ExpiresBefore, -ClusterName, -BackupState and -BackupType. Improved the ability to specify multiple parameters at once to refine which backups are queried.
+* Updated the -All parameter for the Get-SVTbackup command to return all backup records. This bypasses the previous restriction of the -Limit parameter being set to 3000 and is achieved by making multiple calls to the API with an offset. This command can take a long time to finish; specifying additional parameters to restrict the output is recommended.
+* Removed the -Latest parameter from Get-SVTbackup. This effected the performance of Get-SVTbackup generally, whether this parameter was used or not. There is a work around in the example help for this command that displays the same results.
+* Perforamance refactoring and bug fixes.
+
 # Version 2.1.4
 
 * Added support for the new features in HPE SimpliVity V4.0.1
@@ -32,7 +43,6 @@ Note: multi-value parameters do not work for Get-SVTbackup when connected to an 
 * Added additional new attributes provided by API to some cmdlets
 * Bug fixes
 
-
 # Version 2.0.16
 
 * Added support for new HPE SimpliVity V4.0.0 features. Specifically, the ability to create new and show external stores with two new cmdlets (New-SVTexternalStore and Get-SVTexternalStore, respectively). In addition, the following cmdlets have been updated to support external stores:
@@ -53,7 +63,6 @@ Note: The new HPE StoreOnce Catalyst datastore must be added via the StoreOnce m
 * Autosized columns added for most SimpliVity objects. For performance reasons, cmdlets that produce a lot of objects, like Get-SVTmetric and Get-SVTbackup are not autosized
 * Added some additional properties to cluster objects related to the new supported Arbiter configurations available in V4.0.0
 * Bug fixes
-
 
 # Version 1.1.5
 

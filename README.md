@@ -1,4 +1,4 @@
- # HPE SimpliVity PowerShell Module
+# HPE SimpliVity PowerShell Module
 
 This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage a HPE SimpliVity federation. It works by connecting to any HPE OmniStack virtual controller in your environment. With the release of HPE SimpliVity V4.0.0, you can now also connect to a management virtual appliance, which is recommended.
 
@@ -26,44 +26,44 @@ Most "Get" commands display default properties; use Format-List or Select-Object
     .
     .
 ```
-## Update V2.1.11 new features
+## Update V2.1.12 new features
 
 * Supports the new features in HPE SimpliVity 4.0.1. Specifically, the ability to delete external stores and reset the credentials of external stores 
-* Added support to create and update backup policies with a retention specified in hours. The ability to specify retention in days still exists.
-* Added Get-SVTfile and Restore-SVTfile to retrieve file information within SimpliVity backups and restore files from the command line.
-* Updated Get-SVTbackup with many more parameters, including -Date, -CreateAfter, -CreateBefore, -ExpiresAfter, -ExpiresBefore, -ClusterName, -BackupState and -BackupType. Improved the ability to specify multiple parameters to refine backup record filtering.
-* Updated the -All parameter for the Get-SVTbackup command to return all backup records. This bypasses the previous limitation of -Limit being set to 3000 and is achieved by making multiple calls to the API with an offset. This command can take a long time to finish; specifying additional parameters to restrict the output is recommended.
+* Added the ability to display backed up file information within HPE SimpliVity backups and to perform file-level restores from the command line, using two new commands; Get-SVTfile and Restore-SVTfile respectively.
+* Added the ability to set user credentials on virtual machines for Microsoft Volume Shadow Copy Service (VSS) backups. This is implemented via a new command called Set-SVTvm.
+* Updated Get-SVTbackup with many more parameters, i.e. -Date, -CreateAfter, -CreateBefore, -ExpiresAfter, -ExpiresBefore, -ClusterName, -BackupState and -BackupType. Improved the ability to specify multiple parameters to refine which backups are queried.
+* Updated the -All parameter for the Get-SVTbackup command to return all backup records. This bypasses the previous restriction of the -Limit parameter being set to 3000 and is achieved by making multiple calls to the API with an offset. This command can take a long time to finish; specifying additional parameters to restrict the output is recommended.
 * Updated Remove-SVTbackup to remove multiple backups using a single task. This is much more efficient even if you have a small number of backups to remove.
 
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
-The module contains 58 exported cmdlets, divided into the following feature categories:
+The module contains 59 exported cmdlets, divided into the following feature categories:
 
 Datastore | Backup | Backup Policy
 :--- | :--- | :---
-Get-SVTdatastore | Get-SVTbackup | Get-SVTpolicy
-New-SVTdatastore | Copy-SVTbackup | Rename-SVTpolicy 
-Remove-SVTdatastore | Lock-SVTbackup | Resume-SVTpolicy 
-Resize-SVTdatastore | New-SVTbackup | Suspend-SVTpolicy 
-Publish-SVTdatastore | Remove-SVTbackup | Remove-SVTpolicy 
-Unpublish-SVTdatastore | Rename-SVTbackup | New-SVTpolicy 
-Get-SVTdatastoreComputeNode | Stop-SVTbackup | New-SVTpolicyRule 
-Set-SVTdatastorePolicy | Set-SVTbackupRetention | Update-SVTpolicyRule 
-Get-SVTexternalStore | Update-SVTbackupUniqueSize | Remove-SVTpolicyRule 
-New-SVTexternalStore | Get-SVTfile | Get-SVTpolicyScheduleReport 
-Set-SVTexternalStore | Restore-SVTfile
-Remove-SVTexternalStore
+Get-SVTdatastore | Copy-SVTbackup | Get-SVTpolicy
+Get-SVTdatastoreComputeNode | Get-SVTbackup | Get-SVTpolicySchedule
+Get-SVTexternalStore | Get-SVTfile | New-SVTpolicy
+New-SVTdatastore | Lock-SVTbackup | New-SVTpolicyRule
+New-SVTexternalStore | New-SVTbackup | Remove-SVTpolicy
+Publish-SVTdatastore | Remove-SVTbackup | Remove-SVTpolicyRule
+Remove-SVTdatastore | Rename-SVTbackup | Rename-SVTpolicy
+Remove-SVTexternalStore | Restore-SVTfile | Resume-SVTpolicy
+Resize-SVTdatastore | Set-SVTbackupRetention | Suspend-SVTpolicy
+Set-SVTdatastorePolicy | Stop-SVTbackup | Update-SVTpolicyRule
+Set-SVTexternalStore | Update-SVTbackupUniqueSize
+Unpublish-SVTdatastore
 ||
-**Cluster & Utility** | **Host** | **Virtual Machine**
-Get-SVTcluster | Get-SVThost | Get-SVTvm
-Get-SVTclusterConnected | Get-SVThardware | Move-SVTvm
-Connect-SVT | Remove-SVThost | New-SVTclone
-Get-SVTcapacity | Start-SVTshutdown | Restore-SVTvm
-Get-SVTmetric | Stop-SVTshutdown | Start-SVTvm
-Get-SVTtask | Get-SVTshutdownStatus | Stop-SVTvm
-Get-SVTtimezone | Get-SVTthroughput | Set-SVTvmPolicy
-Set-SVTtimezone | Get-SVTdisk | Get-SVTvmReplicaSet
-Get-SVTversion
+**Cluster & Utility** | **Host** | **Virtual Machine**
+Connect-SVT | Get-SVTdisk | Get-SVTvm
+Get-SVTcapacity | Get-SVThardware | Get-SVTvmReplicaSet
+Get-SVTcluster | Get-SVThost | Move-SVTvm
+Get-SVTclusterConnected | Get-SVTshutdownStatus | New-SVTclone
+Get-SVTmetric | Get-SVTthroughput | Restore-SVTvm
+Get-SVTtask | Remove-SVThost | Set-SVTvm
+Get-SVTtimezone | Start-SVTshutdown | Set-SVTvmPolicy
+Get-SVTversion | Stop-SVTshutdown | Start-SVTvm
+Set-SVTtimezone | &nbsp; | Stop-SVTvm
 
 ## Requirements
 
@@ -111,7 +111,7 @@ and then in your script, import the credential:
 
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
-## Known issues with V4.0.1 of the API (With HPESimpliVity 2.1.11)
+## Known issues with V4.0.1 of the API
 
 The API has some documented and undocumented issues:
 * OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation
