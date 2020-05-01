@@ -855,15 +855,15 @@ function Get-SVTmetricChart {
     
     $Path = Get-Location
     $Culture = Get-Culture
-    $StartDate = $Metric | Select-Object -First 1 -ExpandProperty Date
-    $EndDate = $Metric | Select-Object -Last 1 -ExpandProperty Date
+    $StartDate = $Metric | Select-Object -Last 1 -ExpandProperty Date
+    $EndDate = $Metric | Select-Object -First 1 -ExpandProperty Date
     $ChartLabelFont = 'Arial, 8pt'
     $ChartTitleFont = 'Arial, 12pt'
     $DateStamp = Get-Date -Format 'yyMMddhhmmss'
 
     # define an object to determine the best interval on the Y axis, given a maximum value
-    $Ylimit = (0, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000, 5120000, 10240000, 20480000)
-    $Yinterval = (200, 500, 1000, 5000, 10000, 15000, 20000, 50000, 75000, 100000, 250000, 400000, 1000000)
+    $Ylimit = (0, 5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000, 5120000, 10240000, 20480000)
+    $Yinterval = (200, 400, 600, 1000, 5000, 10000, 15000, 20000, 50000, 75000, 100000, 250000, 400000, 1000000)
     $Yaxis = 0..11 | foreach-object {
         [PSCustomObject]@{
             Limit    = $Ylimit[$_]
@@ -939,6 +939,7 @@ function Get-SVTmetricChart {
                 $Max = $_
             }
         }
+        Write-Verbose "Maximum milliseconds value = $Max"
 
         # determine an appropriate Yaxis interval.
         $Yaxis | ForEach-Object {
@@ -947,6 +948,7 @@ function Get-SVTmetricChart {
                 $Area1.AxisY.Interval = $Yint
             }
         }
+        Write-Verbose "Y axis interval = $Yint"
 
         # title for second Y axis
         $Area1.AxisY2.Title = 'Throughput (Mbps)'
@@ -955,6 +957,7 @@ function Get-SVTmetricChart {
         $Area1.AxisY2.LineColor = [System.Drawing.Color]::Transparent
         $Area1.AxisY2.MajorGrid.Enabled = $false
         $Area1.AxisY2.Enabled = $AxisEnabled::true
+        #$Area1.AxisY2.Interval = 2
 
         # Add Area to chart
         $Chart1.ChartAreas.Add($Area1)
