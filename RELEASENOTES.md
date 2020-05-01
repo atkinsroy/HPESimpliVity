@@ -7,7 +7,7 @@
 * Updated Get-SVTbackup with many more parameters, i.e. -Date, -CreateAfter, -CreateBefore, -ExpiresAfter, -ExpiresBefore, -ClusterName, -BackupState and -BackupType. Improved the ability to specify multiple parameters at once to refine which backups are queried.
 * Updated the -All parameter for the Get-SVTbackup command to return all backup records. This bypasses the previous restriction of the -Limit parameter being set to 3000 and is achieved by making multiple calls to the API with an offset. This command can take a long time to finish; specifying additional parameters to restrict the output is recommended.
 * Removed the -Latest parameter from Get-SVTbackup. This effected the performance of Get-SVTbackup generally, whether this parameter was used or not. There is a work around in the example help for this command that displays the same results.
-* Perforamance refactoring and bug fixes.
+* Performance refactoring and bug fixes.
 
 # Version 2.1.4
 
