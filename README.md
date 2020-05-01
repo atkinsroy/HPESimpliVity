@@ -28,13 +28,6 @@ Most "Get" commands display default properties; use Format-List or Select-Object
 ```
 ## Update V2.1.12 new features
 
-* Supports the new features in HPE SimpliVity 4.0.1. Specifically, the ability to delete external stores and reset the credentials of external stores 
-* Added the ability to display backed up file information within HPE SimpliVity backups and to perform file-level restores from the command line, using two new commands; Get-SVTfile and Restore-SVTfile respectively.
-* Added the ability to set user credentials on virtual machines for Microsoft Volume Shadow Copy Service (VSS) backups. This is implemented via a new command called Set-SVTvm.
-* Updated Get-SVTbackup with many more parameters, i.e. -Date, -CreateAfter, -CreateBefore, -ExpiresAfter, -ExpiresBefore, -ClusterName, -BackupState and -BackupType. Improved the ability to specify multiple parameters to refine which backups are queried.
-* Updated the -All parameter for the Get-SVTbackup command to return all backup records. This bypasses the previous restriction of the -Limit parameter being set to 3000 and is achieved by making multiple calls to the API with an offset. This command can take a long time to finish; specifying additional parameters to restrict the output is recommended.
-* Updated Remove-SVTbackup to remove multiple backups using a single task. This is much more efficient even if you have a small number of backups to remove.
-
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
 The module contains 59 exported cmdlets, divided into the following feature categories:
