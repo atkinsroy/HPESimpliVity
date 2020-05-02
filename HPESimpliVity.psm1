@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.12'
+$HPESimplivityVersion = '2.1.14'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -236,11 +236,9 @@ function Invoke-SVTrestMethod {
                     $OVC = $SVTconnection.OVC -replace 'https://', ''
                     $Retry = Connect-SVT -OVC $OVC -Credential $SVTconnection.Credential
 
-                    # Update the json header with the new token for the retry
-                    $Header = @{
-                        'Authorization' = "Bearer $($Retry.Token)"
-                        'Accept'        = 'application/json' 
-                    }
+                    # Update the json header authorisation with the new token for the retry
+                    # Not the entire header, this breaks subsequent POST calls.
+                    $Header.Authorization = "Bearer $($Retry.Token)"
                 }
             }
             elseif ($_.Exception.Message -match 'The hostname could not be parsed') {
@@ -1211,6 +1209,23 @@ function Get-SVTmodel {
             DiskCount    = $DiskCount[$_]
             DiskCapacity = $DiskCapacity[$_]
             StorageKit   = $Kit[$_]
+        }
+    }
+}
+
+# Helper function for New-SVTpolicyRule, Remove-SVTpolicyRule, Update-SVTpolicyRule and Set-SVTvm
+function Get-SVTimpactReport {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [System.Object]$Response
+    )
+    $TextInfo = (Get-Culture).TextInfo
+    foreach ($Attribute in $Response.schedule_before_change.PSobject.Properties.Name) {
+        [PSCustomObject]@{
+            'Attribute'    = $TextInfo.TotitleCase($Attribute) -replace '_', ''
+            'BeforeChange' = $Response.schedule_before_change.$Attribute
+            'AfterChange'  = $Response.schedule_after_change.$Attribute
         }
     }
 }
@@ -5377,21 +5392,8 @@ function New-SVTpolicyRule {
         catch {
             throw $_.Exception.Message
         }
-
-        $TextInfo = (Get-Culture).TextInfo
-        $Attribute = $Response.schedule_before_change.PSobject.Properties.Name | 
-        Foreach-Object { $TextInfo.TotitleCase($_) -replace '_', '' }
-
-        $BeforeChange = $Response.schedule_before_change.PSobject.Properties.Value
-        $AfterChange = $Response.schedule_after_change.PSobject.Properties.Value
-
-        0..5 | Foreach-Object {
-            [PSCustomObject]@{
-                'Attribute'    = $Attribute[$_]
-                'BeforeChange' = $BeforeChange[$_]
-                'AfterChange'  = $AfterChange[$_]
-            }
-        }
+        # Schedule impact performed, show report
+        Get-SVTimpactReport -Response $Response
     }
     else {
         $Header = @{
@@ -5671,21 +5673,8 @@ function Update-SVTpolicyRule {
         catch {
             throw $_.Exception.Message
         }
-
-        $TextInfo = (Get-Culture).TextInfo
-        $Attribute = $Response.schedule_before_change.PSobject.Properties.Name | 
-        Foreach-Object { $TextInfo.TotitleCase($_) -replace '_', '' }
-
-        $BeforeChange = $Response.schedule_before_change.PSobject.Properties.Value
-        $AfterChange = $Response.schedule_after_change.PSobject.Properties.Value
-
-        0..5 | Foreach-Object {
-            [PSCustomObject]@{
-                'Attribute'    = $Attribute[$_]
-                'BeforeChange' = $BeforeChange[$_]
-                'AfterChange'  = $AfterChange[$_]
-            }
-        }
+        # Schedule impact performed, show report
+        Get-SVTimpactReport -Response $Response
     }
     else {
         $Body = $Body | ConvertTo-Json
@@ -5781,21 +5770,8 @@ function Remove-SVTpolicyRule {
         catch {
             throw $_.Exception.Message
         }
-
-        $TextInfo = (Get-Culture).TextInfo
-        $Attribute = $Response.schedule_before_change.PSobject.Properties.Name | 
-        Foreach-Object { $TextInfo.TotitleCase($_) -replace '_', '' }
-        
-        $BeforeChange = $Response.schedule_before_change.PSobject.Properties.Value
-        $AfterChange = $Response.schedule_after_change.PSobject.Properties.Value
-
-        0..5 | Foreach-Object {
-            [PSCustomObject]@{
-                'Attribute'    = $Attribute[$_]
-                'BeforeChange' = $BeforeChange[$_]
-                'AfterChange'  = $AfterChange[$_]
-            }
-        }
+        # Schedule impact performed, show report
+        Get-SVTimpactReport -Response $Response
     }
     else {
         # Delete the backup policy rule
@@ -7062,21 +7038,7 @@ function Set-SVTvmPolicy {
 
         if ($ImpactReportOnly) {
             # Schedule impact performed, show report
-            $TextInfo = (Get-Culture).TextInfo
-            
-            $Attribute = $Response.schedule_before_change.PSobject.Properties.Name | 
-            Foreach-Object { $TextInfo.TotitleCase($_) -replace '_', '' }
-            
-            $BeforeChange = $Response.schedule_before_change.PSobject.Properties.Value
-            $AfterChange = $Response.schedule_after_change.PSobject.Properties.Value
-
-            0..4 | Foreach-Object {
-                [PSCustomObject]@{
-                    'Attribute'    = $Attribute[$_]
-                    'BeforeChange' = $BeforeChange[$_]
-                    'AfterChange'  = $AfterChange[$_]
-                }
-            }
+            Get-SVTimpactReport -Response $Response
         }
         else {
             #Task peformed, show the task
