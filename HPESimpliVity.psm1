@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.14'
+$HPESimplivityVersion = '2.1.15'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -540,12 +540,19 @@ function Get-SVTversion {
     catch {
         throw $_.Exception.Message
     }
+    if ($Response.SVTFS_Version) {
+        $Controller = 'OmniStack Virtual Controller'
+    }
+    else {
+        $Controller = 'Managed Virtual Appliance'
+    }
 
     $Response | ForEach-Object {
         [PSCustomObject]@{
             'RestApiVersion'          = $_.REST_API_Version
             'SvtFsVersion'            = $_.SVTFS_Version
             'PowerShellModuleVersion' = $HPESimplivityVersion
+            'ControllerType'          = $Controller
         }
     }
 }
@@ -937,7 +944,7 @@ function Get-SVTmetricChart {
                 $Max = $_
             }
         }
-        Write-Verbose "Maximum milliseconds value = $Max"
+        #Write-Verbose "Maximum milliseconds value = $Max"
 
         # determine an appropriate Yaxis interval.
         $Yaxis | ForEach-Object {
@@ -946,7 +953,7 @@ function Get-SVTmetricChart {
                 $Area1.AxisY.Interval = $Yint
             }
         }
-        Write-Verbose "Y axis interval = $Yint"
+        #Write-Verbose "Y axis interval = $Yint"
 
         # title for second Y axis
         $Area1.AxisY2.Title = 'Throughput (Mbps)'
@@ -2225,15 +2232,15 @@ function Copy-SVTbackup {
     }
 
     process {
-        foreach ($thisbackup in $BackupId) {
+        foreach ($BkpId in $BackupId) {
             try {
-                $Uri = $global:SVTconnection.OVC + '/api/backups/' + $thisbackup + '/copy'
+                $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/copy'
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
                 $Task
                 [array]$AllTask += $Task
             }
             catch {
-                Write-Warning "$($_.Exception.Message), copy failed for backup with id $thisbackup"
+                Write-Warning "$($_.Exception.Message), copy failed for backup with id $BkpId"
             }
         }
     }
@@ -5161,6 +5168,8 @@ function New-SVTpolicy {
 .DESCRIPTION
     Create backup policies within an existing HPE Simplivity backup policy. Optionally,
     You can replace all the existing policy rules with the new policy rule.
+
+    You can also display an impact report rather than performing the change.
 .PARAMETER PolicyName
     The backup policy to add/replace backup policy rules
 .PARAMETER WeekDay
@@ -5438,6 +5447,8 @@ function New-SVTpolicyRule {
     using Remove-SVTpolicyRule and New-SVTpolicyRule respectively, to update the backup destination.
 
     Rule numbers start from 0 and increment by 1. Use Get-SVTpolicy to identify the rule you want to update.
+
+    You can also display an impact report rather than performing the change.
 .PARAMETER PolicyName
     The name of the backup policy to update
 .PARAMETER RuleNumber
@@ -5706,7 +5717,9 @@ function Update-SVTpolicyRule {
     Delete an existing rule from a HPE SimpliVity backup policy. You must specify the policy name and 
     the rule number to be removed.
 
-    Rule numbers start from 0 and increment by 1. Use Get-SVTpolicy to identify the rule you want to delete
+    Rule numbers start from 0 and increment by 1. Use Get-SVTpolicy to identify the rule you want to delete.
+
+    You can also display an impact report rather than performing the change.
 .PARAMETER PolicyName
     Specify the policy containing the policy rule to delete
 .PARAMETER RuleNumber
@@ -6680,12 +6693,22 @@ function Move-SVTvm {
 
 <#
 .SYNOPSIS
-    Set the credentials on a SimpliVity virtual machine for application consistent backups
+    Sets a backup policy or the user credentials to enable application consistent backups on HPE SimpliVity
+    virtual machines.
 .DESCRIPTION
-    To create application-consistent backups that use Microsoft Volume Shadow Copy Service (VSS),
-    enter the guest credentials for one or more virtual machines. The guest credentials must use
-    administrator privileges for VSS. The target virtual machine(s) must be powered on. The target
-    virtual machine(s) must be running Microsoft Windows.
+    Either sets a new HPE SimpliVity backup policy on virtual machines or sets the guest user credentials
+    to enable application consistent backups. Optionally, for backup policy changes, display an impact report
+    rather than performing the action.
+
+    When a VM is first created, it inherits the backup policy set on the HPE SimpliVity datastore it is 
+    created on. Use this command to explicitly set a different backup policy for specified virtual machine(s).
+    Once set (either automatically or manually), a VM will retain the same backup policy, even if it is moved 
+    to another datastore with a different default backup policy.
+
+    To create application-consistent backups that use Microsoft Volume Shadow Copy Service (VSS), enter the 
+    guest credentials for one or more virtual machines. The guest credentials must use administrator 
+    privileges for VSS. The target virtual machine(s) must be powered on. The target virtual machine(s) must 
+    be running Microsoft Windows.
 
     The user name can be specified in the following forms:
        "administrator", a local user account
@@ -6694,12 +6717,35 @@ function Move-SVTvm {
 
     The password cannot be entered as a parameter. The command will prompt for a secure string to be entered.
 
+.PARAMETER PolicyName
+    The name of the new policy to use when setting the backup policy on one or more VMs
 .PARAMETER VmName
-    The name(s) of the virtual machines you'd like to set VSS credentials for
+    The target virtual machine(s)
+.PARAMETER VmId
+    Instead of specifying one or more VM names, HPE SimpliVity virtual machine objects can be passed in from 
+    the pipeline, using Get-SVTvm. This is more efficient (single call to the SimpliVity API).
+.PARAMETER ImpactReportOnly
+    Rather than change the backup policy on one or more virtual machines, display a report showing the impact 
+    this action would make. The report shows projected daily backup rates and new total retained backups given 
+    the frequency and retention settings for the given backup policy.
 .PARAMETER Username
-    The username
+    When setting the user credentials, specify the username 
 .PARAMETER Password
-    The password must be entered as a secure string
+    When setting the user credentials, the password must be entered as a secure string (not as a parameter)
+.EXAMPLE
+    PS C:\>Get-SVTvm -Datastore DS01 | Set-SVTvmPolicy Silver
+
+    Changes the backup policy for all VMs on the specified datastore to the backup policy named 'Silver'
+.EXAMPLE
+    Set-SVTvmPolicy Silver VM01
+
+    Using positional parameters to apply a new backup policy to the VM
+.EXAMPLE
+    Get-SVTvm -Policy Silver | Set-SVTvmPolicy -PolicyName Gold -ImpactReportOnly
+
+    No changes are made. Displays an impact report showing the effects that changing all virtual machines with
+    the Silver backup policy to the Gold backup policy would make to the system. The report shows projected 
+    daily backup rates and total retained backup rates. 
 .EXAMPLE
     PS C:\>Set-SVTvm -VmName MyVm -Username svc_backup
 
@@ -6708,75 +6754,181 @@ function Move-SVTvm {
     PS C:\>"VM1", "VM2" | Set-SVTvm -Username sugarstar\backupadmin
 
     Prompts for the password of the specified account and sets the VSS credentials for the two virtual machines.
+    The command contacts the running Windows guest to confirm the validity of the password before setting it.
 .EXAMPLE
     PS C:\>Get-VM Server2016-01 | Set-SVTvm -Username administrator
     PS C:\>Get-VM Server2016-01 | Select-Object VmName, AppAwareVmStatus
 
-    Set the credentials for the specified virtual machine and confirm they're set properly.
+    Set the credentials for the specified virtual machine and then confirm they are set properly.
 .INPUTS
-    system.string
+    System.String
     HPE.SimpliVity.VirtualMachine
 .OUTPUTS
     HPE.SimpliVity.Task
+    PSCustomObject
 .NOTES
 #>
 function Set-SVTvm {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'SetPolicy')]
     param (
-        [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
-        [Alias('Name')]
-        [System.String]$VmName,
+        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'SetPolicy')]
+        [Alias('Policy')]
+        [System.String]$PolicyName,
 
-        [Parameter(Mandatory = $true, Position = 1)]
+        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'SetCredential',
+            ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
+        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'SetPolicy',
+            ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
+        [Alias('Name')]
+        [System.String[]]$VmName,
+
+        [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'SetPolicy')]
+        [switch]$ImpactReportOnly,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'SetPolicy',
+            ValueFromPipelinebyPropertyName = $true)]
+        [System.String]$VmId,
+
+        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'SetCredential')]
         [System.String]$Username,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'SetCredential')]
         [System.Security.SecureString]$Password
     )
 
     begin {
+        # This header is used by /backup_parameters (set credentials) and /policy_impact_report/apply_policy. 
+        # Not by /set_policy. This is fixed later
         $Header = @{
             'Authorization' = "Bearer $($global:SVTconnection.Token)"
             'Accept'        = 'application/json'
             'Content-Type'  = 'application/vnd.simplivity.v1.14+json'
         }
-        $SecurePass = (New-Object System.Management.AUtomation.PSCredential('user', $password)).`
-            GetNetworkCredential().password
-    }
-    process {
-        foreach ($VM in $VmName) {
-            try {
-                $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
-                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + '/backup_parameters'
 
-                $Body = @{
-                    'guest_username'            = $Username
-                    'guest_password'            = $SecurePass
-                    'override_guest_validation' = $false
-                    'app_aware_type'            = 'VSS'
-                } | ConvertTo-Json
-                Write-Verbose $Body
+        if ($PSCmdlet.ParameterSetName -eq 'SetPolicy') {
+            $VmList = @()
+            try {
+                $PolicyId = Get-SVTpolicy -PolicyName $PolicyName | Select-Object -ExpandProperty PolicyId -Unique
             }
             catch {
                 throw $_.Exception.Message
             }
 
-            try {
-                $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
-                $Task
-                [array]$AllTask += $Task
+            if ($ImpactReportOnly) {
+                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/policy_impact_report/apply_policy'
             }
-            catch {
-                Write-Warning "$($_.Exception.Message), failed to set credentials for VM $VM"
+            else {
+                # Fix header for /set_policy API call
+                $Header.'Content-Type' = 'application/vnd.simplivity.v1.5+json'
+                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/set_policy'
             }
         }
+        else {
+            # Setting a user credential for VSS
+            $SecurePass = (New-Object System.Management.AUtomation.PSCredential('user', $password)).`
+                GetNetworkCredential().password
+
+            $Body = @{
+                'guest_username'            = $Username
+                'guest_password'            = $SecurePass
+                'override_guest_validation' = $false
+                'app_aware_type'            = 'VSS'
+            }
+            $SecureBody = $Body
+            $Body = $Body | ConvertTo-Json
+
+            $SecureBody.guest_password = '*' * 10
+            $SecureBody = $SecureBody | ConvertTo-Json
+            Write-Verbose $SecureBody
+        }
+    }
+    process {
+        # VM objects passed in from Get-SVTvm
+        if ($VmId) {
+            if ($PSCmdlet.ParameterSetName -eq 'SetPolicy') {
+                # Both forms of the policy command (set report) uses a hash containing VM Ids (passed in)
+                $VmList += $VmId
+            }
+            else {
+                # Run a task to set user creds on each VM (passed in)
+                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/backup_parameters'
+                try {
+                    $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+                    $Task
+                    [array]$AllTask += $Task
+                }
+                catch {
+                    Write-Warning "$($_.Exception.Message), failed to set credentials for VM $VM"
+                }
+            }
+        }
+        else {
+            foreach ($VM in $VmName) {
+                if ($PSCmdlet.ParameterSetName -eq 'SetPolicy') {
+                    # Both forms of the policy command (set report) uses a hash containing VM Ids (specified)
+                    try {
+                        $VmList += Get-SVTvm -VmName $VM -ErrorAction Stop | Select-Object -ExpandProperty VmId
+                    }
+                    catch {
+                        throw $_.Exception.Message
+                    }
+                }
+                else {
+                    # Run a task to set user creds on each VM (specified)
+                    try {
+                        $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
+                        $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + 
+                        '/backup_parameters'
+                    }
+                    catch {
+                        throw $_.Exception.Message
+                    }
+                    try {
+                        $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+                        $Task
+                        [array]$AllTask += $Task
+                    }
+                    catch {
+                        Write-Warning "$($_.Exception.Message), failed to set credentials for VM $VM"
+                    }
+                }
+            } # end foreach
+        } # end else
     }
     end {
-        # Useful to keep the task objects in this session, so we can keep track of them with Get-SVTtask
-        $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
-    }
+        if ($PSCmdlet.ParameterSetName -eq 'SetPolicy') {
+            # Now we have a list of VM Ids, run the task (set or report policy)
+            $Body = @{
+                'virtual_machine_id' = $VmList
+                'policy_id'          = $PolicyId
+            } | ConvertTo-Json
+            Write-Verbose $Body
+            
+            # run either the set or report API. URI set in begin block.
+            try {
+                $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+            }
+            catch {
+                throw $_.Exception.Message
+            }
+    
+            if ($ImpactReportOnly) {
+                # Schedule impact performed, show report
+                Get-SVTimpactReport -Response $Response
+            }
+            else {
+                #Task peformed, show the task
+                $Response
+                $global:SVTtask = $Response
+                $null = $SVTtask
+            }
+        }
+        else {
+            # Work for set user credentials is done in process loop, just output the task Ids
+            $global:SVTtask = $AllTask
+            $null = $SVTtask
+        }
+    } # end block
 }
 
 <#
@@ -6919,135 +7071,6 @@ function Start-SVTvm {
         $global:SVTtask = $AllTask
         $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
     }
-}
-
-<#
-.SYNOPSIS
-    Sets a new HPE SimpliVity backup policy on a virtual machine
-.DESCRIPTION
-    Sets a new HPE SimpliVity backup policy on a virtual machine. When a VM is first created, it inherits the
-    backup policy set on the datastore it is first created on. Use this command to explicitly reset the backup
-    policy for a given VM.
-.PARAMETER PolicyName
-    The name of the backup policy to be used
-.PARAMETER VmName
-    The target VM that will get a new backup policy
-.PARAMETER VmId
-    Instead of specifying a VM name, one or more SimpliVity virtual machine objects can be passed in from
-    the pipeline, using Get-SVTvm. This is more efficient (single call to the SimpliVity API).
-.PARAMETER ImpactReportOnly
-    Rather than change the policy on one or more virtual machines, display a report showing the impact this
-    change would make. The report shows projected daily backup rates and new total retained backups given 
-    the frequency and retention settings for the given backup policy.
-.EXAMPLE
-    PS C:\>Get-SVTvm -Datastore DS01 | Set-SVTvmPolicy Silver
-
-    Changes the backup policy for all VMs on the specified datastore.
-.EXAMPLE
-    Set-SVTvmPolicy Silver VM01
-
-    Using positional parameters to apply a new backup policy to the VM
-.EXAMPLE
-    Get-SVTvm -Policy Silver | Set-SVTvmPolicy -PolicyName Gold -ImpactReportOnly
-
-    No changes are made. Displays an impact report showing the effects that changing all virtual machines with
-    the Silver backup policy to the Gold backup policy would make to the system. The report show projected 
-    daily backup rates and total retained backup rates. 
-.INPUTS
-    System.String
-    HPE.SimpliVity.VirtualMachine
-.OUTPUTS
-    HPE.SimpliVity.Task
-    PSCustomObject
-.NOTES
-#>
-function Set-SVTvmPolicy {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true, Position = 0)]
-        [Alias('Name')]
-        [System.String]$PolicyName,
-
-        [Parameter(Mandatory = $true, Position = 1, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
-        [System.String]$VmName,
-
-        [Parameter(Mandatory = $false, ValueFromPipelinebyPropertyName = $true)]
-        [System.String]$VmId,
-
-        [Parameter(Mandatory = $false)]
-        [Switch]$ImpactReportOnly
-    )
-
-    begin {
-        $VmList = @()
-
-        if ($ImpactReportOnly) {
-            $Header = @{
-                'Authorization' = "Bearer $($global:SVTconnection.Token)"
-                'Accept'        = 'application/json'
-                'Content-Type'  = 'application/vnd.simplivity.v1.14+json'
-            }
-            $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/policy_impact_report/apply_policy'
-        }
-        else {
-            $Header = @{
-                'Authorization' = "Bearer $($global:SVTconnection.Token)"
-                'Accept'        = 'application/json'
-                'Content-Type'  = 'application/vnd.simplivity.v1.5+json'
-            }
-            $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/set_policy'
-        }
-
-        try {
-            $PolicyId = Get-SVTpolicy -PolicyName $PolicyName | Select-Object -ExpandProperty PolicyId -Unique
-        }
-        catch {
-            throw $_.Exception.Message
-        }
-
-    }
-    process {
-        if ($VmId) {
-            $Vmlist += $VmId
-        }
-        else {
-            foreach ($VM in $VmName) {
-                try {
-                    $VmList += Get-SVTvm -VmName $VM -ErrorAction Stop | Select-Object -ExpandProperty VmId
-                }
-                catch {
-                    throw $_.Exception.Message
-                }
-            }
-        }
-    }
-    end {
-        $Body = @{
-            'virtual_machine_id' = $VmList
-            'policy_id'          = $PolicyId
-        } | ConvertTo-Json
-        Write-Verbose $Body
-
-        try {
-            $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
-        }
-        catch {
-            throw $_.Exception.Message
-        }
-
-        if ($ImpactReportOnly) {
-            # Schedule impact performed, show report
-            Get-SVTimpactReport -Response $Response
-        }
-        else {
-            #Task peformed, show the task
-            $Response
-            # Useful to keep the task objects in this session, so we can keep track of them with Get-SVTtask
-            $global:SVTtask = $Response
-            $null = $SVTtask # Stops PSScriptAnalzer complaining about variable assigned but never used
-        }
-    } #end
 }
 
 #endregion VirtualMachine

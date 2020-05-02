@@ -1,8 +1,8 @@
-# Version 2.1.12
+# Version 2.1.15
 
 * Added the ability to display backed up file information within HPE SimpliVity backups and to perform file-level restores from the command line, using two new commands; Get-SVTfile and Restore-SVTfile respectively.
-* Added the ability to set user credentials on virtual machines for Microsoft Volume Shadow Copy Service (VSS) bckups. This is implemented via a new command called Set-SVTvm.
-* A new parameter called -ImpactReportOnly has been added to several commands; Set-SVTvmPolicy, New-SVTpolicyRule, Update-SVTpolicyRule and Remove-SVTpolicyRule. Instead of making the change, the command displays a report that shows projected daily backup rates and new total retained backups given the frequency and retention settings if the change is subsequently made.
+* Renamed Set-SVTvmPolicy to Set-SVTvm and added the ability to set user credentials on virtual machines for Microsoft Volume Shadow Copy Service (VSS) backups using this command.
+* Added a new parameter called -ImpactReportOnly to several commands; Set-SVTvm, New-SVTpolicyRule, Update-SVTpolicyRule and Remove-SVTpolicyRule. Instead of performing the policy based action, the command displays a report that shows the projected daily backup rates and new total retained backups given the frequency and retention settings if the change is subsequently made.
 * Updated Remove-SVTbackup to remove multiple backups using a single task. This is much more efficient even if you have a small number of backups to remove.
 * Updated Get-SVTbackup with many more parameters, i.e. -Date, -CreateAfter, -CreateBefore, -ExpiresAfter, -ExpiresBefore, -ClusterName, -BackupState and -BackupType. Improved the ability to specify multiple parameters at once to refine which backups are queried.
 * Updated the -All parameter for the Get-SVTbackup command to return all backup records. This bypasses the previous restriction of the -Limit parameter being set to 3000 and is achieved by making multiple calls to the API with an offset. This command can take a long time to finish; specifying additional parameters to restrict the output is recommended.
