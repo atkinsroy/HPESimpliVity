@@ -1,4 +1,4 @@
- # HPE SimpliVity PowerShell Module
+# HPE SimpliVity PowerShell Module
 
 This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage a HPE SimpliVity federation. It works by connecting to any HPE OmniStack virtual controller in your environment. With the release of HPE SimpliVity V4.0.0, you can now also connect to a management virtual appliance, which is recommended.
 
@@ -26,37 +26,37 @@ Most "Get" commands display default properties; use Format-List or Select-Object
     .
     .
 ```
-## Update V2.1.4 new features
+## Update V2.1.15 new features
 
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
-The module contains 56 exported cmdlets, divided into the following feature categories:
+The module contains 58 exported cmdlets, divided into the following feature categories:
 
-Datastore | Backup Policy | Backups
+Datastore | Backup | Backup Policy
 :--- | :--- | :---
-Get-SVTdatastore | Suspend-SVTpolicy | Stop-SVTbackup
-New-SVTdatastore | Rename-SVTpolicy | Rename-SVTbackup
-Remove-SVTdatastore | Resume-SVTpolicy | Lock-SVTbackup
-Resize-SVTdatastore | New-SVTpolicy | Remove-SVTbackup
-Publish-SVTdatastore | Remove-SVTpolicy | New-SVTbackup
-Unpublish-SVTdatastore | Get-SVTpolicy | Copy-SVTbackup
-Get-SVTdatastoreComputeNode | New-SVTpolicyRule | Get-SVTbackup
-Set-SVTdatastorePolicy | Update-SVTpolicyRule | Set-SVTbackupRetention
-Get-SVTexternalStore | Remove-SVTpolicyRule | Update-SVTbackupUniqueSize
-New-SVTexternalStore | Get-SVTpolicyScheduleReport 
-Set-SVTexternalStore
-Remove-SVTexternalStore
-||
-**Cluster & Utility** | **Host** | **VM**
-Get-SVTcluster | Get-SVThost | Get-SVTvm
-Get-SVTclusterConnected | Get-SVThardware | Move-SVTvm
-Connect-SVT | Remove-SVThost | New-SVTclone
-Get-SVTcapacity | Start-SVTshutdown | Restore-SVTvm
-Get-SVTmetric | Stop-SVTshutdown | Start-SVTvm
-Get-SVTtask | Get-SVTshutdownStatus | Stop-SVTvm
-Get-SVTtimezone | Get-SVTthroughput | Set-SVTvmPolicy
-Set-SVTtimezone | Get-SVTdisk | Get-SVTvmReplicaSet
-Get-SVTversion
+Get-SVTdatastore | Copy-SVTbackup | Get-SVTpolicy
+Get-SVTdatastoreComputeNode | Get-SVTbackup | Get-SVTpolicySchedule
+Get-SVTexternalStore | Get-SVTfile | New-SVTpolicy
+New-SVTdatastore | Lock-SVTbackup | New-SVTpolicyRule
+New-SVTexternalStore | New-SVTbackup | Remove-SVTpolicy
+Publish-SVTdatastore | Remove-SVTbackup | Remove-SVTpolicyRule
+Remove-SVTdatastore | Rename-SVTbackup | Rename-SVTpolicy
+Remove-SVTexternalStore | Restore-SVTfile | Resume-SVTpolicy
+Resize-SVTdatastore | Set-SVTbackupRetention | Suspend-SVTpolicy
+Set-SVTdatastorePolicy | Stop-SVTbackup | Update-SVTpolicyRule
+Set-SVTexternalStore | Update-SVTbackupUniqueSize
+Unpublish-SVTdatastore
+ ||
+**Cluster & Utility** | **Host** | **Virtual Machine**
+Connect-SVT | Get-SVTdisk | Get-SVTvm
+Get-SVTcapacity | Get-SVThardware | Get-SVTvmReplicaSet
+Get-SVTcluster | Get-SVThost | Move-SVTvm
+Get-SVTclusterConnected | Get-SVTshutdownStatus | New-SVTclone
+Get-SVTmetric | Get-SVTthroughput | Restore-SVTvm
+Get-SVTtask | Remove-SVThost | Set-SVTvm
+Get-SVTtimezone | Start-SVTshutdown | Start-SVTvm
+Get-SVTversion | Stop-SVTshutdown | Stop-SVTvm
+Set-SVTtimezone
 
 ## Requirements
 
@@ -104,7 +104,7 @@ and then in your script, import the credential:
 
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
-## Known issues with V4.0.1 of the API (With HPESimpliVity 2.1.4)
+## Known issues with the API (HPE SimpliVity V4.0.1)
 
 The API has some documented and undocumented issues:
 * OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation
