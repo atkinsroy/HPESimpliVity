@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.15'
+$HPESimplivityVersion = '2.1.16'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -1491,6 +1491,7 @@ function Get-SVTbackup {
         'Accept'        = 'application/json'
     }
     $LocalFormat = Get-SVTLocalDateFormat
+    $LocalCulture = [System.Threading.Thread]::CurrentThread.CurrentCulture
     $Offset = 0
 
     # Case sensitivity is problematic with /backups API. Some properties do not support case insensitive 
@@ -1656,7 +1657,7 @@ function Get-SVTbackup {
             if ($BackupCount -gt $Limit) {
                 $Message = "There are $BackupCount matching backups, but limited to displaying $Limit only. " +
                 'Either increase -Limit or use more restrictive parameters'
-                Write-Warning $Message 
+                Write-Verbose $Message
             }
             else {
                 Write-Verbose "There are $BackupCount matching backups"
@@ -1712,6 +1713,7 @@ function Get-SVTbackup {
                 $Destination = $_.external_store_name
             }
 
+            # Converting numeric strings to numbers so that sorting is possible. This must take into account locale
             [PSCustomObject]@{
                 PSTypeName        = 'HPE.SimpliVity.Backup'
                 VmName            = $_.virtual_machine_name
@@ -1728,13 +1730,13 @@ function Get-SVTbackup {
                 ClusterId         = $_.omnistack_cluster_id
                 VmType            = $_.virtual_machine_type
                 SentCompleteDate  = $_.sent_completion_time
-                UniqueSizeMB      = [single]('{0:n0}' -f ($_.unique_size_bytes / 1mb))
+                UniqueSizeMB      = [single]::Parse('{0:n0}' -f ($_.unique_size_bytes / 1mb), $LocalCulture)
                 ClusterGroupIDs   = $_.cluster_group_ids
                 UniqueSizeDate    = $UniqueSizeDate
                 ExpiryDate        = $ExpirationDate
                 ClusterName       = $_.omnistack_cluster_name
-                SentMB            = [single]('{0:n0}' -f ($_.sent / 1mb))
-                SizeGB            = [single]('{0:n2}' -f ($_.size / 1gb))
+                SentMB            = [single]::Parse('{0:n0}' -f ($_.sent / 1mb), $LocalCulture)
+                SizeGB            = [single]::Parse('{0:n2}' -f ($_.size / 1gb), $LocalCulture)
                 VmState           = $_.virtual_machine_state
                 BackupName        = $_.name
                 DatastoreId       = $_.datastore_id
@@ -1809,7 +1811,7 @@ function New-SVTbackup {
         [Parameter(Mandatory = $false, Position = 3)]
         [System.Int32]$RetentionDay = 1,
 
-        [Parameter(Mandatory = $false, Position = 5)]
+        [Parameter(Mandatory = $false, Position = 4)]
         [ValidateSet('DEFAULT', 'VSS', 'NONE')]
         [System.String]$ConsistencyType = 'NONE'
     )
@@ -2056,8 +2058,8 @@ function Restore-SVTvm {
     backup. This call accepts multiple backup IDs, and efficiently removes multiple backups with a single task. 
     This also works for backups in remote clusters.
 
-    There is another specific DELETE call (/api/backups/<bkpId>) which only works locally (i.e. if you're connected 
-    to an OVC where the backup resides), but this fails when trying to delete remote backups.
+    There is another REST API DELETE call (/api/backups/<bkpId>) which only works locally (i.e. when 
+    connected to an OVC where the backup resides), but this fails when trying to delete remote backups.
 #>
 function Remove-SVTbackup {
     [CmdletBinding()]
@@ -2391,14 +2393,14 @@ function Rename-SVTbackup {
     where backups will be immediately expired, you'll receive an error in the task.
 
     OMNI-53536: Setting the retention time to a time that causes backups to be deleted fails
-.PARAMETER BackupId
-    The UID of the backup you'd like to set the retention for
 .PARAMETER RetentionDay
     The new retention you would like to set, in days.
+.PARAMETER BackupId
+    The UID of the backup you'd like to set the retention for
 .EXAMPLE
     PS C:\> Get-Backup -BackupName 2019-05-09T22:00:01-04:00 | Set-SVTbackupRetention -RetentionDay 21
 
-    Gets the backups with the specified name and sets the retention to 21 days.
+    Gets the backups with the specified name and then sets the retention to 21 days.
 .INPUTS
     System.String
     HPE.SimpliVity.Backup
@@ -2431,6 +2433,7 @@ function Set-SVTbackupRetention {
         }
 
         $Uri = $global:SVTconnection.OVC + '/api/backups/set_retention'
+        $BackupIdList = @()
 
         $ForceRetention = $false
         if ($PSBoundParameters.ContainsKey('Force')) {
@@ -2443,27 +2446,27 @@ function Set-SVTbackupRetention {
         # This API call accepts a list of backup Ids. However, we are creating a task per backup ID here.
         # Using a task list with a single task may be more efficient, but its inconsistent with the other cmdlets.
         foreach ($BkpId in $BackupId) {
-            $Body = @{
-                'backup_id' = @($BkpId)            # Expects an array (square brackets around it in Json)
-                'retention' = $RetentionDay * 1440 # Must be specified in minutes
-                'force'     = $ForceRetention
-            } | ConvertTo-Json
-            Write-Verbose $Body
-
-            try {
-                $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
-                $Task
-                [array]$AllTask += $Task
-            }
-            catch {
-                Write-Warning "$($_.Exception.Message), failed to set retention for backup with id $BkpId"
-            }
+            $BackupIdList += $BkpId
         }
     }
     end {
-        $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
-    }
+        $Body = @{
+            'backup_id' = @($BkpIdList)        # Expects an array (square brackets around it in Json)
+            'retention' = $RetentionDay * 1440 # Must be specified in minutes
+            'force'     = $ForceRetention
+        } | ConvertTo-Json
+        Write-Verbose $Body
+
+        try {
+            $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+            $Task
+            $global:SVTtask = $AllTask
+            $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        }
+        catch {
+            Write-Warning "$($_.Exception.Message), failed to set retention for backup with id $BkpId"
+        }
+    } #end
 }
 
 <#
@@ -3089,12 +3092,6 @@ function Resize-SVTdatastore {
         $Uri = $global:SVTconnection.OVC + '/api/datastores/' + $DatastoreId + '/resize'
         $Body = @{ 'size' = $SizeGB * 1Gb } | ConvertTo-Json # Size must be in bytes
         Write-Verbose $Body
-    }
-    catch {
-        throw $_.Exception.Message
-    }
-
-    try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
     }
     catch {
@@ -3152,12 +3149,6 @@ function Set-SVTdatastorePolicy {
 
         $Body = @{ 'policy_id' = $PolicyId } | ConvertTo-Json
         Write-Verbose $Body
-    }
-    catch {
-        throw $_.Exception.Message
-    }
-
-    try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
     }
     catch {
@@ -3209,15 +3200,8 @@ function Publish-SVTdatastore {
         Select-Object -ExpandProperty DatastoreId
 
         $Uri = $global:SVTconnection.OVC + '/api/datastores/' + $DatastoreId + '/share'
-    }
-    catch {
-        throw $_.Exception.Message
-    }
-
-    $Body = @{ 'host_name' = $ComputeNodeName } | ConvertTo-Json
-    Write-Verbose $Body
-
-    try {
+        $Body = @{ 'host_name' = $ComputeNodeName } | ConvertTo-Json
+        Write-Verbose $Body
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
     }
     catch {
@@ -3273,12 +3257,6 @@ function Unpublish-SVTdatastore {
         Select-Object -ExpandProperty DatastoreId
         
         $Uri = $global:SVTconnection.OVC + '/api/datastores/' + $DatastoreId + '/unshare'
-    }
-    catch {
-        throw $_.Exception.Message
-    }
-
-    try {
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
     }
     catch {
@@ -3333,12 +3311,6 @@ function Get-SVTdatastoreComputeNode {
                 Select-Object -ExpandProperty DatastoreId
 
                 $Uri = $global:SVTconnection.OVC + '/api/datastores/' + $DatastoreId + '/standard_hosts'
-            }
-            catch {
-                throw $_.Exception.Message
-            }
-
-            try {
                 $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
             }
             catch {
@@ -3584,18 +3556,13 @@ function Remove-SVTexternalStore {
 
     try {
         $ClusterId = Get-SVTcluster -ClusterName $ClusterName | Select-Object -ExpandProperty ClusterId
-    }
-    catch {
-        $_.Exception.Message
-    }
-    
-    $Body = @{
-        'name'                 = $ExternalStoreName
-        'omnistack_cluster_id' = $ClusterID
-    } | ConvertTo-Json
-    Write-Verbose $Body
-
-    try {
+        
+        $Body = @{
+            'name'                 = $ExternalStoreName
+            'omnistack_cluster_id' = $ClusterID
+        } | ConvertTo-Json
+        Write-Verbose $Body
+        
         $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
     }
     catch {
@@ -3959,6 +3926,8 @@ function Get-SVTdisk {
     )
 
     begin {
+        $LocalCulture = [System.Threading.Thread]::CurrentThread.CurrentCulture
+
         $Hardware = Get-SVThardware
         if ($PSBoundParameters.ContainsKey('HostName')) {
             try {
@@ -4012,7 +3981,7 @@ function Get-SVTdisk {
                     Health          = $_.health
                     Enclosure       = [System.Int32]$_.enclosure
                     Slot            = [System.Int32]$_.slot
-                    CapacityTB      = [single]('{0:n2}' -f ($_.capacity / 1000000000000))
+                    CapacityTB      = [single]::Parse('{0:n2}' -f ($_.capacity / 1000000000000), $LocalCulture)
                     WWN             = $_.wwn
                     PercentRebuilt  = [System.Int32]$_.percent_rebuilt
                     AddtionalStatus = $_.additional_status
@@ -4804,6 +4773,18 @@ function Get-SVTthroughput {
         else {
             $Date = $null
         }
+        if ($_.data.date_of_minimum -as [DateTime]) {
+            $MinDate = Get-Date -Date $_.data.date_of_minimum -Format $LocalFormat
+        }
+        else {
+            $MinDate = $null
+        }
+        if ($_.data.date_of_maximum -as [DateTime]) {
+            $MaxDate = Get-Date -Date $_.data.date_of_maximum -Format $LocalFormat
+        }
+        else {
+            $MaxDate = $null
+        }
         [PSCustomObject]@{
             PSTypeName                       = 'HPE.SimpliVity.Throughput'
             Date                             = $Date
@@ -4815,7 +4796,11 @@ function Get-SVTthroughput {
             SourceClusterHypervisorName      = $_.source_omnistack_cluster_hypervisor_object_parent_name
             SourceClusterId                  = $_.source_omnistack_cluster_id
             SourceClusterName                = $_.source_omnistack_cluster_name
-            AverageThroughputKB              = '{0:n2}' -f ($_.average_throughput / 1kb)
+            AvgThroughput                    = '{0:n0}' -f $_.average_throughput
+            MinThroughput                    = '{0:n0}' -f $_.data.minimum_throughput
+            MinDate                          = $MinDate
+            MaxThroughput                    = '{0:n0}' -f $_.data.maximum_throughput
+            MaxDate                          = $MaxDate
         }
     }
 }
@@ -4930,6 +4915,10 @@ function Set-SVTtimezone {
     PS C:\>Get-SVTclusterConnected -ClusterName Production
 
     Displays information about the clusters directly connected to the specified cluster
+.EXAMPLE
+    PS C:\>Get-SVTclusterConnected
+
+    Displays information about the first cluster in the federation (by cluster name, alphabetically)
 .INPUTS
     System.String
 .OUTPUTS
@@ -6938,18 +6927,26 @@ function Set-SVTvm {
     Stop a virtual machine hosted on HPE SimpliVity storage
 
     Stopping VMs with this command is not recommended. The VM will be in a "crash consistent" state.
-    This action may lead to data loss or data corruption.
+    This action may lead to some data loss.
 
     A better option is to use the VMware PowerCLI Stop-VMGuest cmdlet. This shuts down the Guest OS gracefully.
-
-    Note: This command requires a specific version in the content-type passed to the REST API.
-    Upgrades to SimpliVity may require the version to be adjusted.
 .PARAMETER VmName
     The virtual machine name to stop
+.PARAMETER VmId
+    Instead of specifying one or more VM names, HPE SimpliVity virtual machine objects can be passed in from 
+    the pipeline, using Get-SVTvm. This is more efficient (single call to the SimpliVity API).
 .EXAMPLE
-    PS C:\>Stop-SVTvm -VmName MyVm
+    PS C:\> Stop-SVTvm -VmName MyVm
 
-    Stops the VM. Not recommended for production workloads
+    Stops the specified virtual machine
+.EXAMPLE
+    PS C:\> Get-SVTvm -Datastore DS01 | Stop-SVTvm
+
+    Stops all the VMs on the specified datastore
+.EXAMPLE
+    PS C:\> Stop-SVTvm -VmName Server2016-01,Server2016-02,Server2016-03
+
+    Stops the specified virtual machines
 .INPUTS
     System.String
     HPE.SimpliVity.VirtualMachine
@@ -6963,7 +6960,10 @@ function Stop-SVTvm {
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
             ValueFromPipelinebyPropertyName = $true)]
         [Alias('Name')]
-        [System.String]$VmName
+        [System.String[]]$VmName,
+
+        [Parameter(Mandatory = $false, ValueFromPipelinebyPropertyName = $true)]
+        [System.String]$VmId
     )
 
     begin {
@@ -6975,23 +6975,36 @@ function Stop-SVTvm {
     }
 
     process {
-        foreach ($VM in $VmName) {
-            try {
-                # Getting VM name within the loop. Getting all VMs in the begin block might be a problem with a large number of VMs
-                $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
-                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + '/power_off'
-            }
-            catch {
-                throw $_.Exception.Message
-            }
-
+        if ($VmId) {
+            $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/power_off'
             try {
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Post -ErrorAction Stop
                 $Task
                 [array]$AllTask += $Task
             }
             catch {
-                Write-Warning "$($_.Exception.Message), failed to stop VM $VM"
+                Write-Warning "$($_.Exception.Message), failed to stop VM $VmName"
+            }
+        }
+        else {
+            foreach ($VM in $VmName) {
+                try {
+                    # Getting VM name within the loop. Getting all VMs in the begin block might be a problem with a large number of VMs
+                    $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
+                    $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + '/power_off'
+                }
+                catch {
+                    throw $_.Exception.Message
+                }
+
+                try {
+                    $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Post -ErrorAction Stop
+                    $Task
+                    [array]$AllTask += $Task
+                }
+                catch {
+                    Write-Warning "$($_.Exception.Message), failed to stop VM $VM"
+                }
             }
         }
     }
@@ -7007,19 +7020,23 @@ function Stop-SVTvm {
     Start a virtual machine hosted on HPE SimpliVity storage
 .DESCRIPTION
     Start a virtual machine hosted on HPE SimpliVity storage
-
-    Note: This command requires a specific version in the content-type passed to the REST API.
-    Upgrades to SimpliVity may require the version to be adjusted.
 .PARAMETER VmName
     The virtual machine name to start
+.PARAMETER VmId
+    Instead of specifying one or more VM names, HPE SimpliVity virtual machine objects can be passed in from 
+    the pipeline, using Get-SVTvm. This is more efficient (single call to the SimpliVity API).
 .EXAMPLE
-    PS C:\>Start-SVTvm -VmName MyVm
+    PS C:\> Start-SVTvm -VmName MyVm
 
-    Starts the VM
+    Starts the specified virtual machine
 .EXAMPLE
-    PS C:\>Get-SVTvm -ClusterName DR01 | Start-SVTvm -VmName MyVm
+    PS C:\> Get-SVTvm -ClusterName DR01 | Start-SVTvm -VmName MyVm
 
-    Starts the VMs in the specified cluster
+    Starts the virtual machines in the specified cluster
+.EXAMPLE
+    PS C:\> Start-SVTvm -VmName Server2016-01,RHEL8-01
+
+    Starts the specfied virtual machines
 .INPUTS
     System.String
     HPE.SimpliVity.VirtualMachine
@@ -7033,7 +7050,10 @@ function Start-SVTvm {
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
             ValueFromPipelinebyPropertyName = $true)]
         [Alias('Name')]
-        [System.String]$VmName
+        [System.String[]]$VmName,
+
+        [Parameter(Mandatory = $false, ValueFromPipelinebyPropertyName = $true)]
+        [System.String]$VmId
     )
 
     begin {
@@ -7045,24 +7065,37 @@ function Start-SVTvm {
     }
 
     process {
-        foreach ($VM in $VmName) {
-            try {
-                # Getting VM name within the loop. Getting all VMs in the begin block might be a problem 
-                # with a large number of VMs
-                $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
-                $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + '/power_on'
-            }
-            catch {
-                throw $_.Exception.Message
-            }
-
+        if ($VmId) {
+            $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/power_on'
             try {
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Post -ErrorAction Stop
                 $Task
                 [array]$AllTask += $Task
             }
             catch {
-                Write-Warning "$($_.Exception.Message), failed to start VM $VM"
+                Write-Warning "$($_.Exception.Message), failed to stop VM $VmName"
+            }
+        }
+        else {
+            foreach ($VM in $VmName) {
+                try {
+                    # Getting VM name within the loop. Getting all VMs in the begin block might be a problem 
+                    # with a large number of VMs
+                    $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
+                    $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + '/power_on'
+                }
+                catch {
+                    throw $_.Exception.Message
+                }
+
+                try {
+                    $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Post -ErrorAction Stop
+                    $Task
+                    [array]$AllTask += $Task
+                }
+                catch {
+                    Write-Warning "$($_.Exception.Message), failed to start VM $VM"
+                }
             }
         }
     }
