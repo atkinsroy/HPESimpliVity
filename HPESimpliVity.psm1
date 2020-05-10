@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.16'
+$HPESimplivityVersion = '2.1.17'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -1282,6 +1282,10 @@ function Get-SVTimpactReport {
     Show backups with the specified state. i.e PROTECTED, FAILED or SAVING
 .PARAMETER BackupType
     Show backups with the specified type. i.e. MANUAL or POLICY
+.PARAMETER MinSizeMB
+    Show backups with the specified minimum size
+.PARAMETER MaxSizeMB
+    Show backups with the specified maximum size
 .PARAMETER Date
     Display backups created on the specified date. This takes precedence over all other date related parameters.
 .PARAMETER CreatedAfter
@@ -1444,6 +1448,16 @@ function Get-SVTbackup {
         [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [System.Int32]$MinSizeMB,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [System.Int32]$MaxSizeMB,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
         [System.String]$Date,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
@@ -1558,6 +1572,14 @@ function Get-SVTbackup {
         $BackupType = ($BackupType).ToUpper() -join ','
         $Uri += "&type=$BackupType"
     }
+    if ($PSBoundParameters.ContainsKey('MinSizeMB')) {
+        $MinSizeByte = $MinSizeMB * 1mb
+        $Uri += "&size_min=$MinSizeByte"
+    }
+    if ($PSBoundParameters.ContainsKey('MaxSizeMB')) {
+        $MaxSizeByte = $MaxSizeMB * 1mb
+        $Uri += "&size_max=$MaxSizeByte"
+    }
     if ($PSBoundParameters.ContainsKey('Date')) {
         $Message = 'Date parameter takes precedence over other date related parameters, like CreatedAfter ' +
         'and ExpiresAfter'
@@ -1618,8 +1640,8 @@ function Get-SVTbackup {
         # This approach is safer than counting passed in parameters - the user may specify -verbose or other common
         # parameters, which would affect the behavior. -Limit is allowed.
         $ParamList = @('VmName', 'ClusterName', 'DatastoreName', 'BackupId', 'DestinationName', 'BackupName', 
-            'BackupState', 'BackupType', 'All', 'Date', 'CreatedAfter', 'CreatedBefore', 'ExpiresAfter', 
-            'ExpiresBefore')
+            'BackupState', 'BackupType', 'MinSizeMB', 'MaxSizeMB', 'All', 'Date', 'CreatedAfter', 
+            'CreatedBefore', 'ExpiresAfter', 'ExpiresBefore')
         $ParamFound = $false
         foreach ($Param in $ParamList) {
             if ($Param -in $PSBoundParameters.Keys) {
@@ -1737,6 +1759,7 @@ function Get-SVTbackup {
                 ClusterName       = $_.omnistack_cluster_name
                 SentMB            = [single]::Parse('{0:n0}' -f ($_.sent / 1mb), $LocalCulture)
                 SizeGB            = [single]::Parse('{0:n2}' -f ($_.size / 1gb), $LocalCulture)
+                SizeMB            = [single]::Parse('{0:n2}' -f ($_.size / 1mb), $LocalCulture)
                 VmState           = $_.virtual_machine_state
                 BackupName        = $_.name
                 DatastoreId       = $_.datastore_id
