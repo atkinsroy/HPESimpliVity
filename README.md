@@ -26,7 +26,7 @@ Most "Get" commands display default properties; use Format-List or Select-Object
     .
     .
 ```
-## Update V2.1.15 new features
+## Update V2.1.18 new features
 
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
@@ -104,7 +104,7 @@ and then in your script, import the credential:
 
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
-## Known issues with the API (HPE SimpliVity V4.0.1)
+## Known issues with the REST API (HPE SimpliVity V4.0.1)
 
 The API has some documented and undocumented issues:
 * OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation

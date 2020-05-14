@@ -1,3 +1,10 @@
+# Version 2.1.18
+
+* Added a new parameter -RetentionHour to the New-SVTbackup and Set-SVTbackupRetention commands
+* Added -MinSizeGB and -MaxSizeGB to the Get-SVTbackup command
+* Locale bug fix in the Get-SVTbackup and Get-SVTdisk commands
+* Performance refactoring
+
 # Version 2.1.15
 
 * Added the ability to display backed up file information within HPE SimpliVity backups and to perform file-level restores from the command line, using two new commands; Get-SVTfile and Restore-SVTfile respectively.
