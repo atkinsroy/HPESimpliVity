@@ -802,7 +802,7 @@ function Get-SVTmetric {
             }
 
             #Transpose the custom object to return each date with read and write for each metric
-            $MetricObject = $CustomObject | Sort-Object -Property Date, Name | 
+            $MetricObject = $CustomObject | Sort-Object -Property { $_.Date -as [datetime] }, Name | 
             Group-Object -Property Date | ForEach-Object {
                 $Property = [ordered]@{
                     PStypeName = 'HPE.SimpliVity.Metric'
@@ -866,8 +866,8 @@ function Get-SVTmetricChart {
     
     $Path = Get-Location
     $Culture = Get-Culture
-    $StartDate = $Metric | Select-Object -Last 1 -ExpandProperty Date
-    $EndDate = $Metric | Select-Object -First 1 -ExpandProperty Date
+    $StartDate = $Metric | Select-Object -First 1 -ExpandProperty Date
+    $EndDate = $Metric | Select-Object -Last 1 -ExpandProperty Date
     $ChartLabelFont = 'Arial, 8pt'
     $ChartTitleFont = 'Arial, 12pt'
     $DateStamp = Get-Date -Format 'yyMMddhhmmss'
