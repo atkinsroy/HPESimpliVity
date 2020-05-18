@@ -2,6 +2,10 @@
 
 * Added branding to the charts produced by Get-SVTmetric and Get-SVTcapacity
 
+![Here is a sample branded metric chart](/Media/SVTmetric-branded.png)
+
+![Here is a sample branded capacity chart](/Media/SVTcapacity-branded.png)
+
 # Version 2.1.18
 
 * Added a new parameter -RetentionHour to the New-SVTbackup and Set-SVTbackupRetention commands
