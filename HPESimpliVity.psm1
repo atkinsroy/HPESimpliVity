@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.18'
+$HPESimplivityVersion = '2.1.19'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -841,7 +841,7 @@ function Get-SVTmetric {
 
     end {
         if ($PSBoundParameters.ContainsKey('Chart')) {
-            Get-SVTmetricChart -Metric $ChartObject -TypeName $TypeName 
+            Get-SVTmetricChart -Metric $ChartObject
         }
     }
 }
@@ -851,19 +851,16 @@ function Get-SVTmetricChart {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
-        [System.Object]$Metric,
-
-        [Parameter(Mandatory = $true, Position = 1)]
-        [System.String]$TypeName
+        [System.Object]$Metric
     )
 
     if ($PSVersionTable.PSVersion.Major -gt 5) {
-        throw 'Microsoft Chart Controls are not currently supported with PowerShell Core, use Windows PowerShell'
+        throw 'Microsoft Chart Controls are not currently supported, use Windows PowerShell'
     }
 
+    $TypeName = $Metric | Get-Member | Select-Object -ExpandProperty TypeName -Unique
     $ObjectList = $Metric.ObjectName | Select-Object -Unique
-    #$ObjectTotal = $ObjectList | Measure-Object | Select-Object -ExpandProperty Count
-    
+
     $Path = Get-Location
     $Culture = Get-Culture
     $StartDate = $Metric | Select-Object -First 1 -ExpandProperty Date
@@ -871,11 +868,12 @@ function Get-SVTmetricChart {
     $ChartLabelFont = 'Arial, 8pt'
     $ChartTitleFont = 'Arial, 12pt'
     $DateStamp = Get-Date -Format 'yyMMddhhmmss'
+    $Logo = (split-path -parent (get-module hpesimplivity -ListAvailable).Path) + '\hpe.png'
 
     # define an object to determine the best interval on the Y axis, given a maximum value
-    $Ylimit = (0, 5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000, 5120000, 10240000, 20480000)
-    $Yinterval = (200, 400, 600, 1000, 5000, 10000, 15000, 20000, 50000, 75000, 100000, 250000, 400000, 1000000)
-    $Yaxis = 0..11 | foreach-object {
+    $Ylimit = (0, 2500, 5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000, 5120000, 10240000, 20480000)
+    $Yinterval = (100, 200, 400, 600, 1000, 5000, 10000, 15000, 20000, 50000, 75000, 100000, 250000, 400000, 1000000)
+    $Yaxis = 0..14 | foreach-object {
         [PSCustomObject]@{
             Limit    = $Ylimit[$_]
             Interval = $YInterval[$_]
@@ -888,13 +886,25 @@ function Get-SVTmetricChart {
         $DataSource = $Metric | Where-Object ObjectName -eq $Instance
         $DataPoint = $DataSource | Measure-Object | Select-Object -ExpandProperty Count
 
-        # chart object
-        $Chart1 = New-object System.Windows.Forms.DataVisualization.Charting.Chart
+        # create chart object
+        $Chart1 = New-Object System.Windows.Forms.DataVisualization.Charting.Chart
         $Chart1.Width = 1200
         $Chart1.Height = 600
         $Chart1.BackColor = [System.Drawing.Color]::WhiteSmoke
 
-        # title
+        # add HPE logo
+        $Image = New-Object System.Windows.Forms.DataVisualization.Charting.ImageAnnotation
+        $Image.X = 85
+        $Image.Y = 85
+        $Image.Image = $Logo
+        $Chart1.Annotations.Add($Image)
+
+        # legend to chart
+        $Legend = New-Object system.Windows.Forms.DataVisualization.Charting.Legend
+        $Legend.name = 'Legend1'
+        $Chart1.Legends.Add($Legend)
+
+        # add chart title
         try {
             $ShortName = ([ipaddress]$Instance).IPAddressToString
         }
@@ -905,7 +915,7 @@ function Get-SVTmetricChart {
         $Chart1.Titles[0].Font = 'Arial, 16pt'
         $Chart1.Titles[0].Alignment = 'topLeft'
 
-        # chart area
+        # add chart area, axistype is required to create primary and secondary yaxis
         $AxisEnabled = New-Object System.Windows.Forms.DataVisualization.Charting.AxisEnabled
         $AxisType = New-Object System.Windows.Forms.DataVisualization.Charting.AxisType
         $Area1 = New-Object System.Windows.Forms.DataVisualization.Charting.ChartArea
@@ -915,9 +925,8 @@ function Get-SVTmetricChart {
         $Area1.AxisX.LabelStyle.Font = $ChartLabelFont
         $Area1.AxisX.MajorGrid.LineColor = [System.Drawing.Color]::LightGray
 
-        # to determine an appropriate X axis interval, find the number of data points in the data
-        $Interval = [math]::Round($DataPoint / 24) #show 24 dates on X axis only
-       
+        # show a maximum of 24 labels on the xaxis
+        $Interval = [math]::Round($DataPoint / 24)
         if ($Interval -lt 1) {
             $Area1.AxisX.Interval = 1
         }
@@ -930,36 +939,32 @@ function Get-SVTmetricChart {
         $Area1.AxisY.LabelStyle.Font = $ChartLabelFont
         $Area1.AxisY.MajorGrid.LineColor = [System.Drawing.Color]::LightGray
 
+        # reduce line weight for charts with long time ranges
         if ($Interval -gt 12) {
-            $BorderWidth = 1  #reduce line weight for charts with long time ranges
+            $BorderWidth = 1
         }
-        else {
+        elseif ($Interval -gt 2) {
             $BorderWidth = 2
         }
+        else {
+            $BorderWidth = 3
+        }
 
-        # To determine an appropriate interval on Y axis, find the maximum value in the data.
+        # Show an appropriate number of labels on the yaxis by finding the largest number in the data set
+        # this only applies to yaxis for Area1, the 4 properties measured in IOs. 
         $MaxArray = @(
             $DataSource | Measure-Object -Property LatencyRead -Maximum | Select-Object -ExpandProperty Maximum
             $DataSource | Measure-Object -Property LatencyWrite -Maximum | Select-Object -ExpandProperty Maximum
             $DataSource | Measure-Object -Property IopsRead -Maximum | Select-Object -ExpandProperty Maximum
             $DataSource | Measure-Object -Property IopsWrite -Maximum | Select-Object -ExpandProperty Maximum
         )
-        $Max = 0  #ensure Y axis has appropriate interval
-        $MaxArray | Foreach-Object {
-            if ($_ -gt $Max) {
-                $Max = $_
-            }
-        }
-        #Write-Verbose "Maximum milliseconds value = $Max"
-
-        # determine an appropriate Yaxis interval.
+        $Max = $Maxarray | Measure-Object -Maximum | Select-Object -ExpandProperty Maximum
         $Yaxis | ForEach-Object {
             if ($Max -gt $_.Limit) {
                 $Yint = $_.Interval
                 $Area1.AxisY.Interval = $Yint
             }
         }
-        #Write-Verbose "Y axis interval = $Yint"
 
         # title for second Y axis
         $Area1.AxisY2.Title = 'Throughput (Mbps)'
@@ -968,17 +973,11 @@ function Get-SVTmetricChart {
         $Area1.AxisY2.LineColor = [System.Drawing.Color]::Transparent
         $Area1.AxisY2.MajorGrid.Enabled = $false
         $Area1.AxisY2.Enabled = $AxisEnabled::true
-        #$Area1.AxisY2.Interval = 2
 
-        # Add Area to chart
+        # add area to chart
         $Chart1.ChartAreas.Add($Area1)
         $Chart1.ChartAreas['ChartArea1'].AxisY.LabelStyle.Angle = 0
         $Chart1.ChartAreas['ChartArea1'].AxisX.LabelStyle.Angle = -45
-
-        # legend to chart
-        $Legend = New-Object system.Windows.Forms.DataVisualization.Charting.Legend
-        $Legend.name = 'Legend1'
-        $Chart1.Legends.Add($Legend)
 
         # data series
         $null = $Chart1.Series.Add('IopsRead')
@@ -988,7 +987,7 @@ function Get-SVTmetricChart {
         $Chart1.Series['IopsRead'].IsVisibleInLegend = $true
         $Chart1.Series['IopsRead'].ChartArea = 'ChartArea1'
         $Chart1.Series['IopsRead'].Legend = 'Legend1'
-        $Chart1.Series['IopsRead'].Color = [System.Drawing.Color]::BlueViolet
+        $Chart1.Series['IopsRead'].Color = "#7630EA" # HPE Medium Purple
         $DataSource | ForEach-Object {
             $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
             $null = $Chart1.Series['IopsRead'].Points.addxy($Date, $_.IopsRead)
@@ -1002,7 +1001,7 @@ function Get-SVTmetricChart {
         $Chart1.Series['IopsWrite'].IsVisibleInLegend = $true
         $Chart1.Series['IopsWrite'].ChartArea = 'ChartArea1'
         $Chart1.Series['IopsWrite'].Legend = 'Legend1'
-        $Chart1.Series['IopsWrite'].Color = [System.Drawing.Color]::MediumOrchid
+        $Chart1.Series['IopsWrite'].Color = "#C140FF" # HPE Light Purple
         $DataSource | ForEach-Object {
             $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
             $null = $Chart1.Series['IopsWrite'].Points.addxy($Date, $_.IopsWrite)
@@ -1016,7 +1015,7 @@ function Get-SVTmetricChart {
         $Chart1.Series['LatencyRead'].IsVisibleInLegend = $true
         $Chart1.Series['LatencyRead'].ChartArea = 'ChartArea1'
         $Chart1.Series['LatencyRead'].Legend = 'Legend1'
-        $Chart1.Series['LatencyRead'].Color = [System.Drawing.Color]::Goldenrod
+        $Chart1.Series['LatencyRead'].Color = "#FEC901" # HPE Yellow
         $DataSource | ForEach-Object {
             $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
             $null = $Chart1.Series['LatencyRead'].Points.addxy($Date, $_.LatencyRead)
@@ -1030,7 +1029,7 @@ function Get-SVTmetricChart {
         $Chart1.Series['LatencyWrite'].IsVisibleInLegend = $true
         $Chart1.Series['LatencyWrite'].ChartArea = 'ChartArea1'
         $Chart1.Series['LatencyWrite'].Legend = 'Legend1'
-        $Chart1.Series['LatencyWrite'].Color = [System.Drawing.Color]::OrangeRed
+        $Chart1.Series['LatencyWrite'].Color = "#FF8300" # Aruba Orange
         $DataSource | ForEach-Object {
             $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
             $null = $Chart1.Series['LatencyWrite'].Points.addxy($Date, $_.LatencyWrite)
@@ -1044,7 +1043,7 @@ function Get-SVTmetricChart {
         $Chart1.Series['ThroughputRead'].IsVisibleInLegend = $true
         $Chart1.Series['ThroughputRead'].ChartArea = 'ChartArea1'
         $Chart1.Series['ThroughputRead'].Legend = 'Legend1'
-        $Chart1.Series['ThroughputRead'].Color = [System.Drawing.Color]::DarkSlateGray
+        $Chart1.Series['ThroughputRead'].Color = "#0D5265" # HPE Dark Blue
         $DataSource | ForEach-Object {
             $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
             $null = $Chart1.Series['ThroughputRead'].Points.addxy($Date, ($_.ThroughputRead / 1024 / 1024))
@@ -1058,7 +1057,7 @@ function Get-SVTmetricChart {
         $Chart1.Series['ThroughputWrite'].IsVisibleInLegend = $true
         $Chart1.Series['ThroughputWrite'].ChartArea = 'ChartArea1'
         $Chart1.Series['ThroughputWrite'].Legend = 'Legend1'
-        $Chart1.Series['ThroughputWrite'].Color = [System.Drawing.Color]::MediumTurquoise
+        $Chart1.Series['ThroughputWrite'].Color = "#32DAC8" # HPE Medium Blue
         $DataSource | ForEach-Object {
             $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
             $null = $Chart1.Series['ThroughputWrite'].Points.addxy($Date, ($_.ThroughputWrite / 1024 / 1024))
@@ -1092,6 +1091,7 @@ function Get-SVTcapacityChart {
     $ChartLabelFont = 'Arial, 10pt'
     $ChartTitleFont = 'Arial, 13pt'
     $DateStamp = Get-Date -Format 'yyMMddhhmmss'
+    $Logo = (split-path -parent (get-module hpesimplivity -ListAvailable).Path) + '\hpe.png'
 
     $ObjectList = $Capacity.HostName | Select-Object -Unique
     foreach ($Instance in $ObjectList) {
@@ -1110,13 +1110,20 @@ function Get-SVTcapacityChart {
             'Stored Virtual Machine Data' = $Cap.StoredVirtualMachineData / 1GB
         }
 
-        # chart object
+        # create chart object
         $Chart1 = New-object System.Windows.Forms.DataVisualization.Charting.Chart
         $Chart1.Width = 1200
         $Chart1.Height = 600
         $Chart1.BackColor = [System.Drawing.Color]::WhiteSmoke
 
-        # title
+        # add HPE logo
+        $Image = New-Object System.Windows.Forms.DataVisualization.Charting.ImageAnnotation
+        $Image.X = 85
+        $Image.Y = 85
+        $Image.Image = $Logo
+        $Chart1.Annotations.Add($Image)
+
+        # add title
         try {
             $ShortName = ([ipaddress]$Instance).IPAddressToString
         }
@@ -1127,7 +1134,7 @@ function Get-SVTcapacityChart {
         $Chart1.Titles[0].Font = 'Arial, 16pt'
         $Chart1.Titles[0].Alignment = 'topLeft'
 
-        # chart area
+        # create chart area
         $Area1 = New-Object System.Windows.Forms.DataVisualization.Charting.ChartArea
         $Area3Dstyle = New-Object System.Windows.Forms.DataVisualization.Charting.ChartArea3DStyle
         $Area3Dstyle.Enable3D = $true
@@ -1164,7 +1171,7 @@ function Get-SVTcapacityChart {
         # add series
         $null = $Chart1.Series.Add('Data')
         $Chart1.Series['Data'].Points.DataBindXY($DataSource.Keys, $DataSource.Values)
-        $Chart1.Series['Data'].Color = [System.Drawing.Color]::MediumSeaGreen
+        $Chart1.Series['Data'].Color = "#01A982" # HPE Green
 
         # save chart
         try {
@@ -4224,8 +4231,8 @@ function Get-SVTcapacity {
             }
 
             # Transpose the custom object to return each date with the value for each metric
-            $CapacityObject = $CustomObject | Sort-Object -Property Date | Group-Object -Property Date | 
-            ForEach-Object {
+            $CapacityObject = $CustomObject | Sort-Object -Property { $_.Date -as [datetime] } | 
+            Group-Object -Property Date | ForEach-Object {
                 $Property = [ordered]@{
                     PStypeName = 'HPE.SimpliVity.Capacity'
                     Date       = $_.Name
@@ -4252,7 +4259,7 @@ function Get-SVTcapacity {
             else {
                 $CapacityObject
             }
-        }
+        } #end foreach host
     }
 
     end {
@@ -4336,14 +4343,14 @@ function Remove-SVThost {
 .SYNOPSIS
     Shutdown a HPE Omnistack Virtual Controller
 .DESCRIPTION
-     Ideally, you should only run this command when all the VMs in the cluster
-     have been shutdown, or if you intend to leave virtual controllers running in the cluster.
+    Ideally, you should only run this command when all the VMs in the cluster
+    have been shutdown, or if you intend to leave virtual controllers running in the cluster.
 
-     This RESTAPI call only works if executed on the local host to the virtual controller. So this command
-     connects to the virtual controller on the specified host to shut it down.
+    This RESTAPI call only works if executed on the local host to the virtual controller. So this command
+    connects to the virtual controller on the specified host to shut it down.
 
-     Note: Once the shutdown is executed on the specified host, this command will reconnect to another 
-     operational virtual controller in the Federation, using the same credentials, if there is one.
+    Note: Once the shutdown is executed on the specified host, this command will reconnect to another 
+    operational virtual controller in the Federation, using the same credentials, if there is one.
 .PARAMETER HostName
     Specify the host name running the OmniStack virtual controller to shutdown
 .EXAMPLE
@@ -4407,7 +4414,7 @@ function Start-SVTshutdown {
     if ($ThisHost.State -ne 'ALIVE') {
         $ThisHost.State
         throw "The HPE Omnistack Virtual Controller on $($ThisHost.HostName) is not running"
-    } 
+    }
 
     if ($NextHost) {
         $Message = "This command will reconnect to $($NextHost.HostName) following the shutdown of the " +
@@ -4510,7 +4517,7 @@ function Start-SVTshutdown {
             'reconnect not possible'
             Write-Verbose $Message
         }
-    }
+    } #endif should process
 }
 
 <#
@@ -5198,7 +5205,7 @@ function Get-SVTpolicy {
                 PolicyId   = $PolicyId
             }
         }
-    }
+    } #end foreach policy
 }
 
 <#

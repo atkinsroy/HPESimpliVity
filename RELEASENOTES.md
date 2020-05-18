@@ -1,3 +1,7 @@
+# Version 2.1.19
+
+* Added branding to the charts produced by Get-SVTmetric and Get-SVTcapacity
+
 # Version 2.1.18
 
 * Added a new parameter -RetentionHour to the New-SVTbackup and Set-SVTbackupRetention commands
