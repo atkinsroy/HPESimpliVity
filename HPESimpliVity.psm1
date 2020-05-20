@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.19'
+$HPESimplivityVersion = '2.1.20'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -649,10 +649,15 @@ function Get-SVTmetric {
 
         [Parameter(Mandatory = $false, Position = 3)]
         [ValidateSet('SECOND', 'MINUTE', 'HOUR', 'DAY')]
-        [System.String]$Resolution = 'HOUR',
+        [System.String]$Resolution = 'MINUTE',
 
         [Parameter(Mandatory = $false)]
-        [Switch]$Chart
+        [Switch]$Chart,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('IopsRead', 'IopsWrite', 'LatencyRead', 'LatencyWrite', 'ThroughputRead', 'ThroughputWrite')]
+        [System.String[]]$ChartProperty = ('IopsRead', 'IopsWrite', 'LatencyRead', 'LatencyWrite',
+            'ThroughputRead', 'ThroughputWrite')
     )
 
     begin {
@@ -680,12 +685,12 @@ function Get-SVTmetric {
             throw "Maximum range value for resolution $resolution is 26,280 hours (3 years)"
         }
 
-        if ($Resolution -eq 'SECOND' -and $Range -gt 3600 ) {
-            $Message = 'Using the resolution of SECOND beyond a range of 1 hour can take a long time to complete'
+        if ($Resolution -eq 'SECOND' -and $Range -gt 7200 ) {
+            $Message = 'Using the resolution of SECOND beyond a range of 2 hour can take a long time to complete'
             Write-Warning $Message
         }
-        if ($Resolution -eq 'MINUTE' -and $Range -gt 43200 ) {
-            $Message = 'Using the resolution of MINUTE beyond a range of 12 hours can take a long time to complete'
+        if ($Resolution -eq 'MINUTE' -and $Range -gt 86400 ) {
+            $Message = 'Using the resolution of MINUTE beyond a range of 24 hours can take a long time to complete'
             Write-Warning $Message
         }
     }
@@ -841,7 +846,7 @@ function Get-SVTmetric {
 
     end {
         if ($PSBoundParameters.ContainsKey('Chart')) {
-            Get-SVTmetricChart -Metric $ChartObject
+            Get-SVTmetricChart -Metric $ChartObject -ChartProperty $ChartProperty
         }
     }
 }
@@ -851,14 +856,24 @@ function Get-SVTmetricChart {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
-        [System.Object]$Metric
+        [System.Object]$Metric,
+
+        [Parameter(Mandatory = $true, Position = 1)]
+        [System.String[]]$ChartProperty
     )
 
     if ($PSVersionTable.PSVersion.Major -gt 5) {
         throw 'Microsoft Chart Controls are not currently supported, use Windows PowerShell'
     }
 
+    # add required properties to those specified by the user
+    $ChartProperty += 'Date', 'ObjectType', 'ObjectName'
+    $ChartProperty = $ChartProperty | Sort-Object | Select-Object -Unique
+
+    # get the object type - cluster, host or VM
     $TypeName = $Metric | Get-Member | Select-Object -ExpandProperty TypeName -Unique
+
+    # get the names of the objects passed in
     $ObjectList = $Metric.ObjectName | Select-Object -Unique
 
     $Path = Get-Location
@@ -879,11 +894,12 @@ function Get-SVTmetricChart {
             Interval = $YInterval[$_]
         }
     }
+    Write-Verbose "Interval is $Interval"
 
     Add-Type -AssemblyName System.Windows.Forms.DataVisualization
 
     foreach ($Instance in $ObjectList) {
-        $DataSource = $Metric | Where-Object ObjectName -eq $Instance
+        $DataSource = $Metric | Where-Object ObjectName -eq $Instance | Select-Object $ChartProperty
         $DataPoint = $DataSource | Measure-Object | Select-Object -ExpandProperty Count
 
         # create chart object
@@ -892,14 +908,14 @@ function Get-SVTmetricChart {
         $Chart1.Height = 600
         $Chart1.BackColor = [System.Drawing.Color]::WhiteSmoke
 
-        # add HPE logo
+        # add the HPE logo
         $Image = New-Object System.Windows.Forms.DataVisualization.Charting.ImageAnnotation
         $Image.X = 85
         $Image.Y = 85
         $Image.Image = $Logo
         $Chart1.Annotations.Add($Image)
 
-        # legend to chart
+        # add a legend to the chart
         $Legend = New-Object system.Windows.Forms.DataVisualization.Charting.Legend
         $Legend.name = 'Legend1'
         $Chart1.Legends.Add($Legend)
@@ -909,6 +925,7 @@ function Get-SVTmetricChart {
             $ShortName = ([ipaddress]$Instance).IPAddressToString
         }
         catch {
+            # the object name is not an IP address
             $ShortName = $Instance -split '\.' | Select-Object -First 1
         }
         $null = $Chart1.Titles.Add("$($TypeName): $ShortName - Metrics from $StartDate to $EndDate")
@@ -934,45 +951,55 @@ function Get-SVTmetricChart {
             $Area1.AxisX.Interval = $Interval
         }
 
-        $Area1.AxisY.Title = 'IOPS and Latency (milliseconds)'
-        $Area1.AxisY.TitleFont = $ChartTitleFont
-        $Area1.AxisY.LabelStyle.Font = $ChartLabelFont
-        $Area1.AxisY.MajorGrid.LineColor = [System.Drawing.Color]::LightGray
-
         # reduce line weight for charts with long time ranges
-        if ($Interval -gt 12) {
+        if ($Interval -gt 30) {
             $BorderWidth = 1
         }
-        elseif ($Interval -gt 2) {
+        else {
             $BorderWidth = 2
         }
-        else {
-            $BorderWidth = 3
-        }
 
-        # Show an appropriate number of labels on the yaxis by finding the largest number in the data set
-        # this only applies to yaxis for Area1, the 4 properties measured in IOs. 
-        $MaxArray = @(
-            $DataSource | Measure-Object -Property LatencyRead -Maximum | Select-Object -ExpandProperty Maximum
-            $DataSource | Measure-Object -Property LatencyWrite -Maximum | Select-Object -ExpandProperty Maximum
-            $DataSource | Measure-Object -Property IopsRead -Maximum | Select-Object -ExpandProperty Maximum
-            $DataSource | Measure-Object -Property IopsWrite -Maximum | Select-Object -ExpandProperty Maximum
-        )
-        $Max = $Maxarray | Measure-Object -Maximum | Select-Object -ExpandProperty Maximum
-        $Yaxis | ForEach-Object {
-            if ($Max -gt $_.Limit) {
-                $Yint = $_.Interval
-                $Area1.AxisY.Interval = $Yint
+        # Show an appropriate number of labels on the Y1 axis by finding the largest number in the data set
+        # this only applies to Y1 axis - 4 properties measured in IOPS or milliseconds (same scale)
+        $AxisY1Data = @()
+        if ('IopsRead' -in $ChartProperty) { $AxisY1Data += $DataSource | Select-Object -ExpandProperty IopsRead }
+        if ('IopsWrite' -in $ChartProperty) { $AxisY1Data += $DataSource | Select-Object -ExpandProperty IopsWrite }
+        if ('LatencyRead' -in $ChartProperty) { $AxisY1Data += $DataSource | Select-Object -ExpandProperty LatencyRead }
+        if ('LatencyWrite' -in $ChartProperty) { $AxisY1Data += $DataSource | Select-Object -ExpandProperty LatencyWrite }
+
+        if ($AxisY1Data) {
+            # At least one of the properties measured in IOs is specified, so add the left y-axis
+            $Area1.AxisY.Title = 'IOPS and Latency (milliseconds)'
+            $Area1.AxisY.TitleFont = $ChartTitleFont
+            $Area1.AxisY.LabelStyle.Font = $ChartLabelFont
+            $Area1.AxisY.MajorGrid.LineColor = [System.Drawing.Color]::LightGray
+
+            $Max = $AxisY1Data | Measure-Object -Maximum | Select-Object -ExpandProperty Maximum
+            $Yaxis | ForEach-Object {
+                if ($Max -gt $_.Limit) {
+                    $Yint = $_.Interval
+                    $Area1.AxisY.Interval = $Yint
+                }
             }
         }
 
-        # title for second Y axis
-        $Area1.AxisY2.Title = 'Throughput (Mbps)'
-        $Area1.AxisY2.TitleFont = $ChartTitleFont
-        $Area1.AxisY2.LabelStyle.Font = $ChartLabelFont
-        $Area1.AxisY2.LineColor = [System.Drawing.Color]::Transparent
-        $Area1.AxisY2.MajorGrid.Enabled = $false
-        $Area1.AxisY2.Enabled = $AxisEnabled::true
+        if ($ChartProperty -match 'Throughput') {
+            # At least one property measured in Mbps is specified, so add the right y-axis
+            $Area1.AxisY2.Title = 'Throughput (Mbps)'
+            $Area1.AxisY2.TitleFont = $ChartTitleFont
+            $Area1.AxisY2.LabelStyle.Font = $ChartLabelFont
+            If ($AxisY1Data) {
+                # Left y-axis is being displayed, so don't show grid lines for the right y-axis
+                $Area1.AxisY2.MajorGrid.LineColor = [System.Drawing.Color]::Transparent
+                $Area1.AxisY2.MajorGrid.Enabled = $false
+            }
+            else {
+                $Area1.AxisY2.MajorGrid.LineColor = [System.Drawing.Color]::LightGray
+                $Area1.AxisY2.MajorGrid.Enabled = $true
+            }
+            $Area1.AxisY2.Enabled = $AxisEnabled::true
+            # Not setting a specific value for interval on the Y2 axis.
+        }
 
         # add area to chart
         $Chart1.ChartAreas.Add($Area1)
@@ -980,87 +1007,99 @@ function Get-SVTmetricChart {
         $Chart1.ChartAreas['ChartArea1'].AxisX.LabelStyle.Angle = -45
 
         # data series
-        $null = $Chart1.Series.Add('IopsRead')
-        $Chart1.Series['IopsRead'].YAxisType = $AxisType::Primary
-        $Chart1.Series['IopsRead'].ChartType = 'Line'
-        $Chart1.Series['IopsRead'].BorderWidth = $BorderWidth
-        $Chart1.Series['IopsRead'].IsVisibleInLegend = $true
-        $Chart1.Series['IopsRead'].ChartArea = 'ChartArea1'
-        $Chart1.Series['IopsRead'].Legend = 'Legend1'
-        $Chart1.Series['IopsRead'].Color = "#7630EA" # HPE Medium Purple
-        $DataSource | ForEach-Object {
-            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
-            $null = $Chart1.Series['IopsRead'].Points.addxy($Date, $_.IopsRead)
+        if ('IopsRead' -in $ChartProperty) {
+            $null = $Chart1.Series.Add('IopsRead')
+            $Chart1.Series['IopsRead'].YAxisType = $AxisType::Primary
+            $Chart1.Series['IopsRead'].ChartType = 'Line'
+            $Chart1.Series['IopsRead'].BorderWidth = $BorderWidth
+            $Chart1.Series['IopsRead'].IsVisibleInLegend = $true
+            $Chart1.Series['IopsRead'].ChartArea = 'ChartArea1'
+            $Chart1.Series['IopsRead'].Legend = 'Legend1'
+            $Chart1.Series['IopsRead'].Color = "#7630EA" # HPE Medium Purple
+            $DataSource | ForEach-Object {
+                $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+                $null = $Chart1.Series['IopsRead'].Points.addxy($Date, $_.IopsRead)
+            }
         }
 
         # data series
-        $null = $Chart1.Series.Add('IopsWrite')
-        $Chart1.Series['IopsWrite'].YAxisType = $AxisType::Primary
-        $Chart1.Series['IopsWrite'].ChartType = 'Line'
-        $Chart1.Series['IopsWrite'].BorderWidth = $BorderWidth
-        $Chart1.Series['IopsWrite'].IsVisibleInLegend = $true
-        $Chart1.Series['IopsWrite'].ChartArea = 'ChartArea1'
-        $Chart1.Series['IopsWrite'].Legend = 'Legend1'
-        $Chart1.Series['IopsWrite'].Color = "#C140FF" # HPE Light Purple
-        $DataSource | ForEach-Object {
-            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
-            $null = $Chart1.Series['IopsWrite'].Points.addxy($Date, $_.IopsWrite)
+        if ('IopsWrite' -in $ChartProperty) {
+            $null = $Chart1.Series.Add('IopsWrite')
+            $Chart1.Series['IopsWrite'].YAxisType = $AxisType::Primary
+            $Chart1.Series['IopsWrite'].ChartType = 'Line'
+            $Chart1.Series['IopsWrite'].BorderWidth = $BorderWidth
+            $Chart1.Series['IopsWrite'].IsVisibleInLegend = $true
+            $Chart1.Series['IopsWrite'].ChartArea = 'ChartArea1'
+            $Chart1.Series['IopsWrite'].Legend = 'Legend1'
+            $Chart1.Series['IopsWrite'].Color = "#C140FF" # HPE Light Purple
+            $DataSource | ForEach-Object {
+                $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+                $null = $Chart1.Series['IopsWrite'].Points.addxy($Date, $_.IopsWrite)
+            }
         }
 
         # data series
-        $null = $Chart1.Series.Add('LatencyRead')
-        $Chart1.Series['LatencyRead'].YAxisType = $AxisType::Primary
-        $Chart1.Series['LatencyRead'].ChartType = 'Line'
-        $Chart1.Series['LatencyRead'].BorderWidth = $BorderWidth
-        $Chart1.Series['LatencyRead'].IsVisibleInLegend = $true
-        $Chart1.Series['LatencyRead'].ChartArea = 'ChartArea1'
-        $Chart1.Series['LatencyRead'].Legend = 'Legend1'
-        $Chart1.Series['LatencyRead'].Color = "#FEC901" # HPE Yellow
-        $DataSource | ForEach-Object {
-            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
-            $null = $Chart1.Series['LatencyRead'].Points.addxy($Date, $_.LatencyRead)
+        if ('LatencyRead' -in $ChartProperty) {
+            $null = $Chart1.Series.Add('LatencyRead')
+            $Chart1.Series['LatencyRead'].YAxisType = $AxisType::Primary
+            $Chart1.Series['LatencyRead'].ChartType = 'Line'
+            $Chart1.Series['LatencyRead'].BorderWidth = $BorderWidth
+            $Chart1.Series['LatencyRead'].IsVisibleInLegend = $true
+            $Chart1.Series['LatencyRead'].ChartArea = 'ChartArea1'
+            $Chart1.Series['LatencyRead'].Legend = 'Legend1'
+            $Chart1.Series['LatencyRead'].Color = "#FEC901" # HPE Yellow
+            $DataSource | ForEach-Object {
+                $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+                $null = $Chart1.Series['LatencyRead'].Points.addxy($Date, $_.LatencyRead)
+            }
         }
 
         # data series
-        $null = $Chart1.Series.Add('LatencyWrite')
-        $Chart1.Series['LatencyWrite'].YAxisType = $AxisType::Primary
-        $Chart1.Series['LatencyWrite'].ChartType = 'Line'
-        $Chart1.Series['LatencyWrite'].BorderWidth = $BorderWidth
-        $Chart1.Series['LatencyWrite'].IsVisibleInLegend = $true
-        $Chart1.Series['LatencyWrite'].ChartArea = 'ChartArea1'
-        $Chart1.Series['LatencyWrite'].Legend = 'Legend1'
-        $Chart1.Series['LatencyWrite'].Color = "#FF8300" # Aruba Orange
-        $DataSource | ForEach-Object {
-            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
-            $null = $Chart1.Series['LatencyWrite'].Points.addxy($Date, $_.LatencyWrite)
+        if ('LatencyWrite' -in $ChartProperty) {
+            $null = $Chart1.Series.Add('LatencyWrite')
+            $Chart1.Series['LatencyWrite'].YAxisType = $AxisType::Primary
+            $Chart1.Series['LatencyWrite'].ChartType = 'Line'
+            $Chart1.Series['LatencyWrite'].BorderWidth = $BorderWidth
+            $Chart1.Series['LatencyWrite'].IsVisibleInLegend = $true
+            $Chart1.Series['LatencyWrite'].ChartArea = 'ChartArea1'
+            $Chart1.Series['LatencyWrite'].Legend = 'Legend1'
+            $Chart1.Series['LatencyWrite'].Color = "#FF8300" # Aruba Orange
+            $DataSource | ForEach-Object {
+                $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+                $null = $Chart1.Series['LatencyWrite'].Points.addxy($Date, $_.LatencyWrite)
+            }
         }
 
         # data series
-        $null = $Chart1.Series.Add('ThroughputRead')
-        $Chart1.Series['ThroughputRead'].YAxisType = $AxisType::Secondary
-        $Chart1.Series['ThroughputRead'].ChartType = 'Line'
-        $Chart1.Series['ThroughputRead'].BorderWidth = $BorderWidth
-        $Chart1.Series['ThroughputRead'].IsVisibleInLegend = $true
-        $Chart1.Series['ThroughputRead'].ChartArea = 'ChartArea1'
-        $Chart1.Series['ThroughputRead'].Legend = 'Legend1'
-        $Chart1.Series['ThroughputRead'].Color = "#0D5265" # HPE Dark Blue
-        $DataSource | ForEach-Object {
-            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
-            $null = $Chart1.Series['ThroughputRead'].Points.addxy($Date, ($_.ThroughputRead / 1024 / 1024))
+        if ('ThroughputRead' -in $ChartProperty) {
+            $null = $Chart1.Series.Add('ThroughputRead')
+            $Chart1.Series['ThroughputRead'].YAxisType = $AxisType::Secondary
+            $Chart1.Series['ThroughputRead'].ChartType = 'Line'
+            $Chart1.Series['ThroughputRead'].BorderWidth = $BorderWidth
+            $Chart1.Series['ThroughputRead'].IsVisibleInLegend = $true
+            $Chart1.Series['ThroughputRead'].ChartArea = 'ChartArea1'
+            $Chart1.Series['ThroughputRead'].Legend = 'Legend1'
+            $Chart1.Series['ThroughputRead'].Color = "#0D5265" # HPE Dark Blue
+            $DataSource | ForEach-Object {
+                $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+                $null = $Chart1.Series['ThroughputRead'].Points.addxy($Date, ($_.ThroughputRead / 1024 / 1024))
+            }
         }
 
         # data series
-        $null = $Chart1.Series.Add('ThroughputWrite')
-        $Chart1.Series['ThroughputWrite'].YAxisType = $AxisType::Secondary
-        $Chart1.Series['ThroughputWrite'].ChartType = 'Line'
-        $Chart1.Series['ThroughputWrite'].BorderWidth = $BorderWidth
-        $Chart1.Series['ThroughputWrite'].IsVisibleInLegend = $true
-        $Chart1.Series['ThroughputWrite'].ChartArea = 'ChartArea1'
-        $Chart1.Series['ThroughputWrite'].Legend = 'Legend1'
-        $Chart1.Series['ThroughputWrite'].Color = "#32DAC8" # HPE Medium Blue
-        $DataSource | ForEach-Object {
-            $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
-            $null = $Chart1.Series['ThroughputWrite'].Points.addxy($Date, ($_.ThroughputWrite / 1024 / 1024))
+        if ('ThroughputWrite' -in $ChartProperty) {
+            $null = $Chart1.Series.Add('ThroughputWrite')
+            $Chart1.Series['ThroughputWrite'].YAxisType = $AxisType::Secondary
+            $Chart1.Series['ThroughputWrite'].ChartType = 'Line'
+            $Chart1.Series['ThroughputWrite'].BorderWidth = $BorderWidth
+            $Chart1.Series['ThroughputWrite'].IsVisibleInLegend = $true
+            $Chart1.Series['ThroughputWrite'].ChartArea = 'ChartArea1'
+            $Chart1.Series['ThroughputWrite'].Legend = 'Legend1'
+            $Chart1.Series['ThroughputWrite'].Color = "#32DAC8" # HPE Medium Blue
+            $DataSource | ForEach-Object {
+                $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
+                $null = $Chart1.Series['ThroughputWrite'].Points.addxy($Date, ($_.ThroughputWrite / 1024 / 1024))
+            }
         }
 
         # save chart and send filename to the pipeline
@@ -1100,8 +1139,8 @@ function Get-SVTcapacityChart {
         $DataSource = [ordered]@{
             'Allocated Capacity'          = $Cap.AllocatedCapacity / 1GB
             'Used Capacity'               = $Cap.UsedCapacity / 1GB
-            'Used Logical Capacity'       = $Cap.UsedLogicalCapacity / 1GB
             'Free Space'                  = $Cap.FreeSpace / 1GB
+            'Used Logical Capacity'       = $Cap.UsedLogicalCapacity / 1GB
             'Capacity Savings'            = $Cap.CapacitySavings / 1GB
             'Local Backup Capacity'       = $Cap.LocalBackupCapacity / 1GB
             'Remote Backup Capacity'      = $Cap.RemoteBackupCapacity / 1GB
@@ -2822,6 +2861,10 @@ function Get-SVTfile {
     6. Folder size matters. The restore will fail if file sizes exceed a DVD capacity. When restoring a large
        amount of data, it might be faster to restore the entire virtual machine and recover the required files 
        from the restored virtual disk.
+    7. File level restores are resticted to nine virtual disks per virtual controller. When viewing the virtual
+       disks with Get-SVTfile, you will only see the first nine disks if they are all attached to the same 
+       virtual controller. In this case, you must restore the entire VM and restore the required files from the
+       restored virtual disk (VMDK) files.
 .PARAMETER VmName
     The target virtual machine. Ensure the DVD drive is disconnected
 .PARAMETER RestorePath

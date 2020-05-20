@@ -1,10 +1,11 @@
-# Version 2.1.19
+# Version 2.1.20
 
-* Added branding to the charts produced by Get-SVTmetric and Get-SVTcapacity
+* Added a new optional parameter to Get-SVTmetric called -ChartProperty to allow you to specify specific metrics
+* Added HPE branding to the charts produced by Get-SVTmetric and Get-SVTcapacity:
 
-![Here is a sample branded metric chart](/Media/SVTmetric-branded.png)
-
-![Here is a sample branded capacity chart](/Media/SVTcapacity-branded.png)
+Metrics | Capacity
+:--- | :---
+![Here is a sample branded metric chart](/Media/SVTmetric-branded.png) | ![Here is a sample branded capacity chart](/Media/SVTcapacity-branded.png)
 
 # Version 2.1.18
 
