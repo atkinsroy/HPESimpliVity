@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.20'
+$HPESimplivityVersion = '2.1.21'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -52,6 +52,11 @@ function Resolve-SVTFullHostName {
         [System.String[]]$ReferenceHost
     )
 
+    begin {
+        [System.String[]]$HostNotFound = @()
+        [System.String[]]$ReturnHost = @()
+
+    }
     process {
         foreach ($ThisHost in $HostName) {
             $TestHost = $ReferenceHost | Where-Object { $_ -eq $ThisHost }
@@ -66,17 +71,21 @@ function Resolve-SVTFullHostName {
             }
 
             if ($TestHost) {
-                [string[]]$ReturnHost += $TestHost
+                $ReturnHost += $TestHost
             }
             else {
-                Write-Warning "Specified host $ThisHost not found"
+                $HostNotFound += $ThisHost
             }
         }
     }
 
     end {
         if ($ReturnHost) {
-            return ($ReturnHost | Sort-Object | Select-Object -Unique)
+            # found at least one host
+            if ($HostNotFound) {
+                Write-Warning "The following host(s) not found: $($HostNotFound -join ', ')"
+            }
+            $ReturnHost | Sort-Object | Select-Object -Unique
         }
         else {
             throw 'Specified host(s) not found'
@@ -85,7 +94,7 @@ function Resolve-SVTFullHostName {
 }
 
 # Helper function to return the embedded error message in the body of the response from the API, rather
-# than a generic runtime (404) error.
+# than a generic runtime (404) error. Called exclusively by Invoke-SVTrestMethod.
 function Get-SVTerror {
     [CmdletBinding()]
     Param (
@@ -94,7 +103,8 @@ function Get-SVTerror {
     )
 
     #$VerbosePreference = 'Continue'
-    if ($PSVersionTable.PSVersion.Major -lt 6) {
+    if ($PSEdition -ne 'Core') {
+        # Windows PowerShell only
         if ($Err.Exception.Response) {
             $Result = $Err.Exception.Response.GetResponseStream()
             $Reader = New-Object System.IO.StreamReader($Result)
@@ -134,6 +144,9 @@ Function Get-SVTbackupDestination {
 
     [bool]$FoundCluster = $false
     [bool]$FoundExternalStore = $false
+    [array]$DestinationNotFound = @()
+    [array]$ReturnObject = @()
+
     foreach ($Destination in $DestinationName) {
         try {
             $Dest = Get-SVTcluster -Name $Destination -ErrorAction Stop
@@ -148,7 +161,7 @@ Function Get-SVTbackupDestination {
                     Name = $Dest.ClusterName  #correct case
                     Id   = $Dest.ClusterId
                 }
-                [array]$ReturnObject += $DestObject
+                $ReturnObject += $DestObject
                 continue
             }
         }
@@ -174,7 +187,7 @@ Function Get-SVTbackupDestination {
                     Name = $Dest.ExternalStoreName
                     Id   = $Dest.ExternalStoreName
                 }
-                [array]$ReturnObject += $DestObject
+                $ReturnObject += $DestObject
             }
         }
         catch {
@@ -182,13 +195,15 @@ Function Get-SVTbackupDestination {
                 throw 'Destinations must be of type cluster or external store, not both'
             }
             else {
-                $Message = "Specified destination name $Destination is not a valid cluster " +
-                'name or external store name'
-                Write-Warning $Message
+                $DestinationNotFound += $Destination
             }
         }
     } #end foreach
     if ($ReturnObject) {
+        if ($DestinationNotFound) {
+            $Message = "Specified destination name(s) not found: $($DestinationNotFound -join ', ')"
+            Write-Warning $Message
+        }
         Return $ReturnObject
     }
     else {
@@ -196,9 +211,9 @@ Function Get-SVTbackupDestination {
     }
 }
 
-# Helper function for Invoke-RestMethod to handle REST errors in one place. The calling function 
-# then re-throws the error, generated here. This cmdlet either outputs a custom task object if the 
-# REST API response is a task object, or otherwise the raw JSON.
+# Helper function for Invoke-RestMethod to handle all REST requests and errors in one place. 
+# This cmdlet either returns a HPE.SimpliVity.Task object if the REST API response is a task object, 
+# or otherwise the raw JSON for the calling function to deal with.
 function Invoke-SVTrestMethod {
     [CmdletBinding()]
     param (
@@ -215,16 +230,22 @@ function Invoke-SVTrestMethod {
         [Parameter(Mandatory = $false, Position = 3)]
         [System.Object]$Body
     )
-    
+
+    $LocalFormat = Get-SVTLocalDateFormat
     [System.int32]$Retrycount = 0
     [bool]$Stoploop = $false
+
     do {
         try {
-            if ($PSBoundParameters.ContainsKey('Body')) {
-                $Response = Invoke-RestMethod -Uri $Uri -Headers $Header -Body $Body -Method $Method -ErrorAction Stop
+            #$Param = $PSBoundParameters | ConvertTo-Json
+            #Write-Verbose $Param
+            if ($PSEdition -eq 'Core' -and -not $SVTconnection.SignedCertificate) {
+                # PowerShell Core without a signed cert
+                $Response = Invoke-RestMethod @PSBoundParameters -SkipCertificateCheck
             }
             else {
-                $Response = Invoke-RestMethod -Uri $Uri -Headers $Header -Method $Method -ErrorAction Stop
+                # Windows PowerShell (with or without a signed cert, and PowerShell Core with a signed cert)
+                $Response = Invoke-RestMethod @PSBoundParameters
             }
             $Stoploop = $true
         }
@@ -240,8 +261,8 @@ function Invoke-SVTrestMethod {
                     $OVC = $SVTconnection.OVC -replace 'https://', ''
                     $Retry = Connect-SVT -OVC $OVC -Credential $SVTconnection.Credential
 
-                    # Update the json header authorisation with the new token for the retry
-                    # Not the entire header, this breaks subsequent POST calls.
+                    # Update the json header authorisation with the new token for the retry,
+                    # not the entire header; this breaks subsequent POST calls.
                     $Header.Authorization = "Bearer $($Retry.Token)"
                 }
             }
@@ -261,13 +282,9 @@ function Invoke-SVTrestMethod {
     until ($Stoploop -eq $true)
 
     # If the JSON output is a task, convert it to a custom object of type 'HPE.SimpliVity.Task' and pass this 
-    # back to the calling cmdlet. A lot of cmdlets produce task object types, so this cuts out repetition 
-    # in the module.
+    # back to the calling cmdlet.
     # Note: $Response.task is incorrectly true with /api/omnistack_clusters/throughput, so added a check for this.
     if ($Response.task -and $URI -notmatch '/api/omnistack_clusters/throughput') {
-
-        $LocalFormat = Get-SVTLocalDateFormat
-
         $Response.task | ForEach-Object {
             if ($_.start_time -as [datetime]) {
                 $StartTime = Get-Date -Date $_.start_time -Format $LocalFormat
@@ -403,33 +420,32 @@ function Get-SVTtask {
     PowerShell cmdlet to create the credential. This can optionally be imported from a file in cases where 
     you are invoking non-interactively. E.g. shutting down the OVC's from a script invoked by UPS software.
 .PARAMETER SignedCert
-    Requires a trusted cert. By default, the cmdlet allows untrusted self-signed SSL certificates with HTTPS
-    connections and enables TLS 1.2.
-    NOTE: You don't need this with PowerShell 6.0; it supports TLS1.2 natively and allows certificate bypass
-    using Invoke-Method -SkipCertificateCheck. This is not implemented here yet.
+    Requires a trusted certificate to enable TLS1.2. By default, the cmdlet allows untrusted certificates with 
+    HTTPS connections. This is, most commonly, a self-signed certificate. Alternatively it could be a 
+    certificate issued from an untrusted certificate authority, such as an internal CA.
 .INPUTS
     System.String
 .OUTPUTS
     System.Management.Automation.PSCustomObject
 .EXAMPLE
-    PS C:\>Connect-SVT -OVC <FQDN or IP Address of OVC>
+    PS C:\> Connect-SVT -OVC <FQDN or IP Address of OVC>
 
     This will securely prompt you for credentials
 .EXAMPLE
-    PS C:\>$Cred = Get-Credential -Message 'Enter Credentials'
-    PS C:\>Connect-SVT -OVC <FQDN or IP Address of OVC> -Credential $Cred
+    PS C:\> $Cred = Get-Credential -Message 'Enter Credentials'
+    PS C:\> Connect-SVT -OVC <FQDN or IP Address of OVC> -Credential $Cred
 
     Create the credential first, then pass it as a parameter.
 .EXAMPLE
-    PS C:\>$CredFile = "$((Get-Location).Path)\OVCcred.XML"
-    PS C:\>Get-Credential -Credential '<username@domain>'| Export-CLIXML $CredFile
+    PS C:\> $CredFile = "$((Get-Location).Path)\OVCcred.XML"
+    PS C:\> Get-Credential -Credential '<username@domain>'| Export-CLIXML $CredFile
 
     Another way is to store the credential in a file (as above), then connect to the OVC using:
-    PS C:\>  Connect-SVT -OVC <FQDN or IP Address of OVC> -Credential $(Import-CLIXML $CredFile)
+    PS C:\> Connect-SVT -OVC <FQDN or IP Address of OVC> -Credential $(Import-CLIXML $CredFile)
 
     or:
-    PS C:\>$Cred = Import-CLIXML $CredFile
-    PS C:\>Connect-SVT -OVC <FQDN or IP Address of OVC> -Credential $Cred
+    PS C:\> $Cred = Import-CLIXML $CredFile
+    PS C:\> Connect-SVT -OVC <FQDN or IP Address of OVC> -Credential $Cred
 
     This method is useful in non-interactive sessions. Once the file is created, run the Connect-SVT
     command to connect and reconnect to the OVC, as required.
@@ -457,32 +473,40 @@ function Connect-SVT {
     $Uri = 'https://' + $OVC + '/api/oauth/token'
 
     if ($SignedCert) {
-        $SignedCertificates = $true
+        # User has specified -SignedCert, so the OVC/MVA must have a certificate which is trusted by the client 
     }
     else {
-        $SignedCertificates = $false
-
-        if ( -not ('TrustAllCertsPolicy' -as [type])) {
-            $Source = @"
-                using System.Net;
-                using System.Security.Cryptography.X509Certificates;
-                public class TrustAllCertsPolicy : ICertificatePolicy
-                {
-                    public bool CheckValidationResult(
-                    ServicePoint srvPoint, X509Certificate certificate,
-                    WebRequest request, int certificateProblem)
-                    {
-                        return true;
-                    }
-                }
-"@
-            Add-Type -TypeDefinition $Source
+        # Effectively bypass TLS by trusting all certificates. Works with untrusted, self-signed certs and is the 
+        # default. Ideally, customers should install trusted certificates, but this is rarely implemented.
+        if ($PSEdition -eq 'Core') {
+            # With PowerShell Core, Invoke-RestMethod supports -SkipCerticateCheck. The global $SVTConnection
+            # variable has a 'SignedCertificate' property set here, used by Invoke-SVTrestMethod. 
         }
-        [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-        [System.Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        else {
+            # With Windows PowerShell, use .Net ServicePointManager to create an object of type TrustAllCertsPolicy
+            if ( -not ('TrustAllCertsPolicy' -as [type])) {
+                $Source = @"
+                    using System.Net;
+                    using System.Security.Cryptography.X509Certificates;
+                    public class TrustAllCertsPolicy : ICertificatePolicy
+                    {
+                        public bool CheckValidationResult(
+                        ServicePoint srvPoint, X509Certificate certificate,
+                        WebRequest request, int certificateProblem)
+                        {
+                            return true;
+                        }
+                    }
+"@
+                Add-Type -TypeDefinition $Source
+            }
+            [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+            [System.Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        }
     }
 
-    # 2 ways to securely authenticate - via an existing credential object or prompt for a credential
+    # Two ways to securely authenticate are available - via an existing credential object which is prviously
+    # created and passed in, or prompt for a credential
     if ($Credential) {
         $OVCcred = $Credential
     }
@@ -505,12 +529,12 @@ function Connect-SVT {
     }
 
     $global:SVTconnection = [pscustomobject]@{
-        OVC                = "https://$OVC"
-        Credential         = $OVCcred
-        Token              = $Response.access_token
-        UpdateTime         = $Response.updated_at
-        Expiration         = $Response.expires_in
-        SignedCertificates = $SignedCertificates
+        OVC               = "https://$OVC"
+        Credential        = $OVCcred
+        Token             = $Response.access_token
+        UpdateTime        = $Response.updated_at
+        Expiration        = $Response.expires_in
+        SignedCertificate = $SignedCert.IsPresent
     }
     # Return connection object to the pipeline. Used by all other HPESimpliVity cmdlets.
     $global:SVTconnection
@@ -528,7 +552,8 @@ function Connect-SVT {
 .EXAMPLE
     PS C:\> Get-SVTversion
 
-    Shows version information for the REST API and SVTFS.
+    Shows version information for the REST API and SVTFS. It also shows whether you are
+    connecting to an Omnistack Virtual Appliance (OVA) or a Managed Virtual Appliance (MVA).
 .NOTES
 #>
 function Get-SVTversion {
@@ -588,33 +613,46 @@ function Get-SVTversion {
 .PARAMETER Chart
     Create a chart instead of showing performance metrics. The chart file is saved to the current folder. 
     One chart is created for each object (e.g. cluster, host or VM)
+.PARAMETER ChartProperty
+    Specify the properties (metrics) you'd like to see on the chart. By default all properties are shown
 .EXAMPLE
-    PS C:\>Get-SVTmetric -ClusterName Production
+    PS C:\> Get-SVTmetric -ClusterName Production
 
     Shows performance metrics about the specified cluster, using the default hour setting (24 hours) and 
     resolution (every hour)
 .EXAMPLE
-    PS C:\>Get-SVThost | Get-SVTmetric -Hour 1 -Resolution SECOND
+    PS C:\> Get-SVThost | Get-SVTmetric -Hour 1 -Resolution SECOND
 
     Shows performance metrics for all hosts in the federation, for every second of the last hour
 .EXAMPLE
-    PS C:\>Get-SVTvm | Where VmName -match "SQL" | Get-SVTmetric
+    PS C:\> Get-SVTvm | Where VmName -match "SQL" | Get-SVTmetric
 
     Show performance metrics for every VM that has "SQL" in its name
 .EXAMPLE
-    PS C:\>Get-SVTcluster -ClusterName DR | Get-SVTmetric -Hour 1440 -Resolution DAY
+    PS C:\> Get-SVTcluster -ClusterName DR | Get-SVTmetric -Hour 1440 -Resolution DAY
 
     Show daily performance metrics for the last two months for the specified cluster
 .EXAMPLE
-    PS C:\>Get-SVTvm Vm1,Vm2,Vm3 | Get-Metric -Chart -Verbose
+    PS C:\> Get-SVTvm Vm1,Vm2,Vm3 | Get-Metric -Chart -Verbose
 
     Create chart(s) instead of showing the metric data. Chart files are created in the current folder.
     Use filtering when creating charts for virtual machines to avoid creating a lot of charts.
 .EXAMPLE
-    PS C:\>Get-SVThost -Name MyHost | Get-Metric -Chart | Foreach-Object {Invoke-Item $_}
+    PS C:\> Get-SVThost -Name MyHost | Get-Metric -Chart | Foreach-Object {Invoke-Item $_}
 
-    Create a metrics chart for the specified host and display it. Note that Invoke-Item only works with
-    image files when the Desktop Experience Feature is installed (may not be installed on some servers)
+    Create a metrics chart for the specified host and immediately display it. Note that Invoke-Item 
+    only works with image files when the Desktop Experience Feature is installed (may not be installed 
+    on some servers)
+.EXAMPLE
+    PS C:\> Get-SVTmetric -Cluster SVTcluster -Chart -ChartProperty IopsRead,IopsWrite
+
+    Create a metrics chart for the specified cluster showing only the specified properties. By default
+    the last day is shown (-Hour 24) with a resolution of MINUTE (-Resolution MINUTE).
+.EXAMPLE
+    PS C:\> Get-SVTmetric -Host server1 -Chart -OffsetHour 24
+
+    Create a chart showing metric information from yesterday (or more correctly, a days worth of information 
+    prior to the last 24 hours).
 .INPUTS
     System.String
     HPE.SimpliVity.Cluster
@@ -723,31 +761,12 @@ function Get-SVTmetric {
                 $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $Item.VmId + '/metrics'
                 $ObjectName = $Item.VmName
             }
-            elseif ($TypeName -eq 'Selected.System.Management.Automation.PSCustomObject') {
-                # User has piped to Select-Object. Order matters - VM object has Host and Cluster, Host has Cluster
-                if ($Item.VmName) {
-                    $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $Item.VmId + '/metrics'
-                    $ObjectName = $Item.VmName
-                    $TypeName = 'HPE.SimpliVity.VirtualMachine'
-                }
-                elseif ($Item.HostName) {
-                    $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $Item.HostId + '/metrics'
-                    $ObjectName = $Item.HostName
-                    $TypeName = 'HPE.SimpliVity.Host'
-                }
-                elseif ($Item.ClusterName) {
-                    $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/' + $Item.ClusterId + '/metrics'
-                    $ObjectName = $Item.ClusterName
-                    $TypeName = 'HPE.SimpliVity.Cluster'
-                }
-            }
-            elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
+            elseif ($PSBoundParameters.ContainsKey('VmName')) {
                 try {
-                    $ClusterId = Get-SVTcluster -ClusterName $Item -ErrorAction Stop | 
-                    Select-Object -ExpandProperty ClusterId
-                    $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/' + $ClusterId + '/metrics'
+                    $VmId = Get-SVTvm -VmName $Item -ErrorAction Stop | Select-Object -ExpandProperty VmId
+                    $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/metrics'
                     $ObjectName = $Item
-                    $TypeName = 'HPE.SimpliVity.Cluster'
+                    $TypeName = 'HPE.SimpliVity.VirtualMachine'
                 }
                 catch {
                     throw $_.Exception.Message
@@ -767,11 +786,13 @@ function Get-SVTmetric {
                 }
             }
             else {
+                # This is deliberately a catchall. $SVTobject could be passed in as a string, e.g.
+                # 'Cluster01' | Get-SVTcluster
                 try {
-                    $VmId = Get-SVTvm -VmName $Item -ErrorAction Stop | Select-Object -ExpandProperty VmId
-                    $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/metrics'
-                    $ObjectName = $Item
-                    $TypeName = 'HPE.SimpliVity.VirtualMachine'
+                    $Cluster = Get-SVTcluster -ClusterName $Item -ErrorAction Stop
+                    $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/' + $Cluster.ClusterId + '/metrics'
+                    $ObjectName = $Cluster.ClusterName
+                    $TypeName = 'HPE.SimpliVity.Cluster'
                 }
                 catch {
                     throw $_.Exception.Message
@@ -862,39 +883,41 @@ function Get-SVTmetricChart {
         [System.String[]]$ChartProperty
     )
 
-    if ($PSVersionTable.PSVersion.Major -gt 5) {
-        throw 'Microsoft Chart Controls are not currently supported, use Windows PowerShell'
-    }
+    #if ($PSEdition -eq 'Core') {
+    #    # This is not actually true, but support is dependent PowerShell versions and .NET Framework versions
+    #    # and appears to be somewhat patchy. Revisit with .NET5 and PowerShell 7.x
+    #    throw 'Runtime Error: Microsoft Chart Controls are not currently supported, use Windows PowerShell'
+    #}
 
-    # add required properties to those specified by the user
+    # add the required properties to those specified by the user and make sure each property is unique
     $ChartProperty += 'Date', 'ObjectType', 'ObjectName'
     $ChartProperty = $ChartProperty | Sort-Object | Select-Object -Unique
 
-    # get the object type - cluster, host or VM
+    # get the object type - e.g. cluster, host or VM
     $TypeName = $Metric | Get-Member | Select-Object -ExpandProperty TypeName -Unique
 
-    # get the names of the objects passed in
+    # get the names of each object passed in, e.g. host names
     $ObjectList = $Metric.ObjectName | Select-Object -Unique
 
+    # Path and datestamp are used for chart filename(s)
     $Path = Get-Location
+    $DateStamp = Get-Date -Format 'yyMMddhhmmss'
     $Culture = Get-Culture
     $StartDate = $Metric | Select-Object -First 1 -ExpandProperty Date
     $EndDate = $Metric | Select-Object -Last 1 -ExpandProperty Date
     $ChartLabelFont = 'Arial, 8pt'
     $ChartTitleFont = 'Arial, 12pt'
-    $DateStamp = Get-Date -Format 'yyMMddhhmmss'
-    $Logo = (split-path -parent (get-module hpesimplivity -ListAvailable).Path) + '\hpe.png'
+    $Logo = (split-path -parent (get-module HPEsimpliVity -ListAvailable).Path) + '\hpe.png'
 
     # define an object to determine the best interval on the Y axis, given a maximum value
-    $Ylimit = (0, 2500, 5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000, 5120000, 10240000, 20480000)
+    $Ymax = (0, 2500, 5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000, 5120000, 10240000, 20480000)
     $Yinterval = (100, 200, 400, 600, 1000, 5000, 10000, 15000, 20000, 50000, 75000, 100000, 250000, 400000, 1000000)
     $Yaxis = 0..14 | foreach-object {
         [PSCustomObject]@{
-            Limit    = $Ylimit[$_]
+            Maximum  = $Ymax[$_]
             Interval = $YInterval[$_]
         }
     }
-    Write-Verbose "Interval is $Interval"
 
     Add-Type -AssemblyName System.Windows.Forms.DataVisualization
 
@@ -920,7 +943,7 @@ function Get-SVTmetricChart {
         $Legend.name = 'Legend1'
         $Chart1.Legends.Add($Legend)
 
-        # add chart title
+        # add chart title. Shortname is also used for the chart filename
         try {
             $ShortName = ([ipaddress]$Instance).IPAddressToString
         }
@@ -959,8 +982,8 @@ function Get-SVTmetricChart {
             $BorderWidth = 2
         }
 
-        # Show an appropriate number of labels on the Y1 axis by finding the largest number in the data set
-        # this only applies to Y1 axis - 4 properties measured in IOPS or milliseconds (same scale)
+        # Kill 2 birds. Determine if any of the properties measured on the primary Y-axis are required and if so, 
+        # collect the values so the maximum value can be found
         $AxisY1Data = @()
         if ('IopsRead' -in $ChartProperty) { $AxisY1Data += $DataSource | Select-Object -ExpandProperty IopsRead }
         if ('IopsWrite' -in $ChartProperty) { $AxisY1Data += $DataSource | Select-Object -ExpandProperty IopsWrite }
@@ -968,28 +991,28 @@ function Get-SVTmetricChart {
         if ('LatencyWrite' -in $ChartProperty) { $AxisY1Data += $DataSource | Select-Object -ExpandProperty LatencyWrite }
 
         if ($AxisY1Data) {
-            # At least one of the properties measured in IOs is specified, so add the left y-axis
+            # At least one of the properties measured on the primary Y-axis are present, so show labels
             $Area1.AxisY.Title = 'IOPS and Latency (milliseconds)'
             $Area1.AxisY.TitleFont = $ChartTitleFont
             $Area1.AxisY.LabelStyle.Font = $ChartLabelFont
             $Area1.AxisY.MajorGrid.LineColor = [System.Drawing.Color]::LightGray
 
+            # Determine an appropriate interval on the primary Y-axis, based on the maximum value
             $Max = $AxisY1Data | Measure-Object -Maximum | Select-Object -ExpandProperty Maximum
             $Yaxis | ForEach-Object {
-                if ($Max -gt $_.Limit) {
-                    $Yint = $_.Interval
-                    $Area1.AxisY.Interval = $Yint
+                if ($Max -gt $_.Maximum) {
+                    $Area1.AxisY.Interval = $_.Interval
                 }
             }
         }
 
         if ($ChartProperty -match 'Throughput') {
-            # At least one property measured in Mbps is specified, so add the right y-axis
+            # At least one property measured on the secondary Y-axis is present, so show labels
             $Area1.AxisY2.Title = 'Throughput (Mbps)'
             $Area1.AxisY2.TitleFont = $ChartTitleFont
             $Area1.AxisY2.LabelStyle.Font = $ChartLabelFont
             If ($AxisY1Data) {
-                # Left y-axis is being displayed, so don't show grid lines for the right y-axis
+                # The primary Y-axis is also being displayed, so don't show grid lines for the secondary Y-axis
                 $Area1.AxisY2.MajorGrid.LineColor = [System.Drawing.Color]::Transparent
                 $Area1.AxisY2.MajorGrid.Enabled = $false
             }
@@ -998,7 +1021,7 @@ function Get-SVTmetricChart {
                 $Area1.AxisY2.MajorGrid.Enabled = $true
             }
             $Area1.AxisY2.Enabled = $AxisEnabled::true
-            # Not setting a specific value for interval on the Y2 axis.
+            # Not setting a specific interval on the secondary Y-axis
         }
 
         # add area to chart
@@ -1121,7 +1144,8 @@ function Get-SVTcapacityChart {
         [System.Object]$Capacity
     )
 
-    if ($PSVersionTable.PSVersion.Major -gt 5) {
+    if ($PSEdition -eq 'Core') {
+        # Disabled because support is somewhat patchy.
         throw 'Microsoft Chart Controls are not currently supported with PowerShell Core, use Windows PowerShell'
     }
     Add-Type -AssemblyName System.Windows.Forms.DataVisualization
@@ -1162,7 +1186,7 @@ function Get-SVTcapacityChart {
         $Image.Image = $Logo
         $Chart1.Annotations.Add($Image)
 
-        # add title
+        # add title, shortname is also used for filename(s)
         try {
             $ShortName = ([ipaddress]$Instance).IPAddressToString
         }
@@ -1257,8 +1281,8 @@ function Get-SVTmodel {
         '12-25TB - SVT380Gen10 Medium',
         '20-40TB - SVT380Gen10 Large',
         '40-80TB - SVT380Gen10 Extra Large', # 3.8TB disk ~ 4TB
-        '20-40TB - SVT380Gen10H (LFF)', #4X1.92 SSD + 8X4TB HDD = 12 disks (Backup/Archive)
-        '25-50TB - SVT380Gen10H (SFF)', #4X1.92 SSD + 20X1.2TB HDD = 24 disks (General Purpose)
+        '20-40TB - SVT380Gen10H (LFF)', # 4X1.92 SSD + 8X4TB HDD = 12 disks (Backup/Archive)
+        '25-50TB - SVT380Gen10H (SFF)', # 4X1.92 SSD + 20X1.2TB HDD = 24 disks (General Purpose)
         ' 8-16TB - SVT380Gen10G x6',
         ' 7-15TB - SVT380Gen10G x8',
         '15-30TB - SVT380Gen10G x12',
@@ -1492,7 +1516,7 @@ function Get-SVTbackup {
         [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
-        [ValidateSet('PROTECTED', 'SAVING', 'FAILED')]
+        [ValidateSet('PROTECTED', 'SAVING', 'QUEUED', 'FAILED')]
         [System.String[]]$BackupState,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
@@ -1569,8 +1593,8 @@ function Get-SVTbackup {
     $Uri = "$($global:SVTconnection.OVC)/api/backups?case=sensitive"
 
     if ($PSBoundParameters.ContainsKey('All')) {
-        $Message = 'This command may take a long time to complete. Consider using other parameters with ' +
-        '-All to limit output'
+        $Message = 'This command may take a long time to complete. Consider using other parameters ' +
+        'with -All to limit output'
         Write-Warning $Message
         $Limit = 3000
         $Uri += "&limit=$Limit"
@@ -1582,29 +1606,24 @@ function Get-SVTbackup {
 
     if ($PSBoundParameters.ContainsKey('VmName')) {
         Write-Verbose 'VM names are case sensitive'
-        $VmName = $VmName -join ','
-        $Uri += "&virtual_machine_name=$VmName"
+        $Uri += "&virtual_machine_name=$($VmName -join ',')"
     }
     if ($PSBoundParameters.ContainsKey('ClusterName')) {
         Write-Verbose 'Cluster names are case sensitive'
-        $ClusterName = $ClusterName -join ','
-        $Uri += "&omnistack_cluster_name=$ClusterName"
+        $Uri += "&omnistack_cluster_name=$($ClusterName -join ',')"
     }
     if ($PSBoundParameters.ContainsKey('DatastoreName')) {
         Write-Verbose 'Datastore names are case sensitive'
-        $DatastoreName = $DatastoreName -join ','
-        $Uri += "&datastore_name=$DatastoreName"
+        $Uri += "&datastore_name=$($DatastoreName -join ',')"
     }
     if ($PSBoundParameters.ContainsKey('DestinationName')) {
         try {
             $Destination = Get-SVTbackupDestination -Name $DestinationName -ErrorAction Stop
             if (($Destination.Type | Select-Object -First 1) -eq 'Cluster') {
-                $ClusterId = $Destination.Id -join ','
-                $Uri += "&omnistack_cluster_id=$($ClusterId)"
+                $Uri += "&omnistack_cluster_id=$($Destination.Id -join ',')"
             }
             else {
-                $ExternalStoreName = $Destination.Name -join ','
-                $Uri += "&external_store_name=$($ExternalStoreName)"
+                $Uri += "&external_store_name=$($Destination.Name -join ',')"
             }
         }
         catch {
@@ -1613,28 +1632,23 @@ function Get-SVTbackup {
     }
     if ($PSBoundParameters.ContainsKey('BackupName')) {
         Write-Verbose 'Backup names are case sensitive. Incomplete backup names are matched'
-        $BackupName = ($BackupName -join '*,') + '*'  # Note the Asterix
-        $Uri += "&name=$($BackupName -replace '\+', '%2B')"
+        # add an asterix to each backupname to support incomplete name match. Also replace plus symbol
+        $Uri += "&name=$(($BackupName -join '*,') + '*' -replace '\+', '%2B')"
     }
     if ($PSBoundParameters.ContainsKey('BackupId')) {
-        $BackupId = $BackupId -join ','
-        $Uri += "&id=$BackupId"
+        $Uri += "&id=$($BackupId -join ',')"
     }
     if ($PSBoundParameters.ContainsKey('BackupState')) {
-        $BackupState = ($BackupState).ToUpper() -join ','
-        $Uri += "&state=$BackupState"
+        $Uri += "&state=$($BackupState -join ',')"
     }
     if ($PSBoundParameters.ContainsKey('BackupType')) {
-        $BackupType = ($BackupType).ToUpper() -join ','
-        $Uri += "&type=$BackupType"
+        $Uri += "&type=$(($BackupType -join ',').ToUpper())"
     }
     if ($PSBoundParameters.ContainsKey('MinSizeMB')) {
-        $MinSizeByte = $MinSizeMB * 1mb
-        $Uri += "&size_min=$MinSizeByte"
+        $Uri += "&size_min=$($MinSizeMB * 1mb)"
     }
     if ($PSBoundParameters.ContainsKey('MaxSizeMB')) {
-        $MaxSizeByte = $MaxSizeMB * 1mb
-        $Uri += "&size_max=$MaxSizeByte"
+        $Uri += "&size_max=$($MaxSizeMB * 1mb)"
     }
     if ($PSBoundParameters.ContainsKey('Date')) {
         $Message = 'Date parameter takes precedence over other date related parameters, like CreatedAfter ' +
@@ -1756,7 +1770,7 @@ function Get-SVTbackup {
                 throw "Backups with specified destination $DestinationName not found"
             }
             if ($PSBoundParameters.ContainsKey('BackupName')) {
-                throw "Specified backup name(s) $BackupName not found"
+                throw "Specified backup name(s) $BackupName* not found"
             }
             if ($PSBoundParameters.ContainsKey('BackupId')) {
                 throw "Specified backup ID(s) $BackupId not found"
@@ -1928,10 +1942,12 @@ function New-SVTbackup {
         }
 
         if ($PSBoundParameters.ContainsKey('RetentionHour')) {
-            $Retention = $RetentionHour * 60 # Must be specified in minutes
+            # Must be specified in minutes
+            $Retention = $RetentionHour * 60
         }
         else {
-            $Retention = $RetentionDay * 1440 # Must be specified in minutes
+            # Must be specified in minutes. Retention will be 1 day by default.
+            $Retention = $RetentionDay * 1440 
         }
     }
 
@@ -1948,7 +1964,7 @@ function New-SVTbackup {
             }
 
             $Body = @{
-                'backup_name'      = $BackupName
+                'backup_name'      = $BackupName -replace "'", ""
                 'app_consistent'   = $ApplicationConsistent
                 'consistency_type' = $ConsistencyType
                 'retention'        = $Retention
@@ -1961,8 +1977,7 @@ function New-SVTbackup {
                 $Body += @{ 'external_store_name' = $Destination.Id }
             }
             else {
-                # No destination cluster/external store specified, so use the cluster id local for VM being 
-                # backed up will be used.
+                # No destination cluster/external store specified, so backup to the local cluster
                 $Body += @{ 'destination_id' = $VmObj.ClusterId }
             }
 
@@ -2204,12 +2219,12 @@ function Remove-SVTbackup {
     Stops (cancels) a currently executing HPE SimpliVity backup
 
     BackupId is the only unique identifier for backup objects (e.g. multiple backups can have the same name). 
-    This makes using this command a little cumbersome by itself. However, you can use Get-SVTBackup to identify 
+    This makes using this command a little cumbersome by itself. However, you can use Get-SVTBackup to identify
     the backups you want to target and then pass the output to this command.
 .PARAMETER BackupId
     Specify the Backup ID(s) for the backup(s) to cancel
 .EXAMPLE
-    PS C:\>Get-SVTbackup -BackupName '2019-05-12T01:00:00-04:00' | Stop-SVTBackup
+    PS C:\> Get-SVTbackup -BackupName '2019-05-12T01:00:00-04:00' | Stop-SVTBackup
 
     Cancels the backup or backups with the specified backup name.
 .INPUTS
@@ -2278,15 +2293,15 @@ function Stop-SVTbackup {
     Specify the Backup ID(s) to copy. Use the output from an appropriate Get-SVTbackup command to provide
     one or more Backup ID's to copy. 
 .EXAMPLE
-    PS C:\>Get-SVTbackup -VmName Server2016-01 | Copy-SVTbackup -DestinationName Cluster02
+    PS C:\> Get-SVTbackup -VmName Server2016-01 | Copy-SVTbackup -DestinationName Cluster02
 
     Copy the last 24 hours of backups for the specified VM to the specified SimpliVity cluster
 .EXAMPLE
-    PS C:\>Get-SVTbackup -Hour 2 | Copy-SVTbackup Cluster02
+    PS C:\> Get-SVTbackup -Hour 2 | Copy-SVTbackup Cluster02
 
     Copy the last two hours of all backups to the specified cluster
 .EXAMPLE
-    PS C:\>Get-SVTbackup -Name 'BeforeSQLupgrade' | Copy-SVTbackup -DestinationName StoreOnce-Data02
+    PS C:\> Get-SVTbackup -Name 'BeforeSQLupgrade' | Copy-SVTbackup -DestinationName StoreOnce-Data02
 
     Copy backups with the specified name to the specified external store.
 .INPUTS
@@ -2361,8 +2376,8 @@ function Copy-SVTbackup {
 .PARAMETER BackupId
     Lock the backup(s) with the specified backup ID(s)
 .EXAMPLE
-    PS C:\>Get-SVTBackup -BackupName 2019-05-09T22:00:01-04:00 | Lock-SVTbackup
-    PS C:\>Get-SVTtask
+    PS C:\> Get-SVTBackup -BackupName 2019-05-09T22:00:01-04:00 | Lock-SVTbackup
+    PS C:\> Get-SVTtask
 
     Locks the backup(s) with the specified name. Use Get-SVTtask to track the progress of the task(s).
 .INPUTS
@@ -2600,7 +2615,7 @@ function Set-SVTbackupRetention {
 .PARAMETER BackupId
     Use Get-SVTbackup to output the required VMs as input for this command
 .EXAMPLE
-    PS C:\>Get-SVTbackup -VmName VM01 | Update-SVTbackupUniqueSize
+    PS C:\> Get-SVTbackup -VmName VM01 | Update-SVTbackupUniqueSize
 
     Starts a task to calculate the unique size of the specified backup(s)
 .EXAMPLE
@@ -2681,14 +2696,14 @@ function Update-SVTbackupUniqueSize {
 .PARAMETER FilePath
     The folder path for the backed up files
 .EXAMPLE
-    PS C:\>$Backup = Get-SVTbackup -VmName Server2016-01 -Limit 1
-    PS C:\>$Backup | Get-SVTfile
+    PS C:\> $Backup = Get-SVTbackup -VmName Server2016-01 -Limit 1
+    PS C:\> $Backup | Get-SVTfile
 
     The first command identifies the most recent backup of the specified VM.
     The second command displays the virtual disks contained within the backup
 .EXAMPLE
-    PS C:\>$Backup = Get-SVTbackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
-    PS C:\>$Backup | Get-SVTfile -VirtualDisk Server2016-01.vmdk
+    PS C:\> $Backup = Get-SVTbackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
+    PS C:\> $Backup | Get-SVTfile -VirtualDisk Server2016-01.vmdk
 
     The first command identifies the most recent backup of the specified VM taken on a specific date. 
     The second command displays the partitions within the specified virtual disk. Virtual disk names are 
@@ -2698,19 +2713,19 @@ function Update-SVTbackupUniqueSize {
 
     Shows the contents of the root folder on the specified partition inside the specified backup
 .EXAMPLE
-    PS C:\>$Backup = Get-SVTbackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
-    PS C:\>$Backup | Get-SVTfile Server2016-01.vmdk 4
+    PS C:\> $Backup = Get-SVTbackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
+    PS C:\> $Backup | Get-SVTfile Server2016-01.vmdk 4
 
     Shows the backed up files at the root of the specified partition, using positional parameters
 .EXAMPLE
-    PS C:\>$Backup = Get-SVTbackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
-    PS C:\>$Backup | Get-SVTfile Server2016-01.vmdk 4 /Users/Administrator/Documents
+    PS C:\> $Backup = Get-SVTbackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
+    PS C:\> $Backup | Get-SVTfile Server2016-01.vmdk 4 /Users/Administrator/Documents
 
     Shows the specified backed up files within the specified partition, using positional parameters. File 
     names are case sensitive.
 .EXAMPLE
-    PS C:\>$Backup = '5f5f7f06-a485-42eb-b4c0-0b509609c8fb' # This is a valid Backup ID
-    PS C:\>$Backup | Get-SVTfile -VirtualDisk Server2016-01_1.vmdk -PartitionNumber 2 -FilePath '/Log Files'
+    PS C:\> $Backup = '5f5f7f06-a485-42eb-b4c0-0b509609c8fb' # This is a valid Backup ID
+    PS C:\> $Backup | Get-SVTfile -VirtualDisk Server2016-01_1.vmdk -PartitionNumber 2 -FilePath '/Log Files'
 
     The first command identifies the desired backup. The second command displays the specified backed up 
     files using named parameters. Quotes are used because the file path contains a space. File names are 
@@ -2998,8 +3013,7 @@ function Get-SVTdatastore {
     $LocalFormat = Get-SVTLocalDateFormat
 
     if ($PSBoundParameters.ContainsKey('DatastoreName')) {
-        $DatastoreName = $DatastoreName -join ','
-        $Uri += '&name=' + $DatastoreName
+        $Uri += "&name=$($DatastoreName -join ',')"
     }
 
     try {
@@ -3061,7 +3075,7 @@ function Get-SVTdatastore {
 .PARAMETER SizeGB
     Specify the size of the new datastore in GB
 .EXAMPLE
-    PS C:\>New-SVTdatastore -DatastoreName ds01 -ClusterName Cluster1 -PolicyName Daily -SizeGB 102400
+    PS C:\> New-SVTdatastore -DatastoreName ds01 -ClusterName Cluster1 -PolicyName Daily -SizeGB 102400
 
     Creates a new 100TB datastore called ds01 on Cluster1 and assigns the pre-existing Daily backup policy to it
 .INPUTS
@@ -3133,8 +3147,8 @@ function New-SVTdatastore {
 .PARAMETER DatastoreName
     Specify the datastore to delete
 .EXAMPLE
-    PS C:\>Remove-SVTdatastore -Datastore DStemp
-    PS C:\>Get-SVTtask
+    PS C:\> Remove-SVTdatastore -Datastore DStemp
+    PS C:\> Get-SVTtask
 
     Remove the datastore and monitor the task to ensure it completes successfully.
 .INPUTS
@@ -3184,7 +3198,7 @@ function Remove-SVTdatastore {
     Resizes a specified datastore to the specified size in GB. The datastore size can be
     between 1GB and 1,048,576 GB (1,024TB).
 .EXAMPLE
-    PS C:\>Resize-SVTdatastore -DatastoreName ds01 -SizeGB 1024
+    PS C:\> Resize-SVTdatastore -DatastoreName ds01 -SizeGB 1024
 
     Resizes the specified datastore to 1TB
 .PARAMETER DatastoreName
@@ -3243,7 +3257,7 @@ function Resize-SVTdatastore {
 .PARAMETER PolicyName
     The new backup policy for the specified datastore
 .EXAMPLE
-    PS C:\>Set-SVTdatastorePolicy -DatastoreName ds01 -PolicyName Weekly
+    PS C:\> Set-SVTdatastorePolicy -DatastoreName ds01 -PolicyName Weekly
 
     Assigns a new backup policy to the specified datastore
 .INPUTS
@@ -3298,7 +3312,7 @@ function Set-SVTdatastorePolicy {
 .PARAMETER ComputeNodeName
     The compute node that will have the new share
 .EXAMPLE
-    PS C:\>Publish-SVTdatastore -DatastoreName DS01 -ComputeNodeName ESXi03
+    PS C:\> Publish-SVTdatastore -DatastoreName DS01 -ComputeNodeName ESXi03
 
     The specified compute node is given access to the datastore
 .INPUTS
@@ -3351,7 +3365,7 @@ function Publish-SVTdatastore {
 .PARAMETER ComputeNodeName
     The compute node that will no longer have access
 .EXAMPLE
-    PS C:\>Unpublish-SVTdatastore -DatastoreName DS01 -ComputeNodeName ESXi01
+    PS C:\> Unpublish-SVTdatastore -DatastoreName DS01 -ComputeNodeName ESXi01
 
     The specified compute node will no longer have access to the datastore
 .INPUTS
@@ -3404,11 +3418,11 @@ function Unpublish-SVTdatastore {
 .PARAMETER DatastoreName
     Specify the datastore to display information for
 .EXAMPLE
-    PS C:\>Get-SVTdatastoreComputeNode -DatastoreName DS01
+    PS C:\> Get-SVTdatastoreComputeNode -DatastoreName DS01
 
     Display the compute nodes that have NFS access to the specified datastore
 .EXAMPLE
-    PS C:\>Get-SVTdatastoreComputeNode
+    PS C:\> Get-SVTdatastoreComputeNode
 
     Displays all datastores in the Federation and the compute nodes that have NFS access to them
 .INPUTS
@@ -3474,12 +3488,12 @@ function Get-SVTdatastoreComputeNode {
 .PARAMETER ExternalStoreName
     Specify the external datastore to display information
 .EXAMPLE
-    PS C:\>Get-SVTexternalStore StoreOnce-Data01,StoreOnce-Data02,StoreOnce-Data03
-    PS C:\>Get-SVTexternalStore -Name StoreOnce-Data01
+    PS C:\> Get-SVTexternalStore StoreOnce-Data01,StoreOnce-Data02,StoreOnce-Data03
+    PS C:\> Get-SVTexternalStore -Name StoreOnce-Data01
 
     Display information about the specified external datastore(s)
 .EXAMPLE
-    PS C:\>Get-SVTexternalStore
+    PS C:\> Get-SVTexternalStore
 
     Displays all external datastores in the Federation
 .INPUTS
@@ -3504,8 +3518,7 @@ function Get-SVTexternalStore {
 
     $Uri = $global:SVTconnection.OVC + '/api/external_stores?case=insensitive'
     if ($PSBoundParameters.ContainsKey('ExternalstoreName')) {
-        $ExternalstoreName = $ExternalstoreName -join ','
-        $Uri += '&name=' + $ExternalstoreName
+        $Uri += "&name=$($ExternalstoreName -join ',')"
     }
 
     try {
@@ -3561,7 +3574,7 @@ function Get-SVTexternalStore {
 .PARAMETER StoragePort
     The storage port to use for the external storage appliance
 .EXAMPLE
-    PS C:\>New-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ClusterName SVTcluster
+    PS C:\> New-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ClusterName SVTcluster
         -ManagementIP 192.168.10.202 -Username SVT_service -Userpass Password123
 
     Registers a new external datastore called StoreOnce-Data03 with the specified HPE SimpliVity Cluster,
@@ -3654,7 +3667,7 @@ function New-SVTexternalStore {
     The HPE SimpliVity cluster name to associate this external store. Once created, the external store is
     available to all clusters in the cluster group
 .EXAMPLE
-    PS C:\>Remove-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ClusterName SVTcluster
+    PS C:\> Remove-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ClusterName SVTcluster
 
     Unregisters (removes) the external datastore called StoreOnce-Data03 from the specified 
     HPE SimpliVity Cluster
@@ -3723,7 +3736,7 @@ function Remove-SVTexternalStore {
 .PARAMETER Userpass
     The password for the specified username
 .EXAMPLE
-    PS C:\>Set-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ManagementIP 192.168.10.202 
+    PS C:\> Set-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ManagementIP 192.168.10.202 
         -Username SVT_service -Userpass Password123
 
     Resets the external datastore credentials and management IP address
@@ -3833,8 +3846,7 @@ function Get-SVThost {
     $LocalFormat = Get-SVTLocalDateFormat
     
     if ($PSBoundParameters.ContainsKey('ClusterName')) {
-        $ClusterName = $ClusterName -join ','
-        $Uri += '&compute_cluster_name=' + $ClusterName
+        $Uri += "&compute_cluster_name=$($ClusterName -join ',')"
     }
 
     try {
@@ -4145,15 +4157,15 @@ function Get-SVTdisk {
     Create a chart from capacity information. If more than one host is passed in, a chart
     for each host is created.
 .EXAMPLE
-    PS C:\>Get-SVTcapacity MyHost
+    PS C:\> Get-SVTcapacity MyHost
 
     Shows capacity information for the specified host for the last 24 hours
 .EXAMPLE
-    PS C:\>Get-SVTcapacity -HostName MyHost -Hour 1 -Resolution MINUTE
+    PS C:\> Get-SVTcapacity -HostName MyHost -Hour 1 -Resolution MINUTE
 
     Shows capacity information for the specified host showing every minute for the last hour
 .EXAMPLE
-    PS C:\>Get-SVTcapacity -Chart
+    PS C:\> Get-SVTcapacity -Chart
 
     Creates a chart for each host in the SimpliVity federation showing the latest (24 hours) capacity details
 .EXAMPLE
@@ -4329,7 +4341,7 @@ function Get-SVTcapacity {
     node left in the cluster, this parameter must be specified (removes HA compliance for any VMs in the 
     affected cluster.)
 .EXAMPLE
-    PS C:\>Remove-SVThost -HostName Host01
+    PS C:\> Remove-SVThost -HostName Host01
 
     Removes the node from the federation providing there are no VMs running and providing the 
     node is HA-compliant.
@@ -4761,16 +4773,16 @@ function Stop-SVTshutdown {
 .PARAMETER ClusterName
     Show information about the specified cluster only
 .EXAMPLE
-    PS C:\>Get-SVTcluster
+    PS C:\> Get-SVTcluster
 
     Shows information about all clusters in the Federation
 .EXAMPLE
-    PS C:\>Get-SVTcluster Prod01
-    PS C:\>Get-SVTcluster -Name Prod01
+    PS C:\> Get-SVTcluster Prod01
+    PS C:\> Get-SVTcluster -Name Prod01
 
     Shows information about the specified cluster
 .EXAMPLE
-    PS C:\>Get-SVTcluster cluster1,cluster2
+    PS C:\> Get-SVTcluster cluster1,cluster2
 
     Shows information about the specified clusters
 .INPUTS
@@ -4795,8 +4807,7 @@ function Get-SVTcluster {
     $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters?show_optional_fields=true&case=insensitive'
 
     if ($PSBoundParameters.ContainsKey('ClusterName')) {
-        $ClusterName = $ClusterName -join ','
-        $Uri += '&name=' + $ClusterName
+        $Uri += "&name=$($ClusterName -join ',')"
     }
 
     try {
@@ -4866,12 +4877,12 @@ function Get-SVTcluster {
 .PARAMETER OffsetHour
     Show throughput starting from the specified offset (hours from now, default is now)
 .EXAMPLE
-    PS C:\>Get-SVTthroughput
+    PS C:\> Get-SVTthroughput
 
     Displays the throughput information for the first cluster in the Federation, (alphabetically,
     by name)
 .EXAMPLE
-    PS C:\>Get-SVTthroughput -Cluster Prod01
+    PS C:\> Get-SVTthroughput -Cluster Prod01
 
     Displays the throughput information for the specified cluster
 .INPUTS
@@ -4967,7 +4978,7 @@ function Get-SVTthroughput {
 .DESCRIPTION
     Displays the timezones that HPE SimpliVity supports
 .EXAMPLE
-    PS C:\>Get-SVTtimezone
+    PS C:\> Get-SVTtimezone
 
 .INPUTS
     None
@@ -5004,7 +5015,7 @@ function Get-SVTtimezone {
 .PARAMETER TimeZone 
     Specify the valid timezone. Use Get-Timezone to see a list of valid timezones 
 .EXAMPLE
-    PS C:\>Set-SVTtimezone -Cluster PROD -Timezone 'Australia/Sydney'
+    PS C:\> Set-SVTtimezone -Cluster PROD -Timezone 'Australia/Sydney'
 
     Sets the time zone for the specified cluster
 .INPUTS
@@ -5068,11 +5079,11 @@ function Set-SVTtimezone {
 
     If no cluster is specified, the first cluster in the Federation is used (alphabetically)
 .EXAMPLE
-    PS C:\>Get-SVTclusterConnected -ClusterName Production
+    PS C:\> Get-SVTclusterConnected -ClusterName Production
 
     Displays information about the clusters directly connected to the specified cluster
 .EXAMPLE
-    PS C:\>Get-SVTclusterConnected
+    PS C:\> Get-SVTclusterConnected
 
     Displays information about the first cluster in the federation (by cluster name, alphabetically)
 .INPUTS
@@ -5101,7 +5112,7 @@ function Get-SVTclusterConnected {
     }
 
     if (-Not $PSBoundParameters.ContainsKey('ClusterName')) {
-        $ClusterName = $AllCluster | Sort-Object CLusterName | 
+        $ClusterName = $AllCluster | Sort-Object ClusterName | 
         Select-Object -First 1 -ExpandProperty ClusterName
         Write-Verbose "No cluster specified, using $ClusterName by default"
     }
@@ -5263,7 +5274,7 @@ function Get-SVTpolicy {
 .PARAMETER PolicyName
     The new backup policy name to create
 .EXAMPLE
-    PS C:\>New-SVTpolicy -Policy Silver
+    PS C:\> New-SVTpolicy -Policy Silver
 
     Creates a new blank backup policy. To create or replace rules for the new backup policy, 
     use New-SVTpolicyRule.
@@ -5355,27 +5366,27 @@ function New-SVTpolicy {
     shows projected daily backup rates and new total retained backups given the frequency and retention settings
     for the specified backup policy.
 .EXAMPLE
-    PS C:\>New-SVTpolicyRule -PolicyName Silver -All -DestinationName cluster1 -ReplaceRules
+    PS C:\> New-SVTpolicyRule -PolicyName Silver -All -DestinationName cluster1 -ReplaceRules
 
     Replaces all existing backup policy rules with a new rule, backup every day to the specified cluster, 
     using the default start time (00:00), end time (00:00), Frequency (1440, or once per day), retention of 
     1 day and no application consistency.
 .EXAMPLE
-    PS C:\>New-SVTpolicyRule -PolicyName Bronze -Last -ExternalStoreName StoreOnce-Data02 -RetentionDay 365
+    PS C:\> New-SVTpolicyRule -PolicyName Bronze -Last -ExternalStoreName StoreOnce-Data02 -RetentionDay 365
 
     Backup VMs on the last day of the month, storing them on the specified external datastore and retaining the
     backup for one year.
     
-    PS C:\>New-SVTpolicyRule -PolicyName Silver -Weekday Mon,Wed,Fri -DestinationName cluster01 -RetentionDay 7
+    PS C:\> New-SVTpolicyRule -PolicyName Silver -Weekday Mon,Wed,Fri -DestinationName cluster01 -RetentionDay 7
 
     Adds a new rule to the specified policy to run backups on the specified weekdays and retain backup for a week.
 .EXAMPLE
-    PS C:\>New-SVTpolicyRule ShortTerm -RetentionHour 4 -FrequencyMin 60 -StartTime 09:00 -EndTime 17:00
+    PS C:\> New-SVTpolicyRule ShortTerm -RetentionHour 4 -FrequencyMin 60 -StartTime 09:00 -EndTime 17:00
 
     Add a new rule to a policy called ShortTerm, to backup once per hour during office hours and retain the
     backup for 4 hours. (Note: -RetentionHour takes precedence over -RetentionDay if both are specified)
 .EXAMPLE
-    PS C:\>New-SVTpolicyRule Silver -LastDay -DestinationName Prod -RetentionDay 30 -ConsistencyType VSS
+    PS C:\> New-SVTpolicyRule Silver -LastDay -DestinationName Prod -RetentionDay 30 -ConsistencyType VSS
 
     Add a new rule to the specified policy to run an application consistent backup on the last day 
     of each month, retaining it for 1 month.
@@ -5636,23 +5647,23 @@ function New-SVTpolicyRule {
     shows projected daily backup rates and new total retained backups given the frequency and retention settings
     for the specified backup policy.
 .EXAMPLE
-    PS C:\>Update-SVTPolicyRule -Policy Gold -RuleNumber 2 -Weekday Sun,Fri -StartTime 20:00 -EndTime 23:00
+    PS C:\> Update-SVTPolicyRule -Policy Gold -RuleNumber 2 -Weekday Sun,Fri -StartTime 20:00 -EndTime 23:00
 
     Updates rule number 2 in the specified policy with a new weekday policy. start and finish times. This command 
     inherits the existing retention, frequency, and application consistency settings from the existing rule.
 .EXAMPLE
-    PS C:\>Update-SVTPolicyRule -Policy Bronze -RuleNumber 1 -LastDay
-    PS C:\>Update-SVTPolicyRule Bronze 1 -LastDay
+    PS C:\> Update-SVTPolicyRule -Policy Bronze -RuleNumber 1 -LastDay
+    PS C:\> Update-SVTPolicyRule Bronze 1 -LastDay
     
     Both commands update rule 1 in the specified policy with a new day. All other settings are inherited from
     the existing backup policy rule.
 .EXAMPLE
-    PS C:\>Update-SVTPolicyRule Silver 3 -MonthDay 1,7,14,21 -RetentionDay 30
+    PS C:\> Update-SVTPolicyRule Silver 3 -MonthDay 1,7,14,21 -RetentionDay 30
 
     Updates the existing rule 3 in the specified policy to perform backups four times a month on the specified 
     days and retains the backup for 30 days.
 .EXAMPLE
-    PS C:\>Update-SVTPolicyRule Gold 1 -All -RetentionHour 1 -FrequencyMin 20 -StartTime 9:00 -EndTime 17:00
+    PS C:\> Update-SVTPolicyRule Gold 1 -All -RetentionHour 1 -FrequencyMin 20 -StartTime 9:00 -EndTime 17:00
 
     Updates the existing rule 1 in the Gold policy to backup 3 times per hour every day during office hours and 
     retain each backup for 1 hour. (Note: -RetentionHour takes precedence over -RetentionDay if both are 
@@ -5875,7 +5886,7 @@ function Update-SVTpolicyRule {
     shows projected daily backup rates and new total retained backups given the frequency and retention settings
     for the specified backup policy.
 .EXAMPLE
-    PS C:\>Remove-SVTPolicyRule -Policy Gold -RuleNumber 2
+    PS C:\> Remove-SVTPolicyRule -Policy Gold -RuleNumber 2
 
     Removes rule number 2 in the specified backup policy
 .INPUTS
@@ -5963,13 +5974,13 @@ function Remove-SVTpolicyRule {
 .PARAMETER NewPolicyName
     The new name for the backup policy
 .EXAMPLE
-    PS C:\>Get-SVTpolicy
-    PS C:\>Rename-SVTpolicy -PolicyName Silver -NewPolicyName Gold
+    PS C:\> Get-SVTpolicy
+    PS C:\> Rename-SVTpolicy -PolicyName Silver -NewPolicyName Gold
 
     The first command confirms the new policy name doesn't exist. 
     The second command renames the backup policy as specified.
 .EXAMPLE
-    PS C:\>Rename-SVTpolicy Silver Gold
+    PS C:\> Rename-SVTpolicy Silver Gold
 
     Renames the backup policy as specified
 .INPUTS
@@ -6111,18 +6122,18 @@ function Remove-SVTpolicy {
 .PARAMETER Federation
     Apply to federation
 .EXAMPLE
-    PS C:\>Suspend-SVTpolicy -Federation
+    PS C:\> Suspend-SVTpolicy -Federation
 
     Suspends backup policies for the entire federation
 
     NOTE: This command will only work when connected to an OmniStack virtual controller, (not when connected
     to a management virtual appliance)
 .EXAMPLE
-    PS C:\>Suspend-SVTpolicy -ClusterName Prod
+    PS C:\> Suspend-SVTpolicy -ClusterName Prod
 
     Suspend backup policies for the specified cluster
 .EXAMPLE
-    PS C:\>Suspend-SVTpolicy -HostName host01
+    PS C:\> Suspend-SVTpolicy -HostName host01
 
     Suspend backup policies for the specified host
 .INPUTS
@@ -6207,18 +6218,18 @@ function Suspend-SVTpolicy {
 .PARAMETER Federation
     Apply to federation
 .EXAMPLE
-    PS C:\>Resume-SVTpolicy -Federation
+    PS C:\> Resume-SVTpolicy -Federation
 
     Resumes backup policies for the federation
 
     NOTE: This command will only work when connected to an OmniStack virtual controller, (not when connected
     to a management virtual appliance)
 .EXAMPLE
-    PS C:\>Resume-SVTpolicy -ClusterName Prod
+    PS C:\> Resume-SVTpolicy -ClusterName Prod
 
     Resumes backup policies for the specified cluster
 .EXAMPLE
-    PS C:\>Resume-SVTpolicy -HostName host01
+    PS C:\> Resume-SVTpolicy -HostName host01
 
     Resumes backup policies for the specified host
 .INPUTS
@@ -6298,7 +6309,7 @@ function Resume-SVTpolicy {
 .DESCRIPTION
     Display a report showing information about HPE SimpliVity backup rates and limits
 .EXAMPLE
-    PS C:\>Get-SVTpolicyScheduleReport
+    PS C:\> Get-SVTpolicyScheduleReport
 
 .INPUTS
     None
@@ -6450,18 +6461,15 @@ function Get-SVTvm {
     $Allhost = Get-SVThost
 
     if ($PSBoundParameters.ContainsKey('VmName')) {
-        $VmName = $VmName -join ','
-        $Uri += "&name=$VmName"
+        $Uri += "&name=$($VmName -join ',')"
     }
 
     if ($PSBoundParameters.ContainsKey('VmId')) {
-        $VmId = $VmId -join ','
-        $Uri += "&id=$VmId"
+        $Uri += "&id=$($VmId -join ',')"
     }
 
     if ($PSBoundParameters.ContainsKey('PolicyName')) {
-        $PolicyName = $PolicyName -join ','
-        $Uri += "&policy_name=$PolicyName"
+        $Uri += "&policy_name=$($PolicyName -join ',')"
     }
     
     if ($PSBoundParameters.ContainsKey('HostName')) {
@@ -6476,13 +6484,11 @@ function Get-SVTvm {
     }
 
     if ($PSBoundParameters.ContainsKey('ClusterName')) {
-        $ClusterName = $ClusterName -join ','
-        $Uri += "&omnistack_cluster_name=$ClusterName"
+        $Uri += "&omnistack_cluster_name=$($ClusterName -join ',')"
     }
 
     if ($PSBoundParameters.ContainsKey('DataStoreName')) {
-        $DatastoreName = $DatastoreName -join ','
-        $Uri += "&datastore_name=$DataStoreName"
+        $Uri += "&datastore_name=$($DatastoreName -join ',')"
     }
 
     try {
@@ -6570,7 +6576,7 @@ function Get-SVTvm {
 .PARAMETER HostName
     Display information for virtual machines on the specified host
 .EXAMPLE
-    PS C:\>Get-SVTvmReplicaSet
+    PS C:\> Get-SVTvmReplicaSet
 
     Displays the primary and secondary locations for all virtual machine replica sets.
 .INPUTS
@@ -6764,16 +6770,16 @@ function New-SVTclone {
 .PARAMETER DatastoreName
     The destination datastore
 .EXAMPLE
-    PS C:\>Move-SVTvm -VmName MyVm -Datastore DR-DS01
+    PS C:\> Move-SVTvm -VmName MyVm -Datastore DR-DS01
 
     Moves the specified VM to the specified datastore
 .EXAMPLE
-    PS C:\>"VM1", "VM2" | Move-SVTvm -Datastore DS03
+    PS C:\> "VM1", "VM2" | Move-SVTvm -Datastore DS03
 
     Moves the two VMs to the specified datastore
 .EXAMPLE
-    PS C:\>Get-VM | Where-Object VmName -match "WEB" | Move-SVTvm -Datastore DS03
-    PS C:\>Get-SVTtask
+    PS C:\> Get-VM | Where-Object VmName -match "WEB" | Move-SVTvm -Datastore DS03
+    PS C:\> Get-SVTtask
 
     Move VM(s) with "Web" in their name to the specified datastore. Use Get-SVTtask to monitor the progress
     of the move task(s)
@@ -6886,7 +6892,7 @@ function Move-SVTvm {
 .PARAMETER Password
     When setting the user credentials, the password must be entered as a secure string (not as a parameter)
 .EXAMPLE
-    PS C:\>Get-SVTvm -Datastore DS01 | Set-SVTvmPolicy Silver
+    PS C:\> Get-SVTvm -Datastore DS01 | Set-SVTvmPolicy Silver
 
     Changes the backup policy for all VMs on the specified datastore to the backup policy named 'Silver'
 .EXAMPLE
@@ -6900,17 +6906,17 @@ function Move-SVTvm {
     the Silver backup policy to the Gold backup policy would make to the system. The report shows projected 
     daily backup rates and total retained backup rates. 
 .EXAMPLE
-    PS C:\>Set-SVTvm -VmName MyVm -Username svc_backup
+    PS C:\> Set-SVTvm -VmName MyVm -Username svc_backup
 
     Prompts for the password of the specified account and sets the VSS credentials for the virtual machine.
 .EXAMPLE
-    PS C:\>"VM1", "VM2" | Set-SVTvm -Username sugarstar\backupadmin
+    PS C:\> "VM1", "VM2" | Set-SVTvm -Username sugarstar\backupadmin
 
     Prompts for the password of the specified account and sets the VSS credentials for the two virtual machines.
     The command contacts the running Windows guest to confirm the validity of the password before setting it.
 .EXAMPLE
-    PS C:\>Get-VM Server2016-01 | Set-SVTvm -Username administrator
-    PS C:\>Get-VM Server2016-01 | Select-Object VmName, AppAwareVmStatus
+    PS C:\> Get-VM Server2016-01 | Set-SVTvm -Username administrator
+    PS C:\> Get-VM Server2016-01 | Select-Object VmName, AppAwareVmStatus
 
     Set the credentials for the specified virtual machine and then confirm they are set properly.
 .INPUTS
