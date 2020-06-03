@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.21'
+$HPESimplivityVersion = '2.1.22'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -124,12 +124,49 @@ function Get-SVTerror {
     }
 }
 
-# Helper function that returns the local date format. Used by cmdlets that return date properties
+# Helper function that returns the local date format. Used directly by Get-SVTbackup and indirectly by other 
+# cmdlets via ConvertFrom-SVTutc)
 function Get-SVTLocalDateFormat {
+    # Format dates with the local culture, except that days, months and hours are padded with zero.
+    # (Some cultures use single digits)
     $Culture = (Get-Culture).DateTimeFormat
-    $LocalDate = "$($Culture.ShortDatePattern)" -creplace '^d/', 'dd/' -creplace '^M/', 'MM/' -creplace '/d/', '/dd/'
-    $LocalTime = "$($Culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm', 'HH:mm'
-    return "$LocalDate $LocalTime"
+    $DateFormat = "$($Culture.ShortDatePattern)" -creplace '^d/', 'dd/' -creplace '^M/', 'MM/' -creplace '/d/', '/dd/'
+    $TimeFormat = "$($Culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm', 'HH:mm'
+    return "$DateFormat $TimeFormat"
+}
+
+# Helper function that returns the local date/time given the UTC (system) date/time. Used by cmdlets that return 
+# date properties.
+# Note: Dates are handled differently across PowerShell editions. With Desktop, dates in the UTC format are 
+# correctly left as strings (e.g. 2020-06-03T22:00:00Z ) when converting json to a PSobject. However, with Core, 
+# UTC formatted dates are incorrectly converted to the local date/time (e.g. 03/06/2020 22:00:00, ignores UTC 
+# offset). In the former case, its easy to convert to local time as the date is formatted for the local culture.
+# In the latter case, the UTC date/time must be converted to local date/time first and then formatted. This
+# behavior may change in future versions of Core.
+function ConvertFrom-SVTutc {
+    [CmdletBinding()]
+    Param (
+        # string or date object
+        [Parameter(Mandatory = $true, Position = 0)]
+        $Date
+    )
+
+    if ($Date -as [datetime]) {
+        $LocalFormat = Get-SVTLocalDateFormat
+        if ($PSEdition -eq 'Core') {
+            $TimeZone = [System.TimeZoneInfo]::Local
+            $DateLocal = [System.TimeZoneInfo]::ConvertTimeFromUtc($Date, $TimeZone)
+            Get-Date -Date $DateLocal -Format $LocalFormat
+        }
+        else {
+            Get-Date -Date $Date -Format $LocalFormat
+        }
+        #$Message = "UTC: $Date ($(($date).GetType().FullName)), Local: $test ($(($test).GetType().FullName))"
+        #Write-Verbose $Message
+    }
+    else {
+        return $null
+    }
 }
 
 # Helper function used by Get/New/Copy-SVTbackup and New/Update-SVTpolicyRule to return the backup 
@@ -231,7 +268,6 @@ function Invoke-SVTrestMethod {
         [System.Object]$Body
     )
 
-    $LocalFormat = Get-SVTLocalDateFormat
     [System.int32]$Retrycount = 0
     [bool]$Stoploop = $false
 
@@ -286,26 +322,14 @@ function Invoke-SVTrestMethod {
     # Note: $Response.task is incorrectly true with /api/omnistack_clusters/throughput, so added a check for this.
     if ($Response.task -and $URI -notmatch '/api/omnistack_clusters/throughput') {
         $Response.task | ForEach-Object {
-            if ($_.start_time -as [datetime]) {
-                $StartTime = Get-Date -Date $_.start_time -Format $LocalFormat
-            }
-            else {
-                $StartTime = $null
-            }
-            if ($_.end_time -as [datetime]) {
-                $EndTime = Get-Date -Date $_.end_time -Format $LocalFormat
-            }
-            else {
-                $EndTime = $null
-            }
             [PSCustomObject]@{
                 PStypeName      = 'HPE.SimpliVity.Task'
-                StartTime       = $StartTime
+                StartTime       = ConvertFrom-SVTutc -Date $_.start_time
                 AffectedObjects = $_.affected_objects
                 OwnerId         = $_.owner_id
                 DestinationId   = $_.destination_id
                 Name            = $_.name
-                EndTime         = $EndTime
+                EndTime         = ConvertFrom-SVTutc -Date $_.end_time
                 ErrorCode       = $_.error_code
                 ErrorMessage    = $_.error_message
                 State           = $_.state
@@ -661,6 +685,9 @@ function Get-SVTversion {
 .OUTPUTS
     HPE.SimpliVity.Metric
 .NOTES
+    With the -Chart parameter, there is a known issue with PowerShell V7.0.1, an exception calling "SaveImage", 
+    could not load file or assembly when trying to save a chart to a file. PowerShell V5.1, V7.0.0 and
+    V7.1.0-Preview3 work as expected.
 #>
 function Get-SVTmetric {
     [CmdletBinding(DefaultParameterSetName = 'Host')]
@@ -708,7 +735,6 @@ function Get-SVTmetric {
 
         $Range = $Hour * 3600
         $Offset = $OffsetHour * 3600
-        $LocalFormat = Get-SVTLocalDateFormat
 
         if ($Resolution -eq 'SECOND' -and $Range -gt 43200 ) {
             throw "Maximum range value for resolution $resolution is 12 hours"
@@ -812,24 +838,20 @@ function Get-SVTmetric {
             $CustomObject = $Response.metrics | foreach-object {
                 $MetricName = (Get-Culture).TextInfo.ToTitleCase($_.name)
                 $_.data_points | ForEach-Object {
-                    if ($_.date -as [DateTime]) {
-                        $Date = Get-Date -Date $_.date -Format $LocalFormat
-                    }
-                    else {
-                        $Date = $null
-                    }
                     [pscustomobject] @{
                         Name  = $MetricName
-                        Date  = $Date
+                        Date  = ConvertFrom-SVTutc -Date $_.date
                         Read  = $_.reads
                         Write = $_.writes
                     }
                 }
             }
 
-            #Transpose the custom object to return each date with read and write for each metric
-            $MetricObject = $CustomObject | Sort-Object -Property { $_.Date -as [datetime] }, Name | 
-            Group-Object -Property Date | ForEach-Object {
+            # Transpose the custom object to return each date with read and write for each metric
+            # NOTE: PowerShell Core displays grouped items out of order, so sort again by Name
+            $MetricObject = $CustomObject | Sort-Object -Property { $_.Date -as [datetime] } | 
+            Group-Object -Property Date | Sort-Object -Property { $_.Name -as [datetime] } | 
+            ForEach-Object {
                 $Property = [ordered]@{
                     PStypeName = 'HPE.SimpliVity.Metric'
                     Date       = $_.Name
@@ -883,12 +905,6 @@ function Get-SVTmetricChart {
         [System.String[]]$ChartProperty
     )
 
-    #if ($PSEdition -eq 'Core') {
-    #    # This is not actually true, but support is dependent PowerShell versions and .NET Framework versions
-    #    # and appears to be somewhat patchy. Revisit with .NET5 and PowerShell 7.x
-    #    throw 'Runtime Error: Microsoft Chart Controls are not currently supported, use Windows PowerShell'
-    #}
-
     # add the required properties to those specified by the user and make sure each property is unique
     $ChartProperty += 'Date', 'ObjectType', 'ObjectName'
     $ChartProperty = $ChartProperty | Sort-Object | Select-Object -Unique
@@ -905,8 +921,8 @@ function Get-SVTmetricChart {
     $Culture = Get-Culture
     $StartDate = $Metric | Select-Object -First 1 -ExpandProperty Date
     $EndDate = $Metric | Select-Object -Last 1 -ExpandProperty Date
-    $ChartLabelFont = 'Arial, 8pt'
-    $ChartTitleFont = 'Arial, 12pt'
+    $ChartLabelFont = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 8
+    $ChartTitleFont = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 12
     $Logo = (split-path -parent (get-module HPEsimpliVity -ListAvailable).Path) + '\hpe.png'
 
     # define an object to determine the best interval on the Y axis, given a maximum value
@@ -952,7 +968,7 @@ function Get-SVTmetricChart {
             $ShortName = $Instance -split '\.' | Select-Object -First 1
         }
         $null = $Chart1.Titles.Add("$($TypeName): $ShortName - Metrics from $StartDate to $EndDate")
-        $Chart1.Titles[0].Font = 'Arial, 16pt'
+        $Chart1.Titles[0].Font = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 16
         $Chart1.Titles[0].Alignment = 'topLeft'
 
         # add chart area, axistype is required to create primary and secondary yaxis
@@ -1038,7 +1054,7 @@ function Get-SVTmetricChart {
             $Chart1.Series['IopsRead'].IsVisibleInLegend = $true
             $Chart1.Series['IopsRead'].ChartArea = 'ChartArea1'
             $Chart1.Series['IopsRead'].Legend = 'Legend1'
-            $Chart1.Series['IopsRead'].Color = "#7630EA" # HPE Medium Purple
+            $Chart1.Series['IopsRead'].Color = [System.Drawing.Color]::FromArgb(118, 48, 234) #7630EA - HPE Medium Purple
             $DataSource | ForEach-Object {
                 $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
                 $null = $Chart1.Series['IopsRead'].Points.addxy($Date, $_.IopsRead)
@@ -1054,7 +1070,7 @@ function Get-SVTmetricChart {
             $Chart1.Series['IopsWrite'].IsVisibleInLegend = $true
             $Chart1.Series['IopsWrite'].ChartArea = 'ChartArea1'
             $Chart1.Series['IopsWrite'].Legend = 'Legend1'
-            $Chart1.Series['IopsWrite'].Color = "#C140FF" # HPE Light Purple
+            $Chart1.Series['IopsWrite'].Color = [System.Drawing.Color]::FromArgb(193, 64, 255) #C140FF - HPE Light Purple
             $DataSource | ForEach-Object {
                 $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
                 $null = $Chart1.Series['IopsWrite'].Points.addxy($Date, $_.IopsWrite)
@@ -1070,7 +1086,7 @@ function Get-SVTmetricChart {
             $Chart1.Series['LatencyRead'].IsVisibleInLegend = $true
             $Chart1.Series['LatencyRead'].ChartArea = 'ChartArea1'
             $Chart1.Series['LatencyRead'].Legend = 'Legend1'
-            $Chart1.Series['LatencyRead'].Color = "#FEC901" # HPE Yellow
+            $Chart1.Series['LatencyRead'].Color = [System.Drawing.Color]::FromArgb(254, 201, 1) #FEC901 - HPE Yellow
             $DataSource | ForEach-Object {
                 $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
                 $null = $Chart1.Series['LatencyRead'].Points.addxy($Date, $_.LatencyRead)
@@ -1086,7 +1102,7 @@ function Get-SVTmetricChart {
             $Chart1.Series['LatencyWrite'].IsVisibleInLegend = $true
             $Chart1.Series['LatencyWrite'].ChartArea = 'ChartArea1'
             $Chart1.Series['LatencyWrite'].Legend = 'Legend1'
-            $Chart1.Series['LatencyWrite'].Color = "#FF8300" # Aruba Orange
+            $Chart1.Series['LatencyWrite'].Color = [System.Drawing.Color]::FromArgb(255, 131, 0) #FF8300 - Aruba Orange
             $DataSource | ForEach-Object {
                 $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
                 $null = $Chart1.Series['LatencyWrite'].Points.addxy($Date, $_.LatencyWrite)
@@ -1102,7 +1118,7 @@ function Get-SVTmetricChart {
             $Chart1.Series['ThroughputRead'].IsVisibleInLegend = $true
             $Chart1.Series['ThroughputRead'].ChartArea = 'ChartArea1'
             $Chart1.Series['ThroughputRead'].Legend = 'Legend1'
-            $Chart1.Series['ThroughputRead'].Color = "#0D5265" # HPE Dark Blue
+            $Chart1.Series['ThroughputRead'].Color = [System.Drawing.Color]::FromArgb(13, 82, 101) #0D5265 - HPE Dark Blue
             $DataSource | ForEach-Object {
                 $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
                 $null = $Chart1.Series['ThroughputRead'].Points.addxy($Date, ($_.ThroughputRead / 1024 / 1024))
@@ -1118,7 +1134,7 @@ function Get-SVTmetricChart {
             $Chart1.Series['ThroughputWrite'].IsVisibleInLegend = $true
             $Chart1.Series['ThroughputWrite'].ChartArea = 'ChartArea1'
             $Chart1.Series['ThroughputWrite'].Legend = 'Legend1'
-            $Chart1.Series['ThroughputWrite'].Color = "#32DAC8" # HPE Medium Blue
+            $Chart1.Series['ThroughputWrite'].Color = [System.Drawing.Color]::FromArgb(50, 218, 200) #32DAC8 - HPE Medium Blue
             $DataSource | ForEach-Object {
                 $Date = ([datetime]::parse($_.Date, $Culture)).ToString('hh:mm:ss tt')
                 $null = $Chart1.Series['ThroughputWrite'].Points.addxy($Date, ($_.ThroughputWrite / 1024 / 1024))
@@ -1131,7 +1147,8 @@ function Get-SVTmetricChart {
             Get-ChildItem "$Path\SVTmetric-$ShortName-$DateStamp.png" -ErrorAction Stop
         }
         catch {
-            throw "Could not create $Path\SVTmetric-$ShortName-$DateStamp.png"
+            throw $_.Exception.Message
+            #throw "Could not create $Path\SVTmetric-$ShortName-$DateStamp.png"
         }
     }
 }
@@ -1144,15 +1161,11 @@ function Get-SVTcapacityChart {
         [System.Object]$Capacity
     )
 
-    if ($PSEdition -eq 'Core') {
-        # Disabled because support is somewhat patchy.
-        throw 'Microsoft Chart Controls are not currently supported with PowerShell Core, use Windows PowerShell'
-    }
     Add-Type -AssemblyName System.Windows.Forms.DataVisualization
 
     $Path = Get-Location
-    $ChartLabelFont = 'Arial, 10pt'
-    $ChartTitleFont = 'Arial, 13pt'
+    $ChartLabelFont = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 10
+    $ChartTitleFont = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 13
     $DateStamp = Get-Date -Format 'yyMMddhhmmss'
     $Logo = (split-path -parent (get-module hpesimplivity -ListAvailable).Path) + '\hpe.png'
 
@@ -1194,7 +1207,7 @@ function Get-SVTcapacityChart {
             $ShortName = $Instance -split '\.' | Select-Object -First 1
         }
         $null = $Chart1.Titles.Add("HPE.SimpliVity.Host: $ShortName - Capacity from $($Cap.Date)")
-        $Chart1.Titles[0].Font = 'Arial, 16pt'
+        $Chart1.Titles[0].Font = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 16
         $Chart1.Titles[0].Alignment = 'topLeft'
 
         # create chart area
@@ -1234,7 +1247,7 @@ function Get-SVTcapacityChart {
         # add series
         $null = $Chart1.Series.Add('Data')
         $Chart1.Series['Data'].Points.DataBindXY($DataSource.Keys, $DataSource.Values)
-        $Chart1.Series['Data'].Color = "#01A982" # HPE Green
+        $Chart1.Series['Data'].Color = [System.Drawing.Color]::FromArgb(1, 169, 130) #01A982 - HPE Green
 
         # save chart
         try {
@@ -1242,7 +1255,8 @@ function Get-SVTcapacityChart {
             Get-ChildItem "$Path\SVTcapacity-$ShortName-$DateStamp.png" -ErrorAction Stop
         }
         catch {
-            throw "Could not create $Path\SVTcapacity-$ShortName-$DateStamp.png"
+            throw $_.Exception.Message
+            #throw "Could not create $Path\SVTcapacity-$ShortName-$DateStamp.png"
         }
     }
 }
@@ -1778,26 +1792,6 @@ function Get-SVTbackup {
         }
 
         $Response.backups | ForEach-Object {
-            if ($_.created_at -as [datetime]) {
-                $CreateDate = Get-Date -Date $_.created_at -Format $LocalFormat
-            }
-            else {
-                $CreateDate = $null
-            }
-            if ($_.unique_size_timestamp -as [DateTime]) {
-                $UniqueSizeDate = Get-Date -Date $_.unique_size_timestamp -Format $LocalFormat
-            }
-            else {
-                $UniqueSizeDate = $null
-            }
-
-            if ($_.expiration_time -as [Datetime]) {
-                $ExpirationDate = Get-Date -Date $_.expiration_time -Format $LocalFormat
-            }
-            else {
-                $ExpirationDate = $null
-            }
-
             if ($_.omnistack_cluster_name) {
                 $Destination = $_.omnistack_cluster_name
             }
@@ -1805,11 +1799,11 @@ function Get-SVTbackup {
                 $Destination = $_.external_store_name
             }
 
-            # Converting numeric strings to numbers so that sorting is possible. This must take into account locale
+            # Converting numeric strings to numbers so that sorting is possible. Must use locale to format correctly
             [PSCustomObject]@{
                 PSTypeName        = 'HPE.SimpliVity.Backup'
                 VmName            = $_.virtual_machine_name
-                CreateDate        = $CreateDate
+                CreateDate        = ConvertFrom-SVTutc -Date $_.created_at
                 ConsistencyType   = $_.consistency_type
                 BackupType        = $_.type
                 DataStoreName     = $_.datastore_name
@@ -1824,8 +1818,8 @@ function Get-SVTbackup {
                 SentCompleteDate  = $_.sent_completion_time
                 UniqueSizeMB      = [single]::Parse('{0:n0}' -f ($_.unique_size_bytes / 1mb), $LocalCulture)
                 ClusterGroupIDs   = $_.cluster_group_ids
-                UniqueSizeDate    = $UniqueSizeDate
-                ExpiryDate        = $ExpirationDate
+                UniqueSizeDate    = ConvertFrom-SVTutc -Date $_.unique_size_timestamp
+                ExpiryDate        = ConvertFrom-SVTutc -Date $_.expiration_time
                 ClusterName       = $_.omnistack_cluster_name
                 SentMB            = [single]::Parse('{0:n0}' -f ($_.sent / 1mb), $LocalCulture)
                 SizeGB            = [single]::Parse('{0:n2}' -f ($_.size / 1gb), $LocalCulture)
@@ -1905,7 +1899,7 @@ function New-SVTbackup {
 
         [Parameter(Mandatory = $false, Position = 2)]
         [System.String]$BackupName = "Created by $(($SVTconnection.Credential.Username -split '@')[0]) at " +
-        "$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')",
+        "$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss tt')",
 
         [Parameter(Mandatory = $false, Position = 3)]
         [System.Int32]$RetentionDay = 1,
@@ -2761,7 +2755,6 @@ function Get-SVTfile {
             'Authorization' = "Bearer $($global:SVTconnection.Token)"
             'Accept'        = 'application/json'
         }
-        $LocalFormat = Get-SVTLocalDateFormat
     }
 
     process {
@@ -2782,12 +2775,6 @@ function Get-SVTfile {
                 try {
                     $Response = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
                     $Response.virtual_disk_partition_files | ForEach-Object {
-                        if ($_.last_modified -as [datetime]) {
-                            $LastModified = Get-Date -Date $_.last_modified -Format $LocalFormat
-                        }
-                        else {
-                            $LastModified = $null
-                        } 
                         [PSCustomObject]@{
                             PSTypeName           = 'HPE.SimpliVity.File'
                             BackupId             = $BkpId
@@ -2797,7 +2784,7 @@ function Get-SVTfile {
                             Directory            = [bool]$_.directory
                             SymbolicLink         = [bool]$_.symbolic_link
                             SizeMB               = '{0:n0}' -f ($_.size / 1mb)
-                            LastModified         = $LastModified
+                            LastModified         = ConvertFrom-SVTutc -Date $_.last_modified
                             FileRestoreAvailable = [bool]$_.file_level_restore_available
                             RestorePath          = [PSCustomObject]@{
                                 BackupId = $BkpId
@@ -3010,7 +2997,6 @@ function Get-SVTdatastore {
         'Accept'        = 'application/json'
     }
     $Uri = $global:SVTconnection.OVC + '/api/datastores?show_optional_fields=true&case=insensitive'
-    $LocalFormat = Get-SVTLocalDateFormat
 
     if ($PSBoundParameters.ContainsKey('DatastoreName')) {
         $Uri += "&name=$($DatastoreName -join ',')"
@@ -3028,18 +3014,12 @@ function Get-SVTdatastore {
     }
 
     $Response.datastores | ForEach-Object {
-        if ($_.created_at -as [datetime]) {
-            $CreateDate = Get-Date -Date $_.created_at -Format $LocalFormat
-        }
-        else {
-            $CreateDate = $null
-        }
         [PSCustomObject]@{
             PSTypeName               = 'HPE.SimpliVity.DataStore'
             ClusterGroupIds          = $_.cluster_group_ids
             PolicyId                 = $_.policy_id
             MountDirectory           = $_.mount_directory
-            CreateDate               = $CreateDate
+            CreateDate               = ConvertFrom-SVTutc -Date $_.created_at
             PolicyName               = $_.policy_name
             ClusterName              = $_.omnistack_cluster_name
             Shares                   = $_.shares
@@ -3843,8 +3823,7 @@ function Get-SVThost {
         'Accept'        = 'application/json'
     }
     $Uri = $global:SVTconnection.OVC + '/api/hosts?show_optional_fields=true&case=insensitive'
-    $LocalFormat = Get-SVTLocalDateFormat
-    
+
     if ($PSBoundParameters.ContainsKey('ClusterName')) {
         $Uri += "&compute_cluster_name=$($ClusterName -join ',')"
     }
@@ -3876,12 +3855,6 @@ function Get-SVThost {
     }
 
     $Response.hosts | Foreach-Object {
-        if ($_.date -as [datetime]) {
-            $Date = Get-Date -Date $_.date -Format $LocalFormat
-        }
-        else {
-            $Date = $null
-        }
         [PSCustomObject]@{
             PSTypeName                = 'HPE.SimpliVity.Host'
             ClusterFeatureLevel       = $_.cluster_feature_level
@@ -3915,7 +3888,7 @@ function Get-SVThost {
             HypervisorManagementIP    = $_.hypervisor_management_system
             ManagementMask            = $_.management_mask
             HypervisorManagementName  = $_.hypervisor_management_system_name
-            Date                      = $Date
+            Date                      = ConvertFrom-SVTutc -Date $_.date
             UsedLogicalCapacityGB     = '{0:n0}' -f ($_.used_logical_capacity / 1gb)
             UsedCapacityGB            = '{0:n0}' -f ($_.used_capacity / 1gb)
             CompressionRatio          = $_.compression_ratio
@@ -4208,7 +4181,6 @@ function Get-SVTcapacity {
             'Authorization' = "Bearer $($global:SVTconnection.Token)"
             'Accept'        = 'application/json'
         }
-        $LocalFormat = Get-SVTLocalDateFormat
         $Range = $Hour * 3600
         $Offset = $OffsetHour * 3600
 
@@ -4271,23 +4243,19 @@ function Get-SVTcapacity {
                 ) -join ''
 
                 $_.data_points | ForEach-Object {
-                    if ($_.date -as [DateTime]) {
-                        $Date = Get-Date -Date $_.date -Format $LocalFormat
-                    }
-                    else {
-                        $Date = $null
-                    }
                     [pscustomobject] @{
                         Name  = $MetricName
-                        Date  = $Date
+                        Date  = ConvertFrom-SVTutc -Date $_.date
                         Value = $_.value
                     }
                 }
             }
 
             # Transpose the custom object to return each date with the value for each metric
+            # NOTE: PowerShell Core displays grouped items out of order, so sort again by Name
             $CapacityObject = $CustomObject | Sort-Object -Property { $_.Date -as [datetime] } | 
-            Group-Object -Property Date | ForEach-Object {
+            Group-Object -Property Date | Sort-Object -Property { $_.Name -as [datetime] } |
+            ForEach-Object {
                 $Property = [ordered]@{
                     PStypeName = 'HPE.SimpliVity.Capacity'
                     Date       = $_.Name
@@ -4912,8 +4880,6 @@ function Get-SVTthroughput {
 
     $Range = $Hour * 3600
     $Offset = $OffsetHour * 3600
-    $LocalFormat = Get-SVTLocalDateFormat
-    
 
     try {
         $ClusterId = Get-SVTcluster -ClusterName $ClusterName -ErrorAction Stop | 
@@ -4934,27 +4900,9 @@ function Get-SVTthroughput {
     }
 
     $Response.cluster_throughput | ForEach-Object {
-        if ($_.date -as [DateTime]) {
-            $Date = Get-Date -Date $_.date -Format $LocalFormat
-        }
-        else {
-            $Date = $null
-        }
-        if ($_.data.date_of_minimum -as [DateTime]) {
-            $MinDate = Get-Date -Date $_.data.date_of_minimum -Format $LocalFormat
-        }
-        else {
-            $MinDate = $null
-        }
-        if ($_.data.date_of_maximum -as [DateTime]) {
-            $MaxDate = Get-Date -Date $_.data.date_of_maximum -Format $LocalFormat
-        }
-        else {
-            $MaxDate = $null
-        }
         [PSCustomObject]@{
             PSTypeName                       = 'HPE.SimpliVity.Throughput'
-            Date                             = $Date
+            Date                             = ConvertFrom-SVTutc -Date $_.date
             DestinationClusterHypervisorId   = $_.destination_omnistack_cluster_hypervisor_object_parent_id
             DestinationClusterHypervisorName = $_.destination_omnistack_cluster_hypervisor_object_parent_name
             DestinationClusterId             = $_.destination_omnistack_cluster_id
@@ -4965,9 +4913,9 @@ function Get-SVTthroughput {
             SourceClusterName                = $_.source_omnistack_cluster_name
             AvgThroughput                    = '{0:n0}' -f $_.average_throughput
             MinThroughput                    = '{0:n0}' -f $_.data.minimum_throughput
-            MinDate                          = $MinDate
+            MinDate                          = ConvertFrom-SVTutc -Date $_.data.date_of_minimum
             MaxThroughput                    = '{0:n0}' -f $_.data.maximum_throughput
-            MaxDate                          = $MaxDate
+            MaxDate                          = ConvertFrom-SVTutc -Date $_.data.date_of_maximum
         }
     }
 }
@@ -6448,8 +6396,7 @@ function Get-SVTvm {
         'Authorization' = "Bearer $($global:SVTconnection.Token)"
         'Accept'        = 'application/json'
     }
-    
-    $LocalFormat = Get-SVTLocalDateFormat
+
     $Uri = "$($global:SVTconnection.OVC)/api/virtual_machines" +
     '?show_optional_fields=true' +
     '&case=insensitive' +
@@ -6517,29 +6464,17 @@ function Get-SVTvm {
     }
 
     $Response.virtual_machines | ForEach-Object {
-        if ($_.created_at -as [datetime]) {
-            $CreateDate = Get-Date -Date $_.created_at -Format $LocalFormat
-        }
-        else {
-            $CreateDate = $null
-        }
-        if ($_.deleted_at -as [DateTime]) {
-            $DeletedDate = Get-Date -Date $_.deleted_at -format $LocalFormat
-        }
-        else {
-            $DeletedDate = $null
-        }
 
         $ThisHost = $Allhost | Where-Object HostID -eq $_.host_id | Select-Object -ExpandProperty HostName
 
         [PSCustomObject]@{
             PSTypeName               = 'HPE.SimpliVity.VirtualMachine'
             PolicyId                 = $_.policy_id
-            CreateDate               = $CreateDate
+            CreateDate               = ConvertFrom-SVTutc -Date $_.created_at
             PolicyName               = $_.policy_name
             DataStoreName            = $_.datastore_name
             ClusterName              = $_.omnistack_cluster_name
-            DeletedDate              = $DeletedDate
+            DeletedDate              = ConvertFrom-SVTutc -Date $_.deleted_at
             AppAwareVmStatus         = $_.app_aware_vm_status
             HostName                 = $ThisHost
             HostId                   = $_.host_id

@@ -26,7 +26,7 @@ Most "Get" commands display default properties; use Format-List or Select-Object
     .
     .
 ```
-## Update V2.1.20 new features
+## Update V2.1.22 new features
 
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
