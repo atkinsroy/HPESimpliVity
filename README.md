@@ -1,8 +1,8 @@
 # HPE SimpliVity PowerShell Module
 
-This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage a HPE SimpliVity federation. It works by connecting to any HPE OmniStack virtual controller in your environment. With the release of HPE SimpliVity V4.0.0, you can now also connect to a management virtual appliance, which is recommended.
+This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage an HPE SimpliVity federation. It works by connecting to any HPE OmniStack virtual controller in your environment. With the release of HPE SimpliVity V4.0.0, you can now also connect to a management virtual appliance, which is recommended.
 
-All cmdlets are written as advanced cmdlets, with comment based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records when returning virtual machines and backup objects.
+All cmdlets are written as advanced cmdlets, with comment-based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have filtered parameters to limit the number of objects returned. The cmdlets have also been written to adhere to the current recommendations with the REST API. For example, limit the number of records when returning virtual machines and backup objects.
 
 Most "Get" commands display default properties; use Format-List or Select-Object to show the  all. For example:
 ```powershell
@@ -26,7 +26,7 @@ Most "Get" commands display default properties; use Format-List or Select-Object
     .
     .
 ```
-## Update V2.1.22 new features
+## Update V2.1.23 new features
 
 Refer to the release notes ![here](/RELEASENOTES.md) for more details.
 
@@ -62,7 +62,7 @@ Set-SVTtimezone
 
 * PowerShell V5.1 and above. (note: the chart features do not work with PowerShell Core 6.0 or PowerShell 7.0)
 * The IP address and the credentials of an authorized OmniStack user account.
-* Tested with HPE SimpliVity V4.0.1. The module should be compatible with older versions, but has not been tested. 
+* Tested with HPE SimpliVity V4.0.1. The module should be compatible with older versions but has not been tested. 
 
 ## Installation
 
@@ -119,8 +119,8 @@ The API has some documented and undocumented issues:
     PS C:\>  Get-SVTbackup -BackupId a9e82f..., 0ef1bd...
 ````
 
-* Backups stored on external stores cannot be deleted if the VM has been deleted, with a "backup not found" error. This does not apply to backups stored on clusters. This restriction is specific to the API; the CLI command svt-backup-delete works as expected for external store backups.
-* the PUT /policies/\<policyid\>/rules/\<ruleid\> API call (implementmented in Update-SVTpolicyRule) doesn't work as expected in some circumstances. Changing a rules' destination is not supported (this is documented), but in addition, changing the consistancy type to anything other than NONE or DEFAULT doesn't work. If you attempt to change the consistenct type to VSS, for example, the command is ignored. In this scenario, a work around would be to delete the rule entirely from the policy using Remove-SVTpolicyRule and then use New-SVTpolicyRule to create a new rule with the desired destination, consistenecy type and other settings.
+* Backups stored on external stores cannot be deleted if the VM has been deleted, with a "backup not found" error. This does not apply to backups stored on SimpliVity clusters. This restriction is specific to the API; the CLI command svt-backup-delete works as expected for external store backups.
+* the PUT /policies/\<policyid\>/rules/\<ruleid\> API call (implemented in Update-SVTpolicyRule) doesn't work as expected in some circumstances. Changing a rules' destination is not supported (this is documented), but in addition, changing the consistency type to anything other than NONE or DEFAULT doesn't work. If you attempt to change the consistency type to VSS, for example, the command is ignored. In this scenario, a work around would be to delete the rule entirely from the policy using Remove-SVTpolicyRule and then use New-SVTpolicyRule to create a new rule with the desired destination, consistency type and other settings.
 * Using GET /backups with a specific cluster_id (implemented as Get-SVTbackup -DestinationName \<ClusterName\>) will result in both backups located on the specified cluster AND external stores being displayed. This issue only applies when connected to an OVC; calls to an MVA work as expected. In either case, filtering on an external store works as expected (e.g. Get-SVTbackup -DestinationName ExternalStore1)
 
 If you would like to keep up to date with changes, please subscribe to receive notifications.

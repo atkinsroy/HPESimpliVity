@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.22'
+$HPESimplivityVersion = '2.1.23'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -94,7 +94,7 @@ function Resolve-SVTFullHostName {
 }
 
 # Helper function to return the embedded error message in the body of the response from the API, rather
-# than a generic runtime (404) error. Called exclusively by Invoke-SVTrestMethod.
+# than a generic runtime (400,404) error. Called exclusively by Invoke-SVTrestMethod.
 function Get-SVTerror {
     [CmdletBinding()]
     Param (
@@ -102,30 +102,40 @@ function Get-SVTerror {
         [System.Object]$Err
     )
 
-    #$VerbosePreference = 'Continue'
-    if ($PSEdition -ne 'Core') {
-        # Windows PowerShell only
+    if ($PSEdition -eq 'Core') {
+        # PowerShell Core editions has the embedded error availble in ErrorDetails property.
+        if ($Err.ErrorDetails.Message) {
+            $ResponseBody = $Err.ErrorDetails.Message
+            if ($ResponseBody.StartsWith('{')) {
+                $ResponseBody = $ResponseBody | ConvertFrom-Json
+            }
+            return $ResponseBody.Message
+        }
+        else {
+            return $_.Exception.Message
+        }
+    }
+    else {
+        # Windows PowerShell doesn't have this. Use GetResponseStreams() method.
         if ($Err.Exception.Response) {
             $Result = $Err.Exception.Response.GetResponseStream()
             $Reader = New-Object System.IO.StreamReader($Result)
             $Reader.BaseStream.Position = 0
             $Reader.DiscardBufferedData()
             $ResponseBody = $Reader.ReadToEnd()
-            Write-Verbose $ResponseBody
             if ($ResponseBody.StartsWith('{')) {
                 $ResponseBody = $ResponseBody | ConvertFrom-Json
             }
             return $ResponseBody.Message
         }
-    }
-    else {
-        # PowerShell V6 and V7 don't support GetResponseStream(), so return the generic runtime error
-        return $Err.Exception.Message
+        else {
+            return $_.Exception.Message
+        }
     }
 }
 
 # Helper function that returns the local date format. Used directly by Get-SVTbackup and indirectly by other 
-# cmdlets via ConvertFrom-SVTutc)
+# cmdlets via ConvertFrom-SVTutc.
 function Get-SVTLocalDateFormat {
     # Format dates with the local culture, except that days, months and hours are padded with zero.
     # (Some cultures use single digits)
@@ -138,8 +148,8 @@ function Get-SVTLocalDateFormat {
 # Helper function that returns the local date/time given the UTC (system) date/time. Used by cmdlets that return 
 # date properties.
 # Note: Dates are handled differently across PowerShell editions. With Desktop, dates in the UTC format are 
-# correctly left as strings (e.g. 2020-06-03T22:00:00Z ) when converting json to a PSobject. However, with Core, 
-# UTC formatted dates are incorrectly converted to the local date/time (e.g. 03/06/2020 22:00:00, ignores UTC 
+# correctly left as strings (e.g. '2020-06-03T22:00:00Z' ) when converting json to a PSobject. However, with Core, 
+# UTC formatted dates are incorrectly converted to the local date/time (e.g. 03/06/2020 22:00:00, ignoring UTC 
 # offset). In the former case, its easy to convert to local time as the date is formatted for the local culture.
 # In the latter case, the UTC date/time must be converted to local date/time first and then formatted. This
 # behavior may change in future versions of Core.
@@ -155,14 +165,15 @@ function ConvertFrom-SVTutc {
         $LocalFormat = Get-SVTLocalDateFormat
         if ($PSEdition -eq 'Core') {
             $TimeZone = [System.TimeZoneInfo]::Local
-            $DateLocal = [System.TimeZoneInfo]::ConvertTimeFromUtc($Date, $TimeZone)
-            Get-Date -Date $DateLocal -Format $LocalFormat
+            $LocalDate = [System.TimeZoneInfo]::ConvertTimeFromUtc($Date, $TimeZone)
+            $ReturnDate = Get-Date -Date $LocalDate -Format $LocalFormat
         }
         else {
-            Get-Date -Date $Date -Format $LocalFormat
+            $ReturnDate = Get-Date -Date $Date -Format $LocalFormat
         }
-        #$Message = "UTC: $Date ($(($date).GetType().FullName)), Local: $test ($(($test).GetType().FullName))"
+        #$Message = "UTC: $Date ($(($date).GetType().FullName)), Local: $ReturnDate ($(($ReturnDate).GetType().FullName))"
         #Write-Verbose $Message
+        return $ReturnDate
     }
     else {
         return $null
