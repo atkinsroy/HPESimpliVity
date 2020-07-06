@@ -30,7 +30,7 @@ Most "Get" commands display default properties; use Format-List or Select-Object
 
 ## Latest Update
 
-Refer to the release notes [here](/RELEASENOTES.md) for more details.
+Refer to the [release notes](/RELEASENOTES.md) for more details.
 
 The module contains 58 exported cmdlets, divided into the following feature categories:
 
