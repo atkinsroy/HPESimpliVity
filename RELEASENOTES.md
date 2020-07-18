@@ -1,7 +1,12 @@
+# Version 2.1.24
+
+* Added 'RemainingLife' property to Get-SVTdisk
+* Added the ability to use -ExpiresBefore and -ExpiresAfter parameters along with the -Date parameter 
+
 # Version 2.1.23
 
 * PowerShell Core support has been added. Specifically tested PowerShell v7.0.0, v7.0.1 and v7.1.0-preview3. PowerShell v7.0.1 has a bug preventing charts from being created ("Exception calling 'SaveImage'"). The other two versions work as expected. PowerShell Core v6.x versions have not been tested.
-* A new optional parameter to Get-SVTmetric called -ChartProperty has been added to allow you to create charts with specific metrics.
+* A new optional parameter to Get-SVTmetric called -ChartProperty has been added to allow you to create charts with specific metrics
 * HPE branding has been added to the charts produced by Get-SVTmetric and Get-SVTcapacity:
 
 Metrics | Capacity
@@ -17,14 +22,14 @@ Metrics | Capacity
 
 # Version 2.1.15
 
-* Added the ability to display backed up file information within HPE SimpliVity backups and to perform file-level restores from the command line, using two new commands; Get-SVTfile and Restore-SVTfile respectively.
-* Renamed Set-SVTvmPolicy to Set-SVTvm and added the ability to set user credentials on virtual machines for Microsoft Volume Shadow Copy Service (VSS) backups using this command.
-* Added a new parameter called -ImpactReportOnly to several commands; Set-SVTvm, New-SVTpolicyRule, Update-SVTpolicyRule and Remove-SVTpolicyRule. Instead of performing the policy based action, the command displays a report that shows the projected daily backup rates and new total retained backups given the frequency and retention settings if the change is subsequently made.
-* Updated Remove-SVTbackup to remove multiple backups using a single task. This is much more efficient even if you have a small number of backups to remove.
-* Updated Get-SVTbackup with many more parameters, i.e. -Date, -CreateAfter, -CreateBefore, -ExpiresAfter, -ExpiresBefore, -ClusterName, -BackupState and -BackupType. Improved the ability to specify multiple parameters at once to refine which backups are queried.
-* Updated the -All parameter for the Get-SVTbackup command to return all backup records. This bypasses the previous restriction of the -Limit parameter being set to 3000 and is achieved by making multiple calls to the API with an offset. This command can take a long time to finish; specifying additional parameters to restrict the output is recommended.
-* Removed the -Latest parameter from Get-SVTbackup. This effected the performance of Get-SVTbackup generally, whether this parameter was used or not. There is a work around in the example help for this command that displays the same results.
-* Performance refactoring and bug fixes.
+* Added the ability to display backed up file information within HPE SimpliVity backups and to perform file-level restores from the command line, using two new commands; Get-SVTfile and Restore-SVTfile respectively
+* Renamed Set-SVTvmPolicy to Set-SVTvm and added the ability to set user credentials on virtual machines for Microsoft Volume Shadow Copy Service (VSS) backups using this command
+* Added a new parameter called -ImpactReportOnly to several commands; Set-SVTvm, New-SVTpolicyRule, Update-SVTpolicyRule and Remove-SVTpolicyRule. Instead of performing the policy based action, the command displays a report that shows the projected daily backup rates and new total retained backups given the frequency and retention settings if the change is subsequently made
+* Updated Remove-SVTbackup to remove multiple backups using a single task. This is much more efficient even if you have a small number of backups to remove
+* Updated Get-SVTbackup with many more parameters, i.e. -Date, -CreateAfter, -CreateBefore, -ExpiresAfter, -ExpiresBefore, -ClusterName, -BackupState and -BackupType. Improved the ability to specify multiple parameters at once to refine which backups are queried
+* Updated the -All parameter for the Get-SVTbackup command to return all backup records. This bypasses the previous restriction of the -Limit parameter being set to 3000 and is achieved by making multiple calls to the API with an offset. This command can take a long time to finish; specifying additional parameters to restrict the output is recommended
+* Removed the -Latest parameter from Get-SVTbackup. This effected the performance of Get-SVTbackup generally, whether this parameter was used or not. There is a work around in the example help for this command that displays the same results
+* Performance refactoring and bug fixes
 
 # Version 2.1.4
 
@@ -36,15 +41,15 @@ Metrics | Capacity
 
 # Version 2.0.28
 
-* Removed -ApplicationConsistent switch from the policy and backup commands. Application consistency is assumed to be false if ConsistencyType is set to NONE. For all other consistency types (DEFAULT and VSS), application consistency is true. This removes confusion, with multiple parameters doing similar things.
-* Added multi-value support for most "Get" commands, where supported by the API. For example, 
+* Removed -ApplicationConsistent switch from the policy and backup commands. Application consistency is assumed to be false if ConsistencyType is set to NONE. For all other consistency types (DEFAULT and VSS), application consistency is true. This removes confusion, with multiple parameters doing similar things
+* Added multi-value support for most "Get" commands, where supported by the API. For example: 
 
 ````powershell
     PS C:\> Get-SVTvm -ClusterName cluster1,cluster2 -State ALIVE,REMOVED,DELETED
     PS C:\> Get-SVTbackup -VmName Vm1,Vm2,Vm3
     PS C:\> Get-SVThost Host1,Host2,Host3
 ````
-Note: multi-value parameters do not work for Get-SVTbackup when connected to an OVC; they do work when connected to an MVA.
+**Note:** multi-value parameters do not work for Get-SVTbackup when connected to an OVC; they do work when connected to an MVA.
 
 * Added a new -PolicyName parameter to Get-SVTvm
 * Added a new utility script called CreateClone.ps1. This script will clone multiple VMs or clone one VM multiple times or both at once
@@ -69,9 +74,9 @@ Note: multi-value parameters do not work for Get-SVTbackup when connected to an 
     * New-SVTpolicyRule - has a new parameter -ExternalStoreName to specify the destination for a new policy rule
     * Update-SvtPolicyRule - has a new parameter -ExternalStoreName to update an existing policy rule
 
-Note: Remove-SVTbackup and Restore-SVTvm work without change with backups stored on external stores, although restoring with the -RestoreToOrignal switch enabled is currently not supported with external store backups.
+**Note:** Remove-SVTbackup and Restore-SVTvm work without change with backups stored on external stores, although restoring with the -RestoreToOrignal switch enabled is currently not supported with external store backups.
 
-Note: The new HPE StoreOnce Catalyst datastore must be added via the StoreOnce management console with appropriate permissions prior to registering it as a SimpliVity external store
+**Note:** The new HPE StoreOnce Catalyst datastore must be added via the StoreOnce management console with appropriate permissions prior to registering it as a SimpliVity external store
 * Added support for more meaningful run time errors, by determining the error message embedded in the body of the response from the API and passing this through in the cmdlets
 * Hostname is now accepted as well as the fully qualified domain name for those cmdlets that accept the hostname parameter. Hostname can be entered in the form 'host' as well as 'host.domain.com'
 * Refactored some of the cmdlets to simplify the code. Some cmdlets, like Get-SVTvm and New-SVTclone do not accept input from the pipeline any more. Get-SVTvm -Hostname 'host' can be used to filter on a specific hostname

@@ -4,7 +4,7 @@ This PowerShell module utilizes the HPE SimpliVity REST API to display informati
 
 All cmdlets are written as advanced cmdlets, with comment-based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have parameters to limit the number of objects returned. The cmdlets have been written to adhere to the current recommendations with the REST API. For example, limiting the number of records when returning virtual machines and backup objects.
 
-Most "Get" commands display default properties; Use Format-List or Select-Object to show all properties. For example:
+Most "Get" commands display default properties. Use Format-List or Select-Object to show all the properties. For example:
 
 ```powershell
     PS C:\> Connect-SVT -OVC 192.168.1.11 -Credential $Cred
@@ -63,12 +63,12 @@ Set-SVTtimezone
 ## Requirements
 
 * Windows PowerShell V5.1 or PowerShell Core V7.x (PowerShell Core V6.x is not recommended)
-* The IP address and the credentials of an authorized OmniStack user account.
-* Tested with HPE SimpliVity V4.0.1. The module is compatible with older versions but has not been tested.
+* The IP address and the credentials of an authorized OmniStack user account
+* The module has been tested with HPE SimpliVity V4.0.1 and should be compatible with older versions (but has not been tested)
 
 ## Installation
 
-* Install or update the HPESimplivity module from the PowerShell Gallery, using one of the following commands:
+* Install or update the HPESimplivity module from the PowerShell Gallery using one of the following commands:
 
 ```powershell
     PS C:\> Install-Module -Name HPESimpliVity
@@ -100,7 +100,7 @@ The module is signed, so it will work with an execution policy set to 'Remote Si
     PS C:\> Get-SVThost
 ```
 
-Or, if you need to run commands in batch (non-interactively), save your credentials to a file first:
+* Or, if you need to run commands in batch (non-interactively), save your credentials to a file first:
 
 ```powershell
     PS C:\> $Cred = Get-Credential -Username 'administrator@vsphere.local' | Export-Clixml .\OVCcred.XML 
@@ -133,7 +133,7 @@ The API has some documented and undocumented issues:
 ```
 
 * Backups stored on external stores cannot be deleted if the VM has been deleted, with a "backup not found" error. This does not apply to backups stored on SimpliVity clusters. This restriction is specific to the API; the CLI command svt-backup-delete works as expected for external store backups.
-* the PUT /policies/\<policyid\>/rules/\<ruleid\> API call (implemented in Update-SVTpolicyRule) doesn't work as expected in some circumstances. Changing a rules' destination is not supported (this is documented), but in addition, changing the consistency type to anything other than NONE or DEFAULT doesn't work. If you attempt to change the consistency type to VSS, for example, the command is ignored. In this scenario, a work around would be to delete the rule entirely from the policy using Remove-SVTpolicyRule and then use New-SVTpolicyRule to create a new rule with the desired destination, consistency type and other settings.
+* the PUT /policies/\<policyid\>/rules/\<ruleid\> API call (implemented in Update-SVTpolicyRule) doesn't work as expected in some circumstances. Changing a rules' destination is not supported (this is documented). In addition, changing the consistency type to anything other than NONE or DEFAULT doesn't work. If you attempt to change the consistency type to VSS, for example, the command is ignored. In this scenario, a work around would be to delete the rule entirely from the policy using Remove-SVTpolicyRule and then use New-SVTpolicyRule to create a new rule with the desired destination, consistency type and other settings.
 * Using GET /backups with a specific cluster_id (implemented as Get-SVTbackup -DestinationName \<ClusterName\>) will result in both backups located on the specified cluster AND external stores being displayed. This issue only applies when connected to an OVC; calls to an MVA work as expected. In either case, filtering on an external store works as expected (e.g. Get-SVTbackup -DestinationName ExternalStore1)
 
-If you would like to keep up to date with changes, please subscribe to receive notifications. Updates are published to the PowerShell Gallery at the same time.
+If you would like to keep up to date the latest features, please subscribe to receive notifications. Updates are published to the PowerShell Gallery at the same time.
