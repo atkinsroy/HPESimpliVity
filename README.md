@@ -2,9 +2,9 @@
 
 This PowerShell module utilizes the HPE SimpliVity REST API to display information and manage an HPE SimpliVity federation. It works by connecting to any HPE OmniStack virtual controller in your environment. With the release of HPE SimpliVity V4.0.0 and above, you can now also implement and connect to a management virtual appliance, which is recommended.
 
-All cmdlets are written as advanced cmdlets, with comment-based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have parameters to limit the number of objects returned. The cmdlets have been written to adhere to the current recommendations with the REST API. For example, limit the number of records when returning virtual machines and backup objects.
+All cmdlets are written as advanced cmdlets, with comment-based help and the majority have the ability to accept the output from another cmdlet as input. Most cmdlets that show information have parameters to limit the number of objects returned. The cmdlets have been written to adhere to the current recommendations with the REST API. For example, limiting the number of records when returning virtual machines and backup objects.
 
-Most "Get" commands display default properties; use Format-List or Select-Object to show the  all. For example:
+Most "Get" commands display default properties; Use Format-List or Select-Object to show all properties. For example:
 
 ```powershell
     PS C:\> Connect-SVT -OVC 192.168.1.11 -Credential $Cred

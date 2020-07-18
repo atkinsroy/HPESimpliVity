@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.23'
+$HPESimplivityVersion = '2.1.24'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -55,8 +55,8 @@ function Resolve-SVTFullHostName {
     begin {
         [System.String[]]$HostNotFound = @()
         [System.String[]]$ReturnHost = @()
-
     }
+
     process {
         foreach ($ThisHost in $HostName) {
             $TestHost = $ReferenceHost | Where-Object { $_ -eq $ThisHost }
@@ -176,6 +176,7 @@ function ConvertFrom-SVTutc {
         return $ReturnDate
     }
     else {
+        # The API returns 'NA' to represent null values.
         return $null
     }
 }
@@ -252,7 +253,7 @@ Function Get-SVTbackupDestination {
             $Message = "Specified destination name(s) not found: $($DestinationNotFound -join ', ')"
             Write-Warning $Message
         }
-        Return $ReturnObject
+        $ReturnObject | Sort-Object | Select-Object -Unique
     }
     else {
         throw 'Invalid cluster name or external store name specified'
@@ -291,7 +292,7 @@ function Invoke-SVTrestMethod {
                 $Response = Invoke-RestMethod @PSBoundParameters -SkipCertificateCheck
             }
             else {
-                # Windows PowerShell (with or without a signed cert, and PowerShell Core with a signed cert)
+                # Windows PowerShell (with or without a signed cert) or PowerShell Core with a signed cert
                 $Response = Invoke-RestMethod @PSBoundParameters
             }
             $Stoploop = $true
@@ -358,7 +359,7 @@ function Invoke-SVTrestMethod {
 
 <#
 .SYNOPSIS
-    Show information about tasks that are currently executing or have finished executing in a 
+    Show information about tasks that are currently executing or have finished executing in an 
     HPE SimpliVity environment
 .DESCRIPTION
     Performing most Post/Delete calls to the SimpliVity REST API will generate task objects as output.
@@ -388,7 +389,7 @@ function Invoke-SVTrestMethod {
     PS C:\> New-SVTbackup -VmName MyVm
     PS C:\> Get-SVTtask
 
-    Shows the state of the task executed from the New-SVTbackup cmdlet.
+    Show the current state of the task executed from the New-SVTbackup cmdlet.
 .EXAMPLE
     PS C:\> New-SVTclone Server2016-01 NewServer2016-01
     PS C:\> Get-SVTtask | Format-List
@@ -540,7 +541,7 @@ function Connect-SVT {
         }
     }
 
-    # Two ways to securely authenticate are available - via an existing credential object which is prviously
+    # Two ways to securely authenticate are available - via an existing credential object which is previously
     # created and passed in, or prompt for a credential
     if ($Credential) {
         $OVCcred = $Credential
@@ -824,7 +825,7 @@ function Get-SVTmetric {
             }
             else {
                 # This is deliberately a catchall. $SVTobject could be passed in as a string, e.g.
-                # 'Cluster01' | Get-SVTcluster
+                # 'Cluster01' | Get-SVTmetric
                 try {
                     $Cluster = Get-SVTcluster -ClusterName $Item -ErrorAction Stop
                     $Uri = $global:SVTconnection.OVC + '/api/omnistack_clusters/' + $Cluster.ClusterId + '/metrics'
@@ -939,7 +940,7 @@ function Get-SVTmetricChart {
     # define an object to determine the best interval on the Y axis, given a maximum value
     $Ymax = (0, 2500, 5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000, 5120000, 10240000, 20480000)
     $Yinterval = (100, 200, 400, 600, 1000, 5000, 10000, 15000, 20000, 50000, 75000, 100000, 250000, 400000, 1000000)
-    $Yaxis = 0..14 | foreach-object {
+    $Yaxis = 0..14 | ForEach-Object {
         [PSCustomObject]@{
             Maximum  = $Ymax[$_]
             Interval = $YInterval[$_]
@@ -1392,26 +1393,26 @@ function Get-SVTimpactReport {
 .PARAMETER MaxSizeMB
     Show backups with the specified maximum size
 .PARAMETER Date
-    Display backups created on the specified date. This takes precedence over all other date related parameters.
+    Display backups created on the specified date. This takes precedence over CreatedAfter and CreatedBefore.
 .PARAMETER CreatedAfter
     Display backups created after the specified date. This parameter is ignored if -Date is also specified.
 .PARAMETER CreatedBefore
     Display backup created before the specified date. This parameter is ignored if -Date is also specified.
 .PARAMETER ExpiresAfter
-    Display backups that expire after the specified date. This parameter is ignored if -Date is also specified.
+    Display backups that expire after the specified date.
 .PARAMETER ExpiresBefore
-    Display backup that expire before the specified date. This parameter is ignored if -Date is also specified.
+    Display backup that expire before the specified date.
 .PARAMETER Hour
     Display backups created within the specified last number of hours. By default, backups from the last 24 hours 
     are shown. This parameter is ignored when any other date related parameter is also specified.
 .PARAMETER All
-    Bypass the default 500 limit (and the upper maximum limit of 3000). When this parameter is specified, 
-    multiple calls are made to the SimpliVity API using an offset, until all backups are retrieved. This can 
-    take a long time to complete, so it is recommended to use other parameters, like -VmName or -DatastoreName 
-    to limit the output to those specific parameters.
+    Bypass the default 500 record limit (and the upper maximum limit of 3000 records). When this parameter is 
+    specified, multiple calls are made to the SimpliVity API using an offset, until all backups are retrieved. 
+    This can take a long time to complete, so it is recommended to use other parameters, like -VmName or 
+    -DatastoreName to limit the output to those specific parameters.
 .PARAMETER Limit
     By default, display 500 backups. Limit allows you to specify a value between 1 and 3000. A limit of 1 is 
-    useful to use with -Verbose, to quickly see how many backups would be returned with a higher limit. Limit 
+    useful to use with -Verbose, to quickly show how many backups would be returned with a higher limit. Limit 
     is ignored if -All is specified.
 .EXAMPLE
     PS C:\> Get-SVTbackup
@@ -1676,8 +1677,7 @@ function Get-SVTbackup {
         $Uri += "&size_max=$($MaxSizeMB * 1mb)"
     }
     if ($PSBoundParameters.ContainsKey('Date')) {
-        $Message = 'Date parameter takes precedence over other date related parameters, like CreatedAfter ' +
-        'and ExpiresAfter'
+        $Message = 'The Date parameter takes precedence over the CreatedAfter and CreatedBefore parameters'
         Write-Verbose $Message
         $StartDate = Get-Date -Date "$Date"
         $EndDate = (Get-Date -Date $StartDate).AddMinutes(1439)
@@ -1696,16 +1696,16 @@ function Get-SVTbackup {
             $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
             $Uri += "&created_before=$Before"
         }
-        if ($PSBoundParameters.ContainsKey('ExpiresAfter')) {
-            $StartDate = Get-Date -Date "$ExpiresAfter"
-            $After = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
-            $Uri += "&expires_after=$After"
-        }
-        if ($PSBoundParameters.ContainsKey('ExpiresBefore')) {
-            $EndDate = Get-Date -Date "$ExpiresBefore"
-            $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
-            $Uri += "&expires_before=$Before"
-        }
+    }
+    if ($PSBoundParameters.ContainsKey('ExpiresAfter')) {
+        $StartDate = Get-Date -Date "$ExpiresAfter"
+        $After = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+        $Uri += "&expires_after=$After"
+    }
+    if ($PSBoundParameters.ContainsKey('ExpiresBefore')) {
+        $EndDate = Get-Date -Date "$ExpiresBefore"
+        $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
+        $Uri += "&expires_before=$Before"
     }
     if ($PSBoundParameters.ContainsKey('Hour')) {
         # Ignore -Hour if any other date related parameter is specified
@@ -1732,7 +1732,7 @@ function Get-SVTbackup {
     }
     else {
         # -Hour not specified. Show the last 24 hours by default, but only when no other parameters are specified.
-        # This approach is safer than counting passed in parameters - the user may specify -verbose or other 
+        # This approach is safer than counting passed in parameters - the user may specify -Verbose or other 
         # common parameters, which would affect the behavior. -Limit is allowed.
         $ParamList = @('VmName', 'ClusterName', 'DatastoreName', 'BackupId', 'DestinationName', 'BackupName', 
             'BackupState', 'BackupType', 'MinSizeMB', 'MaxSizeMB', 'All', 'Date', 'CreatedAfter', 
@@ -1769,7 +1769,7 @@ function Get-SVTbackup {
         }
         else {
             # -All not specified, so drop out after 1 loop
-            $Offset = $BackupCount + 1
+            $Offset = $BackupCount
 
             if ($BackupCount -gt $Limit) {
                 $Message = "There are $BackupCount matching backups, but limited to displaying $Limit only. " +
@@ -1844,7 +1844,7 @@ function Get-SVTbackup {
                 DestinationName   = $Destination
             }
         } #end foreach backup object
-    } until ($Offset -gt $BackupCount)
+    } until ($Offset -ge $BackupCount)
 }
 
 <#
@@ -4114,6 +4114,7 @@ function Get-SVTdisk {
                     AddtionalStatus = $_.additional_status
                     MediaType       = $_.media_type
                     DrivePosition   = $_.drive_position
+                    RemainingLife   = $_.life_remaining
                     HostStorageKit  = $Kit
                     HostName        = $ThisHost
                 }
@@ -6477,6 +6478,9 @@ function Get-SVTvm {
     $Response.virtual_machines | ForEach-Object {
 
         $ThisHost = $Allhost | Where-Object HostID -eq $_.host_id | Select-Object -ExpandProperty HostName
+        if ($null -eq $ThisHost -and $_.state -eq 'ALIVE') {
+            $ThisHost = '*ComputeNode'
+        }
 
         [PSCustomObject]@{
             PSTypeName               = 'HPE.SimpliVity.VirtualMachine'

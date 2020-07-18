@@ -34,6 +34,10 @@
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Width>13</Width>
+                        <Alignment>right</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
                         <Width>11</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
@@ -70,6 +74,9 @@
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>Health</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>RemainingLife</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>CapacityTB</PropertyName>
