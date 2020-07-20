@@ -1,7 +1,7 @@
 # Version 2.1.24
 
 * Added 'RemainingLife' property to Get-SVTdisk
-* Added the ability to use -ExpiresBefore and -ExpiresAfter parameters along with the -Date parameter 
+* Added the ability to use -ExpiresBefore and -ExpiresAfter parameters with Get-SVTbackup along with the -Date parameter 
 
 # Version 2.1.23
 
