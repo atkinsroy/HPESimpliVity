@@ -1,12 +1,12 @@
 # Version 2.1.24
 
 * Added 'RemainingLife' property to Get-SVTdisk
-* Added the ability to use -ExpiresBefore and -ExpiresAfter parameters along with the -Date parameter 
+* Added the ability to use the -ExpiresBefore and -ExpiresAfter parameters with Get-SVTbackup along with the -Date parameter 
 
 # Version 2.1.23
 
 * PowerShell Core support has been added. Specifically tested PowerShell v7.0.0, v7.0.1 and v7.1.0-preview3. PowerShell v7.0.1 has a bug preventing charts from being created ("Exception calling 'SaveImage'"). The other two versions work as expected. PowerShell Core v6.x versions have not been tested.
-* A new optional parameter to Get-SVTmetric called -ChartProperty has been added to allow you to create charts with specific metrics
+* A new optional parameter to Get-SVTmetric called -ChartProperty has been added to allow you to create charts with a subset of the available metrics
 * HPE branding has been added to the charts produced by Get-SVTmetric and Get-SVTcapacity:
 
 Metrics | Capacity
