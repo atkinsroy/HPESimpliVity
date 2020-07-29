@@ -117,8 +117,6 @@ Similarly, Get-SVTcapacity also has a new -Chart switch. Use the following comma
     PS C:\> Get-SVTHost server01 | Get-SVTcapacity -Chart
 ```
 
-**Note:** Both of these commands require Windows PowerShell (tested with V5.1 only). They will not work with PowerShell Core V6.x / V7.0 (.NET Core does not support Microsoft Chart Controls).
-
 * Improved Get-SVTbackup so that API filters are used properly - This improves performance and removes some weird results
 * Performance updates to Get-SVTvm and bug fixes to Get-SVTclusterConnected
 * Renamed Stop-SVTovc to Start-SVTshutdown
