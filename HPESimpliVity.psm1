@@ -437,9 +437,11 @@ function Get-SVTtask {
     }
 }
 
+
+
 <#
 .SYNOPSIS
-    Obtain an authentication token from a HPE SimpliVity OmniStack Virtual Controller (OVC).
+    Connect to a HPE SimpliVity OmniStack Virtual Controller (OVC) or Managed Virtual Appliance (MVA)
 .DESCRIPTION
     To access the SimpliVity REST API, you need to request an authentication token by issuing a request
     using the OAuth authentication method. Once obtained, you can pass the resulting access token via the
@@ -449,8 +451,8 @@ function Get-SVTtask {
     session. Note that the access token times out after 10 minutes of inactivity. However, the HPEsimpliVity 
     module will automatically recreate a new token using cached credentials. 
 .PARAMETER OVC
-    The Fully Qualified Domain Name (FQDN) or IP address of any OmniStack Virtual Controller. 
-    This is the management IP address of the OVC.
+    The Fully Qualified Domain Name (FQDN) or IP address of any OmniStack Virtual Controller (or MVA). 
+    This is the management IP address of the OVC / MVA.
 .PARAMETER Credential
     User generated credential as System.Management.Automation.PSCredential. Use the Get-Credential 
     PowerShell cmdlet to create the credential. This can optionally be imported from a file in cases where 
@@ -486,6 +488,9 @@ function Get-SVTtask {
     This method is useful in non-interactive sessions. Once the file is created, run the Connect-SVT
     command to connect and reconnect to the OVC, as required.
 .NOTES
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Connect-SVT.md
+
 #>
 function Connect-SVT {
     [CmdletBinding()]
@@ -1354,15 +1359,15 @@ function Get-SVTimpactReport {
     Show backup information from the HPE SimpliVity Federation. Without any parameters, SimpliVity backups from 
     the last 24 hours are shown, but this can be overridden by specifying the -Hour parameter.
 
-    By default the limit is set to show 500 backups, as per the HPE recommended value. This can be set to a 
+    By default the limit is set to show up to 500 backups, as per the HPE recommended value. This can be set to a 
     maximum of 3000 backups using -Limit.
 
-    If -Date is used, it will override any other date related parameter (e.g. -CreatedAfter, -ExpiresAfter
-    and -Hour). The other date related parameters all override -Hour.
+    If -Date is used, it will override -CreatedAfter, -CreatedBefore and -Hour. The other date related parameters 
+    all override -Hour, if specified.
 
     -All will display all backups, regardless of limit. Be careful, this command will take a long time to 
     complete because it returns ALL backups. It does this by calling the SimpliVity API multiple times (using 
-    an offset value with limit set to 3000). It is recommended to use other parameter(s) with the -All parameter 
+    an offset value with limit set to 3000). It is recommended to use other parameters with the -All parameter 
     to limit the output.
 
     Multiple values can be used for most parameters, but only when connecting to a Managed Virtual Appliance. 
@@ -1507,10 +1512,12 @@ function Get-SVTimpactReport {
     HPE.SimpliVity.Backup
 .NOTES
 Known issues with the REST API Get operations for Backup objects:
-OMNI-53190 REST API Limit recommendation for REST GET backup object calls
-OMNI-46361 REST API GET operations for backup objects and sorting and filtering constraints
-Filtering on a cluster destination also displays external store backups. This issue applies when connected to 
+ 1. OMNI-53190 REST API Limit recommendation for REST GET backup object calls.
+ 2. OMNI-46361 REST API GET operations for backup objects and sorting and filtering constraints.
+ 3. Filtering on a cluster destination also displays external store backups. This issue applies when connected to 
 Omnistack virtual controllers only. It works as expected when connected to a Managed Virtual Appliance.
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTbackup.md
 #>
 function Get-SVTbackup {
     [CmdletBinding(DefaultParameterSetName = 'ByVmName')]
@@ -2278,17 +2285,17 @@ function Stop-SVTbackup {
 
 <#
 .SYNOPSIS
-    Copy HPE SimpliVity backups to another cluster or an external store
+    Copy HPE SimpliVity backups to another cluster or to an external store
 .DESCRIPTION
     Copy HPE SimpliVity backups between SimpliVity clusters and backups to and from external stores.
     
-    Note, backups currently on external stores can only be copied to the cluster they were backed 
-    up from. A backup on an external store cannot be copied to another external store. If you 
+    Note that currently backups on external stores can only be copied to the cluster they were backed 
+    up from. In addition, a backup on an external store cannot be copied to another external store. 
 
-    If you try to copy a backup to a destination where is already exists, the task will fail with a "Duplicate
+    If you try to copy a backup to a destination where it already exists, the task will fail with a "Duplicate
     name exists" message. 
 
-    BackupId is the only unique identifier for backup objects (e.g. multiple backups can have the same name). 
+    BackupId is the only unique identifier for backup objects (i.e. backups for each VM have the same name). 
     This makes using this command a little cumbersome by itself. However, you can use Get-SVTBackup to 
     identify the backups you want to target and then pass the output to this command.
 .PARAMETER DestinationName
@@ -2315,6 +2322,8 @@ function Stop-SVTbackup {
 .OUTPUTS
     HPE.SimpliVity.Task
 .NOTES
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Copy-SVTbackup.md
 #>
 function Copy-SVTbackup {
     [CmdletBinding()]
@@ -2752,7 +2761,9 @@ function Get-SVTfile {
         [System.String]$BackupId,
 
         [Parameter(Mandatory = $false, Position = 0)]
+        [Alias('Disk')]
         [System.String]$VirtualDisk,
+
 
         [Parameter(Mandatory = $false, Position = 1)]
         [System.String]$PartitionNumber,
@@ -2994,6 +3005,8 @@ function Restore-SVTfile {
 .OUTPUTS
     HPE.SimpliVity.DataStore
 .NOTES
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastore.md
 #>
 function Get-SVTdatastore {
     [CmdletBinding()]
@@ -3403,7 +3416,7 @@ function Unpublish-SVTdatastore {
 
 <#
 .SYNOPSIS
-    Displays the ESXi compute nodes (standard ESXi hosts) that have access to the specified datastore(s)
+    Displays the compute hosts (standard ESXi hosts) that have access to the specified datastore(s)
 .DESCRIPTION
     Displays the compute nodes that have been configured to connect to the HPE SimpliVity datastore via NFS
 .PARAMETER DatastoreName
@@ -3423,6 +3436,8 @@ function Unpublish-SVTdatastore {
     HPE.SimpliVity.ComputeNode
 .NOTES
     This command currently works in VMware environments only. Compute nodes are not supported with Hyper-V
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 #>
 function Get-SVTdatastoreComputeNode {
     [CmdletBinding()]
@@ -4125,22 +4140,20 @@ function Get-SVTdisk {
 
 <#
 .SYNOPSIS
-    Display capacity information for the specified SimpliVity node
+    Display capacity information for the specified SimpliVity host
 .DESCRIPTION
-    Displays capacity information for a number of useful metrics, such as
-    Free space, used capacity, compression ratio and efficiency ratio over time
-    for a specified SimpliVity node.
+    Displays capacity information for a number of useful metrics, such as free space, used capacity, compression 
+    ratio and efficiency ratio over time for a specified SimpliVity host.
 .PARAMETER HostName
-    The SimpliVity node you want to show capacity information for
+    The SimpliVity host you want to show capacity information for
 .PARAMETER OffsetHour
-    Offset in hours from now.
+    Offset in hours from now
 .PARAMETER Hour
     The range in hours (the duration from the specified point in time)
 .PARAMETER Resolution
     The resolution in seconds, minutes, hours or days
 .PARAMETER Chart
-    Create a chart from capacity information. If more than one host is passed in, a chart
-    for each host is created.
+    Create a chart from capacity information. If more than one host is passed in, a chart for each host is created
 .EXAMPLE
     PS C:\> Get-SVTcapacity MyHost
 
@@ -4163,6 +4176,8 @@ function Get-SVTdisk {
 .OUTPUTS
     HPE.SimpliVity.Capacity
 .NOTES
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTcapacity.md
 #>
 function Get-SVTcapacity {
     [CmdletBinding()]
@@ -4770,6 +4785,8 @@ function Stop-SVTshutdown {
 .OUTPUTS
     HPE.SimpliVity.Cluster
 .NOTES
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTcluster.md
 #>
 function Get-SVTcluster {
     [CmdletBinding()]
@@ -5031,11 +5048,11 @@ function Set-SVTtimezone {
 
 <#
 .SYNOPSIS
-    Displays information about other HPE SimpliVity clusters
+    Displays information about the connected HPE SimpliVity clusters in a Federation
 .DESCRIPTION
     Displays information about other HPE SimpliVity clusters directly connected to the specified cluster
 .PARAMETER ClusterName
-    Specify a 'source' cluster name to display other clusters directly connected to it
+    Specify a 'source' cluster name to display information about the SimpliVity clusters directly connected to it
 
     If no cluster is specified, the first cluster in the Federation is used (alphabetically)
 .EXAMPLE
@@ -5051,6 +5068,8 @@ function Set-SVTtimezone {
 .OUTPUTS
     PSCustomObject
 .NOTES
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTclusterConnected.md
 #>
 function Get-SVTclusterConnected {
     [CmdletBinding()]
