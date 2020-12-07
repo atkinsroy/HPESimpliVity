@@ -37,7 +37,7 @@ The module contains 58 exported cmdlets, divided into the following feature cate
 Datastore | Backup | Backup Policy
 :--- | :--- | :---
 Get-SVTdatastore | Copy-SVTbackup | Get-SVTpolicy
-Get-SVTdatastoreComputeNode | Get-SVTbackup | Get-SVTpolicySchedule
+Get-SVTdatastoreComputeNode | Get-SVTbackup | Get-SVTpolicyScheduleReport
 Get-SVTexternalStore | Get-SVTfile | New-SVTpolicy
 New-SVTdatastore | Lock-SVTbackup | New-SVTpolicyRule
 New-SVTexternalStore | New-SVTbackup | Remove-SVTpolicy
