@@ -5,7 +5,7 @@
 
 # Version 2.1.23
 
-* PowerShell Core support has been added. Specifically tested PowerShell v7.0.0, v7.0.1 and v7.1.0-preview3. PowerShell v7.0.1 has a bug preventing charts from being created ("Exception calling 'SaveImage'"). The other two versions work as expected. PowerShell Core v6.x versions have not been tested.
+* PowerShell Core support has been added. Specifically tested PowerShell v7.0.0, v7.0.1 and v7.1.0. PowerShell v7.0.1 has a bug preventing charts from being created ("Exception calling 'SaveImage'"). The other two versions work as expected. PowerShell Core v6.x versions have not been tested.
 * A new optional parameter to Get-SVTmetric called -ChartProperty has been added to allow you to create charts with a subset of the available metrics
 * HPE branding has been added to the charts produced by Get-SVTmetric and Get-SVTcapacity:
 
@@ -41,7 +41,7 @@ Metrics | Capacity
 
 # Version 2.0.28
 
-* Removed -ApplicationConsistent switch from the policy and backup commands. Application consistency is assumed to be false if ConsistencyType is set to NONE. For all other consistency types (DEFAULT and VSS), application consistency is true. This removes confusion, with multiple parameters doing similar things
+* Removed -ApplicationConsistent switch from the policy and backup commands. Application consistency is assumed to be false if ConsistencyType is set to NONE. For all other consistency types (DEFAULT and VSS), application consistency is true. This removes confusion and follows how the SimpliVity Plugin in vCenter handles application consistency.
 * Added multi-value support for most "Get" commands, where supported by the API. For example: 
 
 ````powershell
