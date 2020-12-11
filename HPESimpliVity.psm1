@@ -2020,47 +2020,49 @@ function New-SVTbackup {
 .DESCRIPTION
     Restore one or more virtual machines from backups hosted on HPE SimpliVity storage. Use Get-SVTbackup output 
     to pass in the backup(s) you want to restore. By default, a new VM is created for each backup passed in. The
-    VMname is the same as the original with a timestamp appended. Alternatively, you can specify the 
-    -RestoreToOriginal switch to overwrite existing virtual machine(s).
+    new virtual machines are named with the original name with a timestamp appended. Alternatively, you can specify 
+    the -RestoreToOriginal switch to overwrite existing virtual machine(s).
 
     However, if -NewVMname is specified, you can only pass in one backup. The first backup passed in will be
     restored with the specified VMname, but subsequent restores will not be attempted and an error is displayed.
     In addition, if you specify a new VM name that this is already in use by an existing VM, then the restore task 
-    will fail.
+    will fail with an appropriate error.
 
-    if -DatastoreName is not specified, then by default, the datastore used by the original VM(s) is/are used from
-    each backup. If specified, then all restored VMs will be located on the specified datastore.
+    By default the datastore used by the original VMs are used for each restore. If -DatastoreName is specified, 
+    the restored VMs will be located on the specified datastore.
 
     BackupId is the only unique identifier for backup objects (e.g. multiple backups can have the same name).
     This makes using this command a little cumbersome by itself. However, you can use Get-SVTBackup to 
     identify the backups you want to target and then pass the output to this command.
 .PARAMETER RestoreToOriginal
-    Specifies that the existing virtual machine is overwritten
+    Specifies that the VM is retored to original location, overwriting the existing virtual machine, if it exists
 .PARAMETER BackupId
     The UID of the backup(s) to restore from
 .PARAMETER NewVMname
-    A new name for the VM when restoring one VM only
+    Specify a new name for the virtual machine when restoring one VM only
 .PARAMETER DatastoreName
-    The destination datastore name. If not specified, the original datastore location in each backup is used
+    The destination datastore name. If not specified, the original datastore location from each backup is used
 .EXAMPLE
     PS C:\> Get-SVTbackup -BackupName 2019-05-09T22:00:00+10:00 | Restore-SVTvm -RestoreToOriginal
 
-    Restores the virtual machine(s) in the specified backup to the original VM(s)
+    Restores the virtual machine(s) in the specified backup to the original virtual machine(s)
 .EXAMPLE
     PS C:\> Get-SVTbackup -VmName MyVm -Limit 1 | Restore-SVTvm
 
-    Restores the most recent backup of specified virtual machine, giving it the name of the original VM with a 
-    data stamp appended
+    Restores the most recent backup of specified virtual machine, giving it a new name comprising of the name of 
+    the original VM with a date stamp appended to ensure uniqueness
 .EXAMPLE
     PS C:\> Get-SVTbackup -VmName MyVm -Limit 1 | Restore-SVTvm -NewVMname MyOtherVM
 
-    Restores the most recent backup of specified virtual machine, giving it the specfied name. NOTE: this command
+    Restores the most recent backup of specified virtual machine, giving it the specified name. NOTE: this command
     will only work for the first backup passed in. Subsequent restores are not attempted and an error is displayed.
 .EXAMPLE
     PS> $LatestBackup = Get-SVTvm -VMname VM1,VM2,VM3 | Foreach-Object { Get-SVTbackup -VmName $_.VmName -Limit 1 }
-    PS> $LatestBackup | Restore-SVTvm -RestoreToOriginal
+    PS> $LatestBackup | Restore-SVTvm -DatastoreName DS2
 
-    Restores the most recent backup of each specified virtual machine, overwriting the existing virtual machine(s)
+    Restores the most recent backup of each specified virtual machine, creating a new copy of each on the specified 
+    datastore. The virtual machines will have new names comprising of the name of the original VM with a date 
+    stamp appended to ensure uniqueness
 .INPUTS
     System.String
     HPE.SimpliVity.Backup
@@ -2130,7 +2132,7 @@ function Restore-SVTvm {
                 if ($NewVMname) {
                     if ($Count -gt 1) { 
                         $global:SVTtask = $AllTask
-                        throw "With multiple restores, you cannot specify a new VM name"
+                        throw "With multiple restores, you cannot specify a new VM name, only the first backup is restored"
                     }
                     else {
                         # Works for the first VM in the pipeline only
@@ -7226,7 +7228,7 @@ function Stop-SVTvm {
 .EXAMPLE
     PS C:\> Start-SVTvm -VmName Server2016-01,RHEL8-01
 
-    Starts the specfied virtual machines
+    Starts the specified virtual machines
 .INPUTS
     System.String
     HPE.SimpliVity.VirtualMachine
