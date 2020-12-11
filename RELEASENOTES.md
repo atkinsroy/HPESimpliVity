@@ -1,3 +1,7 @@
+# Version 2.1.25
+
+* Refactored Restore-SVTvm to also support restoring a single backup with a specified VM name. This will only work for the first backup object passed into the cmdlet. Subsequent restores will not be attempted and an error will be displayed. The existing ability to restore multiple backups at once remains, with all restored VMs retaining the original VM name(s) with an appended timestamp.
+
 # Version 2.1.24
 
 * Added 'RemainingLife' property to Get-SVTdisk
@@ -5,7 +9,7 @@
 
 # Version 2.1.23
 
-* PowerShell Core support has been added. Specifically tested PowerShell v7.0.0, v7.0.1 and v7.1.0-preview3. PowerShell v7.0.1 has a bug preventing charts from being created ("Exception calling 'SaveImage'"). The other two versions work as expected. PowerShell Core v6.x versions have not been tested.
+* PowerShell Core support has been added. Specifically tested PowerShell v7.0.0, v7.0.1 and v7.1.0. PowerShell v7.0.1 has a bug preventing charts from being created ("Exception calling 'SaveImage'"). The other two versions work as expected. PowerShell Core v6.x versions have not been tested.
 * A new optional parameter to Get-SVTmetric called -ChartProperty has been added to allow you to create charts with a subset of the available metrics
 * HPE branding has been added to the charts produced by Get-SVTmetric and Get-SVTcapacity:
 

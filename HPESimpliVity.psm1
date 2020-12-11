@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.24'
+$HPESimplivityVersion = '2.1.25'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -256,7 +256,7 @@ Function Get-SVTbackupDestination {
         $ReturnObject | Sort-Object | Select-Object -Unique
     }
     else {
-        throw 'Invalid cluster name or external store name specified'
+        throw 'Invalid destination name specified. Enter a valid cluster or external store name.'
     }
 }
 
@@ -1504,8 +1504,9 @@ function Get-SVTimpactReport {
     Show a list of backups that were manually taken for VMs residing on the specified datastore.
 .EXAMPLE
     PS C:\> Get-SVTvm -ClusterName cluster1 | Foreach-Object { Get-SVTbackup -VmName $_.VmName -Limit 1 }
+    PS C:\> Get-SVTvm -Name Vm1,Vm2,Vm3 | Foreach-Object { Get-SVTbackup -VmName $_.VmName -Limit 1 }
 
-    Display the latest backup for each VM in the specified SimpliVity cluster.
+    Display the latest backup for each specified VM
 .INPUTS
     System.String
 .OUTPUTS
@@ -2017,11 +2018,18 @@ function New-SVTbackup {
 .SYNOPSIS
     Restore one or more HPE SimpliVity virtual machines
 .DESCRIPTION
-    Restore one or more virtual machines hosted on HPE SimpliVity. Use Get-SVTbackup output to pass in the
-    backup ID(s) and VmName(s) you'd like to restore. You can either specify a destination datastore or restore
-    to the local datastore for each specified backup. By default, the restore will create a new VM with the
-    same/specified name, but with a time stamp appended, or you can specify -RestoreToOriginal switch to 
-    overwrite the existing virtual machine.
+    Restore one or more virtual machines from backups hosted on HPE SimpliVity storage. Use Get-SVTbackup output 
+    to pass in the backup(s) you want to restore. By default, a new VM is created for each backup passed in. The
+    VMname is the same as the original with a timestamp appended. Alternatively, you can specify the 
+    -RestoreToOriginal switch to overwrite existing virtual machine(s).
+
+    However, if -NewVMname is specified, you can only pass in one backup. The first backup passed in will be
+    restored with the specified VMname, but subsequent restores will not be attempted and an error is displayed.
+    In addition, if you specify a new VM name that this is already in use by an existing VM, then the restore task 
+    will fail.
+
+    if -DatastoreName is not specified, then by default, the datastore used by the original VM(s) is/are used from
+    each backup. If specified, then all restored VMs will be located on the specified datastore.
 
     BackupId is the only unique identifier for backup objects (e.g. multiple backups can have the same name).
     This makes using this command a little cumbersome by itself. However, you can use Get-SVTBackup to 
@@ -2030,19 +2038,29 @@ function New-SVTbackup {
     Specifies that the existing virtual machine is overwritten
 .PARAMETER BackupId
     The UID of the backup(s) to restore from
-.PARAMETER VmName
-    The virtual machine name(s)
+.PARAMETER NewVMname
+    A new name for the VM when restoring one VM only
 .PARAMETER DatastoreName
-    The destination datastore name
+    The destination datastore name. If not specified, the original datastore location in each backup is used
 .EXAMPLE
     PS C:\> Get-SVTbackup -BackupName 2019-05-09T22:00:00+10:00 | Restore-SVTvm -RestoreToOriginal
 
-    Restores the virtual machine(s) in the specified backup to the original VM name(s)
+    Restores the virtual machine(s) in the specified backup to the original VM(s)
 .EXAMPLE
-    PS C:\> Get-SVTbackup -VmName MyVm | Select-Object -Last 1 | Restore-SVTvm
+    PS C:\> Get-SVTbackup -VmName MyVm -Limit 1 | Restore-SVTvm
 
     Restores the most recent backup of specified virtual machine, giving it the name of the original VM with a 
     data stamp appended
+.EXAMPLE
+    PS C:\> Get-SVTbackup -VmName MyVm -Limit 1 | Restore-SVTvm -NewVMname MyOtherVM
+
+    Restores the most recent backup of specified virtual machine, giving it the specfied name. NOTE: this command
+    will only work for the first backup passed in. Subsequent restores are not attempted and an error is displayed.
+.EXAMPLE
+    PS> $LatestBackup = Get-SVTvm -VMname VM1,VM2,VM3 | Foreach-Object { Get-SVTbackup -VmName $_.VmName -Limit 1 }
+    PS> $LatestBackup | Restore-SVTvm -RestoreToOriginal
+
+    Restores the most recent backup of each specified virtual machine, overwriting the existing virtual machine(s)
 .INPUTS
     System.String
     HPE.SimpliVity.Backup
@@ -2057,20 +2075,20 @@ function Restore-SVTvm {
         [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'RestoreToOriginal')]
         [switch]$RestoreToOriginal,
 
-        [Parameter(Mandatory = $true, Position = 0, ValueFromPipelinebyPropertyName = $true,
-            ParameterSetName = 'NewVm')]
-        [Alias('Name')]
-        [System.String]$VmName,
+        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'NewVm')]
+        [Alias('VMname')]
+        [System.String]$NewVMname,
 
-        [Parameter(Mandatory = $true, Position = 1, ValueFromPipelinebyPropertyName = $true,
+        [Parameter(Mandatory = $true, Position = 2, ValueFromPipelinebyPropertyName = $true,
             ParameterSetName = 'NewVm')]
         [System.String]$DataStoreName,
 
-        [Parameter(Mandatory = $true, Position = 2, ValueFromPipelinebyPropertyName = $true)]
+        [Parameter(Mandatory = $true, Position = 4, ValueFromPipelinebyPropertyName = $true)]
         [System.String]$BackupId
     )
 
     begin {
+        $DateSuffix = Get-Date -Format 'yyMMddhhmmss'
         $Header = @{
             'Authorization' = "Bearer $($global:SVTconnection.Token)"
             'Accept'        = 'application/json'
@@ -2080,6 +2098,7 @@ function Restore-SVTvm {
         if (-not $PSBoundParameters.ContainsKey('RestoreToOriginal')) {
             try {
                 $Alldatastore = Get-SVTdatastore -ErrorAction Stop
+                $Count = 1
             }
             catch {
                 throw $_.Exception.Message
@@ -2089,9 +2108,8 @@ function Restore-SVTvm {
     process {
         foreach ($BkpId in $BackupId) {
             if ($PSBoundParameters.ContainsKey('RestoreToOriginal')) {
-
-                # Restoring a VM from an external store backup with 'RestoreToOriginal' set is currently
-                # not supported. So, check if the backup is located on an external store. 
+                # Restoring a VM from an external store backup with 'RestoreToOriginal' is currently
+                # not supported. So check if the backup is located on an external store. 
                 try {
                     $ThisBackup = Get-SVTbackup -BackupId $BkpId -ErrorAction Stop
                     if ($ThisBackup.ExternalStoreName) {
@@ -2105,39 +2123,70 @@ function Restore-SVTvm {
                     Write-Error $_.Exception.Message
                     continue
                 }
-
                 $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/restore?restore_original=true'
             }
             else {
-                $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/restore?restore_original=false'
-                
-                $DataStoreId = $AllDataStore | Where-Object DataStoreName -eq $DataStoreName | 
-                Select-Object -ExpandProperty DataStoreId
-
-                if ($VmName.Length -gt 59) {
-                    $RestoreVmName = "$($VmName.Substring(0, 59))-restore-$(Get-Date -Format 'yyMMddhhmmss')"
+                # Not restoring to original and user specified a new VM Name
+                if ($NewVMname) {
+                    if ($Count -gt 1) { 
+                        $global:SVTtask = $AllTask
+                        throw "With multiple restores, you cannot specify a new VM name"
+                    }
+                    else {
+                        # Works for the first VM in the pipeline only
+                        Write-Verbose "Restoring VM with new name $NewVMname"
+                        $RestoreVmName = $NewVMname
+                    }
                 }
+                # Not restoring to original and no new name specified, so use existing VMnames with a timestamp suffix
                 else {
-                    $RestoreVmName = "$VmName-restore-$(Get-Date -Format 'yyMMddhhmmss')"
+                    try {
+                        $VMname = Get-SVTbackup -BackupId $BkpId -ErrorAction Stop | 
+                        Select-Object -ExpandProperty VmName
+                    }
+                    catch {
+                        # Don't exit, continue with other restores in the pipeline
+                        Write-Error $_.Exception.Message
+                        continue
+                    }
+            
+                    if ($VmName.Length -gt 59) {
+                        $RestoreVmName = "$($VmName.Substring(0, 59))-restore-$DateSuffix"
+                    }
+                    else {
+                        $RestoreVmName = "$VmName-restore-$DateSuffix"
+                    }
                 }
+                $Uri = $global:SVTconnection.OVC + '/api/backups/' + $BkpId + '/restore?restore_original=false'
 
+                try {
+                    $DataStoreId = $AllDataStore | Where-Object DataStoreName -eq $DataStoreName | 
+                    Select-Object -ExpandProperty DataStoreId
+                }
+                catch {
+                    # Don't exit, continue with other restores in the pipeline
+                    Write-Error $_.Exception.Message
+                    continue
+                }
+            
                 $Body = @{
                     'datastore_id'         = $DataStoreId
                     'virtual_machine_name' = $RestoreVmName
                 } | ConvertTo-Json
                 Write-Verbose $Body
             }
-
+            
             try {
                 $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
                 $Task
                 [array]$AllTask += $Task
+                $Count += 1
             }
             catch {
                 Write-Warning "$($_.Exception.Message), restore failed for VM $RestoreVmName"
             }
-        }
-    }
+        } #end for
+    } # end process
     end {
         $global:SVTtask = $AllTask
         $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
