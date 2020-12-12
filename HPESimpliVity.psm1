@@ -103,7 +103,7 @@ function Get-SVTerror {
     )
 
     if ($PSEdition -eq 'Core') {
-        # PowerShell Core editions has the embedded error availble in ErrorDetails property.
+        # PowerShell Core editions has the embedded error available in ErrorDetails property.
         if ($Err.ErrorDetails.Message) {
             $ResponseBody = $Err.ErrorDetails.Message
             if ($ResponseBody.StartsWith('{')) {
@@ -437,8 +437,6 @@ function Get-SVTtask {
     }
 }
 
-
-
 <#
 .SYNOPSIS
     Connect to a HPE SimpliVity OmniStack Virtual Controller (OVC) or Managed Virtual Appliance (MVA)
@@ -448,7 +446,7 @@ function Get-SVTtask {
     HTTP header using an Authorisation Bearer token.
 
     The access token is stored in a global variable accessible to all HPESimpliVity cmdlets in the PowerShell 
-    session. Note that the access token times out after 10 minutes of inactivity. However, the HPEsimpliVity 
+    session. Note that the access token times out after 10 minutes of inactivity. However, the HPESimpliVity 
     module will automatically recreate a new token using cached credentials. 
 .PARAMETER OVC
     The Fully Qualified Domain Name (FQDN) or IP address of any OmniStack Virtual Controller (or MVA). 
@@ -456,7 +454,7 @@ function Get-SVTtask {
 .PARAMETER Credential
     User generated credential as System.Management.Automation.PSCredential. Use the Get-Credential 
     PowerShell cmdlet to create the credential. This can optionally be imported from a file in cases where 
-    you are invoking non-interactively. E.g. shutting down the OVC's from a script invoked by UPS software.
+    you are invoking non-interactively. E.g. shutting down the OVCs from a script invoked by UPS software.
 .PARAMETER SignedCert
     Requires a trusted certificate to enable TLS1.2. By default, the cmdlet allows untrusted certificates with 
     HTTPS connections. This is, most commonly, a self-signed certificate. Alternatively it could be a 
@@ -520,7 +518,7 @@ function Connect-SVT {
         # Effectively bypass TLS by trusting all certificates. Works with untrusted, self-signed certs and is the 
         # default. Ideally, customers should install trusted certificates, but this is rarely implemented.
         if ($PSEdition -eq 'Core') {
-            # With PowerShell Core, Invoke-RestMethod supports -SkipCerticateCheck. The global $SVTConnection
+            # With PowerShell Core, Invoke-RestMethod supports -SkipCertificateCheck. The global $SVTConnection
             # variable has a 'SignedCertificate' property set here, used by Invoke-SVTrestMethod. 
         }
         else {
@@ -569,7 +567,7 @@ function Connect-SVT {
         throw $_.Exception.Message
     }
 
-    $global:SVTconnection = [pscustomobject]@{
+    $global:SVTconnection = [PSCustomObject]@{
         OVC               = "https://$OVC"
         Credential        = $OVCcred
         Token             = $Response.access_token
@@ -855,7 +853,7 @@ function Get-SVTmetric {
             $CustomObject = $Response.metrics | foreach-object {
                 $MetricName = (Get-Culture).TextInfo.ToTitleCase($_.name)
                 $_.data_points | ForEach-Object {
-                    [pscustomobject] @{
+                    [PSCustomObject] @{
                         Name  = $MetricName
                         Date  = ConvertFrom-SVTutc -Date $_.date
                         Read  = $_.reads
@@ -874,18 +872,18 @@ function Get-SVTmetric {
                     Date       = $_.Name
                 }
 
-                [string]$prevname = ''
+                [string]$PrevName = ''
                 $_.Group | Foreach-object {
                     # We expect one instance each of Iops, Latency and Throughput per date. 
                     # But sometimes the API returns more. Attempting to create a key that already 
                     # exists generates a non-terminating error so, check for duplicates.
-                    if ($_.name -ne $prevname) {
+                    if ($_.name -ne $PrevName) {
                         $Property += [ordered]@{
                             "$($_.Name)Read"  = $_.Read
                             "$($_.Name)Write" = $_.Write
                         }
                     }
-                    $prevname = $_.Name
+                    $PrevName = $_.Name
                 }
                
                 $Property += [ordered]@{
@@ -940,14 +938,14 @@ function Get-SVTmetricChart {
     $EndDate = $Metric | Select-Object -Last 1 -ExpandProperty Date
     $ChartLabelFont = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 8
     $ChartTitleFont = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 12
-    $Logo = (split-path -parent (get-module HPEsimpliVity -ListAvailable).Path) + '\hpe.png'
+    $Logo = (split-path -parent (get-module HPESimpliVity -ListAvailable).Path) + '\hpe.png'
 
     # define an object to determine the best interval on the Y axis, given a maximum value
-    $Ymax = (0, 2500, 5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000, 5120000, 10240000, 20480000)
-    $Yinterval = (100, 200, 400, 600, 1000, 5000, 10000, 15000, 20000, 50000, 75000, 100000, 250000, 400000, 1000000)
-    $Yaxis = 0..14 | ForEach-Object {
+    $YMax = (0, 2500, 5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000, 5120000, 10240000, 20480000)
+    $YInterval = (100, 200, 400, 600, 1000, 5000, 10000, 15000, 20000, 50000, 75000, 100000, 250000, 400000, 1000000)
+    $YAxis = 0..14 | ForEach-Object {
         [PSCustomObject]@{
-            Maximum  = $Ymax[$_]
+            Maximum  = $YMax[$_]
             Interval = $YInterval[$_]
         }
     }
@@ -988,7 +986,7 @@ function Get-SVTmetricChart {
         $Chart1.Titles[0].Font = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 16
         $Chart1.Titles[0].Alignment = 'topLeft'
 
-        # add chart area, axistype is required to create primary and secondary yaxis
+        # add chart area, axistype is required to create primary and secondary YAxis
         $AxisEnabled = New-Object System.Windows.Forms.DataVisualization.Charting.AxisEnabled
         $AxisType = New-Object System.Windows.Forms.DataVisualization.Charting.AxisType
         $Area1 = New-Object System.Windows.Forms.DataVisualization.Charting.ChartArea
@@ -998,7 +996,7 @@ function Get-SVTmetricChart {
         $Area1.AxisX.LabelStyle.Font = $ChartLabelFont
         $Area1.AxisX.MajorGrid.LineColor = [System.Drawing.Color]::LightGray
 
-        # show a maximum of 24 labels on the xaxis
+        # show a maximum of 24 labels on the XAxis
         $Interval = [math]::Round($DataPoint / 24)
         if ($Interval -lt 1) {
             $Area1.AxisX.Interval = 1
@@ -1032,7 +1030,7 @@ function Get-SVTmetricChart {
 
             # Determine an appropriate interval on the primary Y-axis, based on the maximum value
             $Max = $AxisY1Data | Measure-Object -Maximum | Select-Object -ExpandProperty Maximum
-            $Yaxis | ForEach-Object {
+            $YAxis | ForEach-Object {
                 if ($Max -gt $_.Maximum) {
                     $Area1.AxisY.Interval = $_.Interval
                 }
@@ -1229,14 +1227,14 @@ function Get-SVTcapacityChart {
 
         # create chart area
         $Area1 = New-Object System.Windows.Forms.DataVisualization.Charting.ChartArea
-        $Area3Dstyle = New-Object System.Windows.Forms.DataVisualization.Charting.ChartArea3DStyle
-        $Area3Dstyle.Enable3D = $true
-        $Area3Dstyle.LightStyle = 1
-        $Area3Dstyle.Inclination = 20
-        $Area3Dstyle.Perspective = 0
+        $Area3DStyle = New-Object System.Windows.Forms.DataVisualization.Charting.ChartArea3DStyle
+        $Area3DStyle.Enable3D = $true
+        $Area3DStyle.LightStyle = 1
+        $Area3DStyle.Inclination = 20
+        $Area3DStyle.Perspective = 0
 
         $Area1 = $Chart1.ChartAreas.Add('ChartArea1')
-        $Area1.Area3DStyle = $Area3Dstyle
+        $Area1.Area3DStyle = $Area3DStyle
 
         $Area1.AxisY.Title = 'Size (GB)'
         $Area1.AxisY.TitleFont = $ChartTitleFont
@@ -1341,7 +1339,7 @@ function Get-SVTimpactReport {
     $TextInfo = (Get-Culture).TextInfo
     foreach ($Attribute in $Response.schedule_before_change.PSobject.Properties.Name) {
         [PSCustomObject]@{
-            'Attribute'    = $TextInfo.TotitleCase($Attribute) -replace '_', ''
+            'Attribute'    = $TextInfo.ToTitleCase($Attribute) -replace '_', ''
             'BeforeChange' = $Response.schedule_before_change.$Attribute
             'AfterChange'  = $Response.schedule_after_change.$Attribute
         }
@@ -1666,7 +1664,7 @@ function Get-SVTbackup {
     }
     if ($PSBoundParameters.ContainsKey('BackupName')) {
         Write-Verbose 'Backup names are case sensitive. Incomplete backup names are matched'
-        # add an asterix to each backupname to support incomplete name match. Also replace plus symbol
+        # add an asterisk to each backupname to support incomplete name match. Also replace plus symbol
         $Uri += "&name=$(($BackupName -join '*,') + '*' -replace '\+', '%2B')"
     }
     if ($PSBoundParameters.ContainsKey('BackupId')) {
@@ -1910,7 +1908,7 @@ function New-SVTbackup {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [System.String]$VmName,
 
         [Parameter(Mandatory = $false, Position = 1)]
@@ -2010,7 +2008,7 @@ function New-SVTbackup {
 
     end {
         $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -2035,7 +2033,7 @@ function New-SVTbackup {
     This makes using this command a little cumbersome by itself. However, you can use Get-SVTBackup to 
     identify the backups you want to target and then pass the output to this command.
 .PARAMETER RestoreToOriginal
-    Specifies that the VM is retored to original location, overwriting the existing virtual machine, if it exists
+    Specifies that the VM is restored to original location, overwriting the existing virtual machine, if it exists
 .PARAMETER BackupId
     The UID of the backup(s) to restore from
 .PARAMETER NewVMname
@@ -2081,11 +2079,11 @@ function Restore-SVTvm {
         [Alias('VMname')]
         [System.String]$NewVMname,
 
-        [Parameter(Mandatory = $true, Position = 2, ValueFromPipelinebyPropertyName = $true,
+        [Parameter(Mandatory = $true, Position = 2, ValueFromPipelineByPropertyName = $true,
             ParameterSetName = 'NewVm')]
         [System.String]$DataStoreName,
 
-        [Parameter(Mandatory = $true, Position = 4, ValueFromPipelinebyPropertyName = $true)]
+        [Parameter(Mandatory = $true, Position = 4, ValueFromPipelineByPropertyName = $true)]
         [System.String]$BackupId
     )
 
@@ -2191,7 +2189,7 @@ function Restore-SVTvm {
     } # end process
     end {
         $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -2240,7 +2238,7 @@ function Remove-SVTbackup {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [System.String]$BackupId
     )
 
@@ -2271,7 +2269,7 @@ function Remove-SVTbackup {
         }
         $Task
         $global:SVTtask = $Task
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -2301,7 +2299,7 @@ function Stop-SVTbackup {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [System.String]$BackupId
     )
 
@@ -2330,7 +2328,7 @@ function Stop-SVTbackup {
 
     end {
         $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -2382,7 +2380,7 @@ function Copy-SVTbackup {
         [Parameter(Mandatory = $true, Position = 0)]
         [System.String]$DestinationName,
 
-        [Parameter(Mandatory = $true, Position = 1, ValueFromPipelinebyPropertyName = $true)]
+        [Parameter(Mandatory = $true, Position = 1, ValueFromPipelineByPropertyName = $true)]
         [System.String]$BackupId
     )
 
@@ -2425,7 +2423,7 @@ function Copy-SVTbackup {
     }
     end {
         $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -2455,7 +2453,7 @@ function Copy-SVTbackup {
 function Lock-SVTbackup {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0, ValueFromPipelinebyPropertyName = $true)]
+        [Parameter(Mandatory = $true, Position = 0, ValueFromPipelineByPropertyName = $true)]
         [System.String]$BackupId
     )
 
@@ -2484,7 +2482,7 @@ function Lock-SVTbackup {
     }
     end {
         $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -2521,7 +2519,7 @@ function Rename-SVTbackup {
         [Alias('NewName')]
         [System.String]$BackupName,
 
-        [Parameter(Mandatory = $true, Position = 1, ValueFromPipelinebyPropertyName = $true)]
+        [Parameter(Mandatory = $true, Position = 1, ValueFromPipelineByPropertyName = $true)]
         [System.String]$BackupId
     )
 
@@ -2552,7 +2550,7 @@ function Rename-SVTbackup {
     }
     end {
         $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -2600,7 +2598,7 @@ function Set-SVTbackupRetention {
         [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'ByHour')]
         [System.Int32]$RetentionHour,
 
-        [Parameter(Mandatory = $true, Position = 1, ValueFromPipelinebyPropertyName = $true)]
+        [Parameter(Mandatory = $true, Position = 1, ValueFromPipelineByPropertyName = $true)]
         [System.String]$BackupId
 
         # Force is supported by the API - it tells SimpliVity to set the retention even if backups 
@@ -2659,7 +2657,7 @@ function Set-SVTbackupRetention {
             else {
                 $Task
                 $global:SVTtask = $Task
-                $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+                $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
             }
         }
         catch {
@@ -2701,7 +2699,7 @@ function Update-SVTbackupUniqueSize {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [System.String]$BackupId
     )
 
@@ -2730,7 +2728,7 @@ function Update-SVTbackupUniqueSize {
 
     end {
         $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -2808,7 +2806,7 @@ function Get-SVTfile {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [System.String]$BackupId,
 
         [Parameter(Mandatory = $false, Position = 0)]
@@ -2968,7 +2966,7 @@ function Restore-SVTfile {
         [Parameter(Mandatory = $true, Position = 0)]
         [System.String]$VmName,
 
-        [Parameter(Mandatory = $true, ValueFromPipelinebyPropertyName = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [System.Object]$RestorePath
     )
 
@@ -3024,7 +3022,7 @@ function Restore-SVTfile {
         $Task
         
         $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -3191,7 +3189,7 @@ function New-SVTdatastore {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -3243,7 +3241,7 @@ function Remove-SVTdatastore {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -3297,7 +3295,7 @@ function Resize-SVTdatastore {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -3354,7 +3352,7 @@ function Set-SVTdatastorePolicy {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -3407,7 +3405,7 @@ function Publish-SVTdatastore {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -3462,7 +3460,7 @@ function Unpublish-SVTdatastore {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask # Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask # Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -3493,7 +3491,7 @@ function Unpublish-SVTdatastore {
 function Get-SVTdatastoreComputeNode {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false, Position = 0, ValueFromPipelinebyPropertyName = $true)]
+        [Parameter(Mandatory = $false, Position = 0, ValueFromPipelineByPropertyName = $true)]
         [System.String[]]$DatastoreName = (Get-SVTdatastore | Select-Object -ExpandProperty DatastoreName)
     )
 
@@ -3534,7 +3532,7 @@ function Get-SVTdatastoreComputeNode {
 
 <#
 .SYNOPSIS
-    Displays information on the available external datastores configurated in HPE SimpliVity
+    Displays information on the available external datastores configured in HPE SimpliVity
 .DESCRIPTION
     Displays external stores that have been registered. Upon creation, external datastores are associated
     with a specific SimpliVity cluster, but are subsequently available to all clusters in the cluster group
@@ -3704,15 +3702,15 @@ function New-SVTexternalStore {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 
 }
 
 <#
 .SYNOPSIS
-    Unregisters (removes) an external datastore from the specified HPE SimpliVity cluster
+    Unregister (remove) an external datastore from the specified HPE SimpliVity cluster
 .DESCRIPTION
-    Unregisters an external datastore. Removes the external store as a backup destination for the cluster.
+    Unregister an external datastore. Removes the external store as a backup destination for the cluster.
     Backups remain on the external store, but they can no longer be managed by HPE SimpliVity.
 
     External stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped 
@@ -3726,7 +3724,7 @@ function New-SVTexternalStore {
 .EXAMPLE
     PS C:\> Remove-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ClusterName SVTcluster
 
-    Unregisters (removes) the external datastore called StoreOnce-Data03 from the specified 
+    Unregister (remove) the external datastore called StoreOnce-Data03 from the specified 
     HPE SimpliVity Cluster
 .INPUTS
     system.string
@@ -3771,7 +3769,7 @@ function Remove-SVTexternalStore {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -3845,7 +3843,7 @@ function Set-SVTexternalStore {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 #endregion Datastore
@@ -4017,7 +4015,7 @@ function Get-SVThardware {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [System.String[]]$HostName
     )
 
@@ -4055,7 +4053,7 @@ function Get-SVThardware {
                 throw $_.Exception.Message
             }
             $Response.host | ForEach-Object {
-                [pscustomobject]@{
+                [PSCustomObject]@{
                     PSTypeName       = 'HPE.SimpliVity.Hardware'
                     HostName         = $_.name
                     HostId           = $_.host_id
@@ -4114,7 +4112,7 @@ function Get-SVTdisk {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [System.String[]]$HostName
     )
 
@@ -4164,25 +4162,25 @@ function Get-SVTdisk {
             }
 
             $Disk | ForEach-Object {
-                [pscustomobject]@{
-                    PSTypeName      = 'HPE.SimpliVity.Disk'
-                    SerialNumber    = $_.serial_number
-                    Manufacturer    = $_.manufacturer
-                    ModelNumber     = $_.model_number
-                    Firmware        = $_.firmware_revision
-                    Status          = $_.status
-                    Health          = $_.health
-                    Enclosure       = [System.Int32]$_.enclosure
-                    Slot            = [System.Int32]$_.slot
-                    CapacityTB      = [single]::Parse('{0:n2}' -f ($_.capacity / 1000000000000), $LocalCulture)
-                    WWN             = $_.wwn
-                    PercentRebuilt  = [System.Int32]$_.percent_rebuilt
-                    AddtionalStatus = $_.additional_status
-                    MediaType       = $_.media_type
-                    DrivePosition   = $_.drive_position
-                    RemainingLife   = $_.life_remaining
-                    HostStorageKit  = $Kit
-                    HostName        = $ThisHost
+                [PSCustomObject]@{
+                    PSTypeName       = 'HPE.SimpliVity.Disk'
+                    SerialNumber     = $_.serial_number
+                    Manufacturer     = $_.manufacturer
+                    ModelNumber      = $_.model_number
+                    Firmware         = $_.firmware_revision
+                    Status           = $_.status
+                    Health           = $_.health
+                    Enclosure        = [System.Int32]$_.enclosure
+                    Slot             = [System.Int32]$_.slot
+                    CapacityTB       = [single]::Parse('{0:n2}' -f ($_.capacity / 1000000000000), $LocalCulture)
+                    WWN              = $_.wwn
+                    PercentRebuilt   = [System.Int32]$_.percent_rebuilt
+                    AdditionalStatus = $_.additional_status
+                    MediaType        = $_.media_type
+                    DrivePosition    = $_.drive_position
+                    RemainingLife    = $_.life_remaining
+                    HostStorageKit   = $Kit
+                    HostName         = $ThisHost
                 }
             } # end foreach disk
         } #end foreach host
@@ -4235,7 +4233,7 @@ function Get-SVTcapacity {
     param
     (
         [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [string[]]$HostName,
 
         [Parameter(Mandatory = $false, Position = 1)]
@@ -4321,7 +4319,7 @@ function Get-SVTcapacity {
                 ) -join ''
 
                 $_.data_points | ForEach-Object {
-                    [pscustomobject] @{
+                    [PSCustomObject] @{
                         Name  = $MetricName
                         Date  = ConvertFrom-SVTutc -Date $_.date
                         Value = $_.value
@@ -4437,7 +4435,7 @@ function Remove-SVThost {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -4468,7 +4466,7 @@ function Remove-SVThost {
     Shutdown the specified virtual controller without confirmation. If this is the last virtual controller, 
     ensure all virtual machines are powered off, otherwise there may be loss of data.
 .EXAMPLE
-    PS C:\> Start-SVTshutdown -HostName Host01 -Whatif -Verbose
+    PS C:\> Start-SVTshutdown -HostName Host01 -WhatIf -Verbose
 
     Reports on the shutdown operation, including connecting to the virtual controller, without actually 
     performing the shutdown.
@@ -4547,7 +4545,7 @@ function Start-SVTshutdown {
         Write-Warning $Message
     }
 
-    # Only execute the command if confirmed. Using -Whatif will report only
+    # Only execute the command if confirmed. Using -WhatIf will report only
     if ($PSCmdlet.ShouldProcess("$($ThisHost.HostName)", "Shutdown virtual controller in cluster $ThisCluster")) {
         try {
             $Uri = $global:SVTconnection.OVC + '/api/hosts/' + $ThisHost.HostId + '/shutdown_virtual_controller'
@@ -4664,7 +4662,7 @@ function Get-SVTshutdownStatus {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [System.String[]]$HostName
     )
 
@@ -4756,7 +4754,7 @@ function Stop-SVTshutdown {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [System.String[]]$HostName
     )
 
@@ -4768,7 +4766,7 @@ function Stop-SVTshutdown {
         }
 
         # Get all the hosts in the Federation.
-        # We will be cancelling shutdown for one or more OVC's; grab all host information before we start
+        # We will be cancelling shutdown for one or more OVCs; grab all host information before we start
         try {
             $Allhost = Get-SVThost -ErrorAction Stop
         }
@@ -5094,7 +5092,7 @@ function Set-SVTtimezone {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -5160,7 +5158,7 @@ function Get-SVTclusterConnected {
     $Response.omnistack_clusters | ForEach-Object {
         [PSCustomObject]@{
             PSTypeName             = 'HPE.SimpliVity.ConnectedCluster'
-            Clusterid              = $_.id
+            ClusterId              = $_.id
             ClusterName            = $_.name
             ClusterType            = $_.type
             ClusterMembers         = $_.members
@@ -5345,14 +5343,14 @@ function New-SVTpolicy {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask # Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask # Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
 .SYNOPSIS
     Create a new backup policy rule in a HPE SimpliVity backup policy
 .DESCRIPTION
-    Create backup policies within an existing HPE Simplivity backup policy. Optionally,
+    Create backup policies within an existing HPE SimpliVity backup policy. Optionally,
     You can replace all the existing policy rules with the new policy rule.
 
     You can also display an impact report rather than performing the change.
@@ -5613,7 +5611,7 @@ function New-SVTpolicyRule {
         }
         $Task
         $global:SVTtask = $Task
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -5893,7 +5891,7 @@ function Update-SVTpolicyRule {
         }
         $Task
         $global:SVTtask = $Task
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -5990,7 +5988,7 @@ function Remove-SVTpolicyRule {
         }
         $Task
         $global:SVTtask = $Task
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -6056,7 +6054,7 @@ function Rename-SVTpolicy {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -6137,7 +6135,7 @@ function Remove-SVTpolicy {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -6233,7 +6231,7 @@ function Suspend-SVTpolicy {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -6330,7 +6328,7 @@ function Resume-SVTpolicy {
     }
     $Task
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -6768,7 +6766,7 @@ function New-SVTclone {
     $Task
     # Useful to keep the task objects in this session, so we can keep track of them with Get-SVTtask
     $global:SVTtask = $Task
-    $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+    $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -6814,7 +6812,7 @@ function Move-SVTvm {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [Alias('Name')]
         [System.String]$VmName,
 
@@ -6866,7 +6864,7 @@ function Move-SVTvm {
     end {
         # Useful to keep the task objects in this session, so we can keep track of them with Get-SVTtask
         $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -6955,9 +6953,9 @@ function Set-SVTvm {
         [System.String]$PolicyName,
 
         [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'SetCredential',
-            ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'SetPolicy',
-            ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias('Name')]
         [System.String[]]$VmName,
 
@@ -6965,7 +6963,7 @@ function Set-SVTvm {
         [switch]$ImpactReportOnly,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'SetPolicy',
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [System.String]$VmId,
 
         [Parameter(Mandatory = $true, Position = 1, ParameterSetName = 'SetCredential')]
@@ -7030,7 +7028,7 @@ function Set-SVTvm {
                 $VmList += $VmId
             }
             else {
-                # Run a task to set user creds on each VM (passed in)
+                # Run a task to set user credentials on each VM (passed in)
                 $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmId + '/backup_parameters'
                 try {
                     $Task = Invoke-SVTrestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -7054,7 +7052,7 @@ function Set-SVTvm {
                     }
                 }
                 else {
-                    # Run a task to set user creds on each VM (specified)
+                    # Run a task to set user credentials on each VM (specified)
                     try {
                         $VmObj = Get-SVTvm -VmName $VM -ErrorAction Stop
                         $Uri = $global:SVTconnection.OVC + '/api/virtual_machines/' + $VmObj.VmId + 
@@ -7097,7 +7095,7 @@ function Set-SVTvm {
                 Get-SVTimpactReport -Response $Response
             }
             else {
-                #Task peformed, show the task
+                #Task performed, show the task
                 $Response
                 $global:SVTtask = $Response
                 $null = $SVTtask
@@ -7149,11 +7147,11 @@ function Stop-SVTvm {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [Alias('Name')]
         [System.String[]]$VmName,
 
-        [Parameter(Mandatory = $false, ValueFromPipelinebyPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [System.String]$VmId
     )
 
@@ -7203,7 +7201,7 @@ function Stop-SVTvm {
     end {
         # Useful to keep the task objects in this session, so we can keep track of them with Get-SVTtask
         $global:SVTtask = $AllTask
-        $null = $SVTtask # Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask # Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
@@ -7240,11 +7238,11 @@ function Start-SVTvm {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, 
-            ValueFromPipelinebyPropertyName = $true)]
+            ValueFromPipelineByPropertyName = $true)]
         [Alias('Name')]
         [System.String[]]$VmName,
 
-        [Parameter(Mandatory = $false, ValueFromPipelinebyPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [System.String]$VmId
     )
 
@@ -7294,7 +7292,7 @@ function Start-SVTvm {
     end {
         # Useful to keep the task objects in this session, so we can keep track of them with Get-SVTtask
         $global:SVTtask = $AllTask
-        $null = $SVTtask #Stops PSScriptAnalzer complaining about variable assigned but never used
+        $null = $SVTtask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
 }
 
