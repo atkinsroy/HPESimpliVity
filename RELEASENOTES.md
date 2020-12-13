@@ -14,7 +14,7 @@ For example:
 ````powershell
     PS C:\> Get-SVTbackup -VM VM1,VM3 -Date '12/12/2020 10:00:00 AM'
 ````
-This command will show the two backups from the specified VMs with the specified creation date.
+This command will show the backup with the specified creation date for the two virtual machines.
 
 # Version 2.1.24
 
@@ -22,7 +22,7 @@ This command will show the two backups from the specified VMs with the specified
 * Refactored the Get-SVTbackup command. Added the ability to use the -ExpiresBefore and -ExpiresAfter parameters along with the -Date parameter. For Example:
 
 ````powershell
-    PS C:\> Get-SVTbackup -Date 12/12/2020 -ExpiresAfter '26/01/2020 10:00:00 PM'
+    PS C:\> Get-SVTbackup -Date 18/07/2020 -ExpiresAfter '22/08/2020 10:00:00 PM'
 ````
 
 
