@@ -14,12 +14,17 @@ For example:
 ````powershell
     PS C:\> Get-SVTbackup -VM VM1,VM3 -Date '12/12/2020 10:00:00 AM'
 ````
-This command will show the two backups from the specified VMs with this creation date.
+This command will show the two backups from the specified VMs with the specified creation date.
 
 # Version 2.1.24
 
-* Added 'RemainingLife' property to Get-SVTdisk
-* Added the ability to use the -ExpiresBefore and -ExpiresAfter parameters with Get-SVTbackup along with the -Date parameter 
+* Added 'RemainingLife' property to Get-SVTdisk. This shows up as a percentage.
+* Refactored the Get-SVTbackup command. Added the ability to use the -ExpiresBefore and -ExpiresAfter parameters along with the -Date parameter. For Example:
+
+````powershell
+    PS C:\> Get-SVTbackup -Date 12/12/2020 -ExpiresAfter '26/01/2020 10:00:00 PM'
+````
+
 
 # Version 2.1.23
 
