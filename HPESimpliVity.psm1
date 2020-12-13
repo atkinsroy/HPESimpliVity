@@ -138,8 +138,8 @@ function Get-SVTerror {
 # cmdlets via ConvertFrom-SVTutc.
 function Get-SVTLocalDateFormat {
     # Format dates with the local culture, except that days, months and hours are padded with zero.
-    # (Some cultures use single digits)
     $Culture = (Get-Culture).DateTimeFormat
+    # (Some cultures use single digits)
     $DateFormat = "$($Culture.ShortDatePattern)" -creplace '^d/', 'dd/' -creplace '^M/', 'MM/' -creplace '/d/', '/dd/'
     $TimeFormat = "$($Culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm', 'HH:mm'
     return "$DateFormat $TimeFormat"
@@ -178,6 +178,54 @@ function ConvertFrom-SVTutc {
     else {
         # The API returns 'NA' to represent null values.
         return $null
+    }
+}
+
+# Helper function for Get-SVTbackup when the -Date parameter is specified. The function validates the date specified
+# as well as determining whether or not a time is specified. The function returns start and end date/times. 
+function Get-SVTdateRange {
+    [CmdletBinding()]
+    param (
+        # string or date object
+        [Parameter(Mandatory = $true, Position = 0)]
+        $Date
+    )
+    $Culture = Get-Culture
+    $LocalFull = Get-SVTLocalDateFormat
+    $LocalDate = ($LocalFull -split ' ')[0]
+    try {
+        # Date only specified
+        $null = [System.DateTime]::ParseExact($Date, $LocalDate, $Culture)
+
+        Write-Verbose "Date only specified, showing 24 hour range"
+        $StartDate = Get-Date -Date "$Date"
+        $EndDate = $StartDate.AddMinutes(1439)
+        [PSCustomObject] @{
+            After  = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+            Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
+        }
+        return
+    }
+    catch { 
+        Write-verbose "Date only not specified, trying date/time"
+    }
+
+    try {
+        # Date and time specified
+        $null = [System.DateTime]::ParseExact($Date, $LocalFull, $Culture)
+
+        Write-Verbose "Date and time specified, showing backups with this explicit creation date/time"
+        $StartDate = Get-Date -Date "$Date"
+        $EndDate = $StartDate
+
+        [PSCustomObject] @{
+            After  = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+            Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
+        }
+    }
+    catch {
+        $Message = "Invalid data specified. The date must be in the form of '$LocalFull'" 
+        throw $Message
     }
 }
 
@@ -1422,13 +1470,14 @@ function Get-SVTimpactReport {
 
     Show the last 24 hours of backups from the SimpliVity Federation.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -Date 04/04/2020
-    PS C:\> Get-SVTBackup -Date 04/04/2020 -VmName Server2016-04
+    PS C:\> Get-SVTbackup -Date 23/04/2020
+    PS C:\> Get-SVTBackup -Date '23/04/2020 10:00:00 AM' -VmName Server2016-04,Server2016-08
 
-    The first command show all backups from the specified date, up to the default limit of 500 backups.
-    The second command show all backups from the specified date for a specific virtual machine.
+    The first command shows all backups from the specified date (24 hour period), up to the default limit of 500 
+    backups. The second command show the specific backup from the specified date and time (using local date/time 
+    format) for the specified virtual machines.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -CreatedAfter "04/04/2020 10:00am" -CreatedBefore "04/04/2020 02:00pm"
+    PS C:\> Get-SVTbackup -CreatedAfter "04/04/2020 10:00 AM" -CreatedBefore "04/04/2020 02:00 PM"
 
     Show backups created between the specified dates/times. (using local date/time format). Limited to 500 
     backups by default.
@@ -1446,19 +1495,19 @@ function Get-SVTimpactReport {
     PS C:\> Get-SVTbackup -All
 
     Shows all backups with no limit. This command may take a long time to complete because it makes multiple
-    calls to the SimpliVity API until all backups are returned. It is recommended to use other parameters 
-    restrict the number of backups returned.
+    calls to the SimpliVity API until all backups are returned. It is recommended to use other parameters with
+    the -All parameter to restrict the number of backups returned. (such as -DatastoreName or -VMname)
 .EXAMPLE
-    PS C:\> Get-SVTbackup -Datastore DS01 -All
+    PS C:\> Get-SVTbackup -DatastoreName DS01 -All
 
     Shows all backups for the specified Datastore with no upper limit. This command will take a long time 
     to complete.
 .EXAMPLE
     PS C:\> Get-SVTbackup -VmName Vm1,Vm2 -BackupName 2020-03-28T16:00+10:00 
-    PS C:\> Get-SVTbackup -VmName Vm1,Vm2,Vm3 -Hour 2 -Limit 1
+    PS C:\> Get-SVTbackup -VmName Vm1,Vm2,Vm3 -Hour 2
 
     The first command shows backups for the specified VMs with the specified backup name.
-    The second command shows the last backup taken within the last 2 hours for each specified VM.
+    The second command shows the backups taken within the last 2 hours for each specified VM.
     The use of multiple, comma separated values works when connected to a Managed Virtual Appliance only. 
 .EXAMPLE
     PS C:\> Get-SVTbackup -VMname VM1 -BackupName '2019-04-26T16:00:00+10:00'
@@ -1570,6 +1619,7 @@ function Get-SVTbackup {
         [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [Alias('CreationDate')]
         [System.String]$Date,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
@@ -1683,13 +1733,14 @@ function Get-SVTbackup {
         $Uri += "&size_max=$($MaxSizeMB * 1mb)"
     }
     if ($PSBoundParameters.ContainsKey('Date')) {
-        $Message = 'The Date parameter takes precedence over the CreatedAfter and CreatedBefore parameters'
-        Write-Verbose $Message
-        $StartDate = Get-Date -Date "$Date"
-        $EndDate = (Get-Date -Date $StartDate).AddMinutes(1439)
-        $After = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
-        $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
-        $Uri += "&created_before=$Before&created_after=$After"
+        # The Date parameter takes precedence over the CreatedAfter and CreatedBefore parameters
+        try {
+            $DateRange = Get-SVTdateRange -Date $Date
+        }
+        catch {
+            throw $_.Exception.Message
+        }
+        $Uri += "&created_before=$($DateRange.Before)&created_after=$($DateRange.After)"
     }
     else {
         if ($PSBoundParameters.ContainsKey('CreatedAfter')) {
@@ -2016,15 +2067,16 @@ function New-SVTbackup {
 .SYNOPSIS
     Restore one or more HPE SimpliVity virtual machines
 .DESCRIPTION
-    Restore one or more virtual machines from backups hosted on HPE SimpliVity storage. Use Get-SVTbackup output 
-    to pass in the backup(s) you want to restore. By default, a new VM is created for each backup passed in. The
-    new virtual machines are named with the original name with a timestamp appended. Alternatively, you can specify 
-    the -RestoreToOriginal switch to overwrite existing virtual machine(s).
+    Restore one or more virtual machines from backups hosted on HPE SimpliVity storage. Use output from the 
+    Get-SVTbackup command to pass in the backup(s) you want to restore. By default, a new VM is created for each 
+    backup passed in. The new virtual machines are named after the original VM name with a timestamp suffix to make
+    them unique. Alternatively, you can specify the -RestoreToOriginal switch to restore to the original virtual 
+    machines. This action will overwrite the existing virtual machines, recovering to the state of the backup used.
 
-    However, if -NewVMname is specified, you can only pass in one backup. The first backup passed in will be
-    restored with the specified VMname, but subsequent restores will not be attempted and an error is displayed.
-    In addition, if you specify a new VM name that this is already in use by an existing VM, then the restore task 
-    will fail with an appropriate error.
+    However, if -NewVMname is specified, you can only pass in one backup object. The first backup passed in will 
+    be restored with the specified VMname, but subsequent restores will not be attempted and an error will be
+    displayed. In addition, if you specify a new VM name that this is already in use by an existing VM, then the 
+    restore task will fail with a duplicate name error.
 
     By default the datastore used by the original VMs are used for each restore. If -DatastoreName is specified, 
     the restored VMs will be located on the specified datastore.

@@ -1,6 +1,20 @@
 # Version 2.1.25
 
-* Refactored Restore-SVTvm to also support restoring a single backup with a specified VM name. This will only work for the first backup object passed into the cmdlet. Subsequent restores will not be attempted and an error will be displayed. The existing ability to restore multiple backups at once remains, with all restored VMs retaining the original VM name(s) with an appended timestamp.
+* Refactored the Restore-SVTvm command. Formally, this command supported restoring multiple VMs at once, based on the backup objects passed in from Get-SVTbackup. Restored VMs retain the original VM names with a timestamp suffix to ensure naming uniqueness. The command now supports restoring a single backup with a specified VM name. This will only work for the first backup object passed into the command. Subsequent restores will not be attempted and an error will be displayed. For example:
+
+````powershell
+    PS C:\> Get-SVTbackup -VM VM1 -Limit 1 | Restore-SVTvm -NewVMname NewVM1
+````
+This command will restore the last backup of VM1 to a new VM called NewVM1. By default, this VM will be located on the same datastore as the original, but can be created on an alternative datastore using -DatastoreName.
+
+
+* Refactored the Get-SVTbackup command. The -Date parameter formally accepted just a date and showed the whole 24 hour range of backups. Now, the -Date parameter can also accept a date and time specified in the locale for your system.
+For example:
+
+````powershell
+    PS C:\> Get-SVTbackup -VM VM1,VM3 -Date '12/12/2020 10:00:00 AM'
+````
+This command will show the two backups from the specified VMs with this creation date.
 
 # Version 2.1.24
 
