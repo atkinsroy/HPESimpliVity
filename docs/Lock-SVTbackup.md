@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -19,7 +19,11 @@ Lock-SVTbackup [-BackupId] <String> [<CommonParameters>]
 ## DESCRIPTION
 Locks HPE SimpliVity backups to prevent them from expiring
 
-BackupId is the only unique identifier for backup objects (e.g. multiple backups can have the same name). This makes using this command a little cumbersome by itself. However, you can use Get-SVTBackup to identify the backups you want to target and then pass the output to this command.
+BackupId is the only unique identifier for backup objects (e.g.
+multiple backups can have the same name).
+This makes using this command a little cumbersome by itself.
+However, you can use Get-SVTBackup to identify 
+the backups you want to target and then pass the output to this command.
 
 ## EXAMPLES
 
@@ -29,7 +33,8 @@ Get-SVTBackup -BackupName 2019-05-09T22:00:01-04:00 | Lock-SVTbackup
 PS C:\> Get-SVTtask
 ```
 
-Locks the backup(s) with the specified name. Use Get-SVTtask to track the progress of the task(s).
+Locks the backup(s) with the specified name.
+Use Get-SVTtask to track the progress of the task(s).
 
 ## PARAMETERS
 

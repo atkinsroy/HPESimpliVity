@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -127,7 +127,7 @@ The virtual disk name contained within the backup, including file suffix (".vmdk
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases:
+Aliases: Disk
 
 Required: False
 Position: 1

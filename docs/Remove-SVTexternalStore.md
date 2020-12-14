@@ -1,14 +1,14 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
 # Remove-SVTexternalStore
 
 ## SYNOPSIS
-Unregisters (removes) an external datastore from the specified HPE SimpliVity cluster
+Unregister (remove) an external datastore from the specified HPE SimpliVity cluster
 
 ## SYNTAX
 
@@ -17,7 +17,7 @@ Remove-SVTexternalStore [-ExternalStoreName] <String> [-ClusterName] <String> [<
 ```
 
 ## DESCRIPTION
-Unregisters an external datastore.
+Unregister an external datastore.
 Removes the external store as a backup destination for the cluster.
 Backups remain on the external store, but they can no longer be managed by HPE SimpliVity.
 
@@ -33,7 +33,7 @@ is inaccessible to HPE SimpliVity.
 Remove-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ClusterName SVTcluster
 ```
 
-Unregisters (removes) the external datastore called StoreOnce-Data03 from the specified 
+Unregister (remove) the external datastore called StoreOnce-Data03 from the specified 
 HPE SimpliVity Cluster
 
 ## PARAMETERS

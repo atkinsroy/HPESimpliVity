@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastore.md
 schema: 2.0.0
 ---
 
@@ -71,3 +71,6 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ## NOTES
 
 ## RELATED LINKS
+
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastore.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastore.md)
+

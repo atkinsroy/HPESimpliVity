@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -24,9 +24,18 @@ Get-SVTtask [-Id <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Performing most Post/Delete calls to the SimpliVity REST API will generate task objects as output. Whilst these task objects are immediately returned, the task themselves will change state over time. For example, when a Clone VM task completes, its state changes from IN_PROGRESS to COMPLETED.
+Performing most Post/Delete calls to the SimpliVity REST API will generate task objects as output.
+Whilst these task objects are immediately returned, the task themselves will change state over time. 
+For example, when a Clone VM task completes, its state changes from IN_PROGRESS to COMPLETED.
 
-All cmdlets that return a JSON 'task' object, (e.g. New-SVTbackup and New-SVTclone) will output custom task objects of type HPE.SimpliVity.Task and can then be used as input here to find out if the task completed successfully. You can either specify the Task ID from the cmdlet output or, more usefully, use $SVTtask. This is a global variable that all 'task producing' HPE SimpliVity cmdlets create. $SVTtask is overwritten each time one of these cmdlets is executed.
+All cmdlets that return a JSON 'task' object, (e.g.
+New-SVTbackup and New-SVTclone) will output custom task 
+objects of type HPE.SimpliVity.Task and can then be used as input here to find out if the task completed 
+successfully.
+You can either specify the Task ID from the cmdlet output or, more usefully, use $SVTtask. 
+This is a global variable that all 'task producing' HPE SimpliVity cmdlets create.
+$SVTtask is 
+overwritten each time one of these cmdlets is executed.
 
 ## EXAMPLES
 
@@ -35,7 +44,8 @@ All cmdlets that return a JSON 'task' object, (e.g. New-SVTbackup and New-SVTclo
 Get-SVTtask
 ```
 
-Provides an update of the task(s) from the last HPESimpliVity cmdlet that creates, deletes or updates a SimpliVity resource
+Provides an update of the task(s) from the last HPESimpliVity cmdlet that creates, deletes or updates 
+a SimpliVity resource
 
 ### EXAMPLE 2
 ```
@@ -59,12 +69,16 @@ The second command monitors the progress of the clone task, showing all the task
 Get-SVTtask -ID d7ef1442-2633-...-a03e69ae24a6
 ```
 
-Displays the progress of the specified task ID. This command is useful when using the Web console to test REST API calls
+Displays the progress of the specified task ID.
+This command is useful when using the Web console to 
+test REST API calls
 
 ## PARAMETERS
 
 ### -Task
-The task object(s). Use the global variable $SVTtask which is generated from a 'task producing' HPE SimpliVity cmdlet, like New-SVTbackup, New-SVTclone and Move-SVTvm.
+The task object(s).
+Use the global variable $SVTtask which is generated from a 'task producing' 
+HPE SimpliVity cmdlet, like New-SVTbackup, New-SVTclone and Move-SVTvm.
 
 ```yaml
 Type: Object

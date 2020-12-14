@@ -1,14 +1,14 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTcapacity.md
 schema: 2.0.0
 ---
 
 # Get-SVTcapacity
 
 ## SYNOPSIS
-Display capacity information for the specified SimpliVity node
+Display capacity information for the specified SimpliVity host
 
 ## SYNTAX
 
@@ -18,7 +18,8 @@ Get-SVTcapacity [[-HostName] <String[]>] [[-OffsetHour] <Int32>] [[-Hour] <Int32
 ```
 
 ## DESCRIPTION
-Displays capacity information for a number of useful metrics, such as free space, used capacity, compression ratio and efficiency ratio over time for a specified SimpliVity node.
+Displays capacity information for a number of useful metrics, such as free space, used capacity, compression 
+ratio and efficiency ratio over time for a specified SimpliVity host.
 
 ## EXAMPLES
 
@@ -53,7 +54,7 @@ Shows capacity information for all hosts in the specified list
 ## PARAMETERS
 
 ### -HostName
-The SimpliVity node you want to show capacity information for
+The SimpliVity host you want to show capacity information for
 
 ```yaml
 Type: String[]
@@ -68,7 +69,7 @@ Accept wildcard characters: False
 ```
 
 ### -OffsetHour
-Offset in hours from now.
+Offset in hours from now
 
 ```yaml
 Type: Int32
@@ -113,7 +114,8 @@ Accept wildcard characters: False
 ```
 
 ### -Chart
-Create a chart from capacity information. If more than one host is passed in, a chart for each host is created.
+Create a chart from capacity information.
+If more than one host is passed in, a chart for each host is created
 
 ```yaml
 Type: SwitchParameter
@@ -140,3 +142,6 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ## NOTES
 
 ## RELATED LINKS
+
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTcapacity.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTcapacity.md)
+

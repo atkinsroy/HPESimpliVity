@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -53,7 +53,7 @@ ensure all virtual machines are powered off, otherwise there may be loss of data
 
 ### EXAMPLE 3
 ```
-Start-SVTshutdown -HostName Host01 -Whatif -Verbose
+Start-SVTshutdown -HostName Host01 -WhatIf -Verbose
 ```
 
 Reports on the shutdown operation, including connecting to the virtual controller, without actually 

@@ -1,14 +1,14 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
 # Get-SVTdatastoreComputeNode
 
 ## SYNOPSIS
-Displays the ESXi compute nodes (standard ESXi hosts) that have access to the specified datastore(s)
+Displays the compute hosts (standard ESXi hosts) that have access to the specified datastore(s)
 
 ## SYNTAX
 
@@ -63,6 +63,10 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ### HPE.SimpliVity.ComputeNode
 ## NOTES
-This command currently works in VMware environments only. Compute nodes are not supported with Hyper-V
+This command currently works in VMware environments only.
+Compute nodes are not supported with Hyper-V
 
 ## RELATED LINKS
+
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md)
+

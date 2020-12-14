@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTbackup.md
 schema: 2.0.0
 ---
 
@@ -46,21 +46,20 @@ Show backup information from the HPE SimpliVity Federation.
 Without any parameters, SimpliVity backups from 
 the last 24 hours are shown, but this can be overridden by specifying the -Hour parameter.
 
-By default the limit is set to show 500 backups, as per the HPE recommended value.
+By default the limit is set to show up to 500 backups, as per the HPE recommended value.
 This can be set to a 
 maximum of 3000 backups using -Limit.
 
-If -Date is used, it will override any other date related parameter (e.g.
--CreatedAfter, -ExpiresAfter
-and -Hour).
-The other date related parameters all override -Hour.
+If -Date is used, it will override -CreatedAfter, -CreatedBefore and -Hour.
+The other date related parameters 
+all override -Hour, if specified.
 
 -All will display all backups, regardless of limit.
 Be careful, this command will take a long time to 
 complete because it returns ALL backups.
 It does this by calling the SimpliVity API multiple times (using 
 an offset value with limit set to 3000).
-It is recommended to use other parameter(s) with the -All parameter 
+It is recommended to use other parameters with the -All parameter 
 to limit the output.
 
 Multiple values can be used for most parameters, but only when connecting to a Managed Virtual Appliance. 
@@ -77,16 +76,18 @@ Show the last 24 hours of backups from the SimpliVity Federation.
 
 ### EXAMPLE 2
 ```
-Get-SVTbackup -Date 04/04/2020
-PS C:\> Get-SVTBackup -Date 04/04/2020 -VmName Server2016-04
+Get-SVTbackup -Date 23/04/2020
+PS C:\> Get-SVTBackup -Date '23/04/2020 10:00:00 AM' -VmName Server2016-04,Server2016-08
 ```
 
-The first command show all backups from the specified date, up to the default limit of 500 backups.
-The second command show all backups from the specified date for a specific virtual machine.
+The first command shows all backups from the specified date (24 hour period), up to the default limit of 500 
+backups.
+The second command show the specific backup from the specified date and time (using local date/time 
+format) for the specified virtual machines.
 
 ### EXAMPLE 3
 ```
-Get-SVTbackup -CreatedAfter "04/04/2020 10:00am" -CreatedBefore "04/04/2020 02:00pm"
+Get-SVTbackup -CreatedAfter "04/04/2020 10:00 AM" -CreatedBefore "04/04/2020 02:00 PM"
 ```
 
 Show backups created between the specified dates/times.
@@ -121,12 +122,13 @@ Get-SVTbackup -All
 Shows all backups with no limit.
 This command may take a long time to complete because it makes multiple
 calls to the SimpliVity API until all backups are returned.
-It is recommended to use other parameters 
-restrict the number of backups returned.
+It is recommended to use other parameters with
+the -All parameter to restrict the number of backups returned.
+(such as -DatastoreName or -VMname)
 
 ### EXAMPLE 7
 ```
-Get-SVTbackup -Datastore DS01 -All
+Get-SVTbackup -DatastoreName DS01 -All
 ```
 
 Shows all backups for the specified Datastore with no upper limit.
@@ -136,11 +138,11 @@ to complete.
 ### EXAMPLE 8
 ```
 Get-SVTbackup -VmName Vm1,Vm2 -BackupName 2020-03-28T16:00+10:00 
-PS C:\> Get-SVTbackup -VmName Vm1,Vm2,Vm3 -Hour 2 -Limit 1
+PS C:\> Get-SVTbackup -VmName Vm1,Vm2,Vm3 -Hour 2
 ```
 
 The first command shows backups for the specified VMs with the specified backup name.
-The second command shows the last backup taken within the last 2 hours for each specified VM.
+The second command shows the backups taken within the last 2 hours for each specified VM.
 The use of multiple, comma separated values works when connected to a Managed Virtual Appliance only.
 
 ### EXAMPLE 9
@@ -213,9 +215,10 @@ Show a list of backups that were manually taken for VMs residing on the specifie
 ### EXAMPLE 17
 ```
 Get-SVTvm -ClusterName cluster1 | Foreach-Object { Get-SVTbackup -VmName $_.VmName -Limit 1 }
+PS C:\> Get-SVTvm -Name Vm1,Vm2,Vm3 | Foreach-Object { Get-SVTbackup -VmName $_.VmName -Limit 1 }
 ```
 
-Display the latest backup for each VM in the specified SimpliVity cluster.
+Display the latest backup for each specified VM
 
 ## PARAMETERS
 
@@ -388,7 +391,7 @@ This takes precedence over CreatedAfter and CreatedBefore.
 ```yaml
 Type: String
 Parameter Sets: ByVmName, ByClusterName, ByDatastoreName
-Aliases:
+Aliases: CreationDate
 
 Required: False
 Position: Named
@@ -527,9 +530,17 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ### HPE.SimpliVity.Backup
 ## NOTES
 Known issues with the REST API Get operations for Backup objects:
-* OMNI-53190 REST API Limit recommendation for REST GET backup object calls
-* OMNI-46361 REST API GET operations for backup objects and sorting and filtering constraints
-* Filtering on a cluster destination also displays external store backups
-* This issue applies when connected to Omnistack virtual controllers only. It works as expected when connected to a Managed Virtual Appliance.
+ 1.
+OMNI-53190 REST API Limit recommendation for REST GET backup object calls.
+ 2.
+OMNI-46361 REST API GET operations for backup objects and sorting and filtering constraints.
+ 3.
+Filtering on a cluster destination also displays external store backups.
+This issue applies when connected to 
+Omnistack virtual controllers only.
+It works as expected when connected to a Managed Virtual Appliance.
 
 ## RELATED LINKS
+
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTbackup.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTbackup.md)
+

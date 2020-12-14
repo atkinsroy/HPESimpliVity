@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -17,11 +17,19 @@ Get-SVTshutdownStatus [[-HostName] <String[]>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-This RESTAPI call only works if executed on the local host to the OVC. So this cmdlet iterates through the specified hosts and connects to each specified host to sequentially get the status.
+This RESTAPI call only works if executed on the local host to the OVC.
+So this cmdlet
+iterates through the specified hosts and connects to each specified host to sequentially get the status.
 
-This RESTAPI call only works if status is 'None' (i.e. the OVC is responsive), which kind of renders the REST API a bit useless However, this cmdlet is still useful to identify the unresponsive (i.e shut down or shutting down) OVC(s).
+This RESTAPI call only works if status is 'None' (i.e.
+the OVC is responsive), which kind of renders 
+the REST API a bit useless.
+However, this cmdlet is still useful to identify the unresponsive (i.e shut 
+down or shutting down) OVC(s).
 
-Note, because we're connecting to each OVC, the connection token will point to the last OVC we  successfully connect to. You may want to reconnect to your preferred OVC again using Connect-SVT.
+Note, because we're connecting to each OVC, the connection token will point to the last OVC we 
+successfully connect to.
+You may want to reconnect to your preferred OVC again using Connect-SVT.
 
 ## EXAMPLES
 

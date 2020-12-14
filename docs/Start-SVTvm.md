@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -40,7 +40,7 @@ Starts the virtual machines in the specified cluster
 Start-SVTvm -VmName Server2016-01,RHEL8-01
 ```
 
-Starts the specfied virtual machines
+Starts the specified virtual machines
 
 ## PARAMETERS
 

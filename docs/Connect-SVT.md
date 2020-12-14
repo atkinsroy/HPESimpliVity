@@ -1,14 +1,14 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Connect-SVT.md
 schema: 2.0.0
 ---
 
 # Connect-SVT
 
 ## SYNOPSIS
-Obtain an authentication token from a HPE SimpliVity OmniStack Virtual Controller (OVC).
+Connect to a HPE SimpliVity OmniStack Virtual Controller (OVC) or Managed Virtual Appliance (MVA)
 
 ## SYNTAX
 
@@ -25,7 +25,7 @@ HTTP header using an Authorisation Bearer token.
 The access token is stored in a global variable accessible to all HPESimpliVity cmdlets in the PowerShell 
 session.
 Note that the access token times out after 10 minutes of inactivity.
-However, the HPEsimpliVity 
+However, the HPESimpliVity 
 module will automatically recreate a new token using cached credentials.
 
 ## EXAMPLES
@@ -65,8 +65,8 @@ command to connect and reconnect to the OVC, as required.
 ## PARAMETERS
 
 ### -OVC
-The Fully Qualified Domain Name (FQDN) or IP address of any OmniStack Virtual Controller. 
-This is the management IP address of the OVC.
+The Fully Qualified Domain Name (FQDN) or IP address of any OmniStack Virtual Controller (or MVA). 
+This is the management IP address of the OVC / MVA.
 
 ```yaml
 Type: String
@@ -87,7 +87,7 @@ PowerShell cmdlet to create the credential.
 This can optionally be imported from a file in cases where 
 you are invoking non-interactively.
 E.g.
-shutting down the OVC's from a script invoked by UPS software.
+shutting down the OVCs from a script invoked by UPS software.
 
 ```yaml
 Type: PSCredential
@@ -133,3 +133,6 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ## NOTES
 
 ## RELATED LINKS
+
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Connect-SVT.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Connect-SVT.md)
+

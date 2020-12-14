@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -19,18 +19,31 @@ Restore-SVTvm [-RestoreToOriginal] [-BackupId] <String> [<CommonParameters>]
 
 ### NewVm
 ```
-Restore-SVTvm [-VmName] <String> [-DataStoreName] <String> [-BackupId] <String> [<CommonParameters>]
+Restore-SVTvm [[-NewVMname] <String>] [-DataStoreName] <String> [-BackupId] <String> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Restore one or more virtual machines hosted on HPE SimpliVity.
-Use Get-SVTbackup output to pass in the
-backup ID(s) and VmName(s) you'd like to restore.
-You can either specify a destination datastore or restore
-to the local datastore for each specified backup.
-By default, the restore will create a new VM with the
-same/specified name, but with a time stamp appended, or you can specify -RestoreToOriginal switch to 
-overwrite the existing virtual machine.
+Restore one or more virtual machines from backups hosted on HPE SimpliVity storage.
+Use output from the 
+Get-SVTbackup command to pass in the backup(s) you want to restore.
+By default, a new VM is created for each 
+backup passed in.
+The new virtual machines are named after the original VM name with a timestamp suffix to make
+them unique.
+Alternatively, you can specify the -RestoreToOriginal switch to restore to the original virtual 
+machines.
+This action will overwrite the existing virtual machines, recovering to the state of the backup used.
+
+However, if -NewVMname is specified, you can only pass in one backup object.
+The first backup passed in will 
+be restored with the specified VMname, but subsequent restores will not be attempted and an error will be
+displayed.
+In addition, if you specify a new VM name that this is already in use by an existing VM, then the 
+restore task will fail with a duplicate name error.
+
+By default the datastore used by the original VMs are used for each restore.
+If -DatastoreName is specified, 
+the restored VMs will be located on the specified datastore.
 
 BackupId is the only unique identifier for backup objects (e.g.
 multiple backups can have the same name).
@@ -45,20 +58,41 @@ identify the backups you want to target and then pass the output to this command
 Get-SVTbackup -BackupName 2019-05-09T22:00:00+10:00 | Restore-SVTvm -RestoreToOriginal
 ```
 
-Restores the virtual machine(s) in the specified backup to the original VM name(s)
+Restores the virtual machine(s) in the specified backup to the original virtual machine(s)
 
 ### EXAMPLE 2
 ```
-Get-SVTbackup -VmName MyVm | Select-Object -Last 1 | Restore-SVTvm
+Get-SVTbackup -VmName MyVm -Limit 1 | Restore-SVTvm
 ```
 
-Restores the most recent backup of specified virtual machine, giving it the name of the original VM with a 
-data stamp appended
+Restores the most recent backup of specified virtual machine, giving it a new name comprising of the name of 
+the original VM with a date stamp appended to ensure uniqueness
+
+### EXAMPLE 3
+```
+Get-SVTbackup -VmName MyVm -Limit 1 | Restore-SVTvm -NewVMname MyOtherVM
+```
+
+Restores the most recent backup of specified virtual machine, giving it the specified name.
+NOTE: this command
+will only work for the first backup passed in.
+Subsequent restores are not attempted and an error is displayed.
+
+### EXAMPLE 4
+```
+$LatestBackup = Get-SVTvm -VMname VM1,VM2,VM3 | Foreach-Object { Get-SVTbackup -VmName $_.VmName -Limit 1 }
+PS> $LatestBackup | Restore-SVTvm -DatastoreName DS2
+```
+
+Restores the most recent backup of each specified virtual machine, creating a new copy of each on the specified 
+datastore.
+The virtual machines will have new names comprising of the name of the original VM with a date 
+stamp appended to ensure uniqueness
 
 ## PARAMETERS
 
 ### -RestoreToOriginal
-Specifies that the existing virtual machine is overwritten
+Specifies that the VM is restored to original location, overwriting the existing virtual machine, if it exists
 
 ```yaml
 Type: SwitchParameter
@@ -72,23 +106,24 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -VmName
-The virtual machine name(s)
+### -NewVMname
+Specify a new name for the virtual machine when restoring one VM only
 
 ```yaml
 Type: String
 Parameter Sets: NewVm
-Aliases: Name
+Aliases: VMname
 
-Required: True
-Position: 1
+Required: False
+Position: 2
 Default value: None
-Accept pipeline input: True (ByPropertyName)
+Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
 ### -DataStoreName
-The destination datastore name
+The destination datastore name.
+If not specified, the original datastore location from each backup is used
 
 ```yaml
 Type: String
@@ -96,7 +131,7 @@ Parameter Sets: NewVm
 Aliases:
 
 Required: True
-Position: 2
+Position: 3
 Default value: None
 Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
@@ -111,7 +146,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: True
-Position: 3
+Position: 5
 Default value: None
 Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False

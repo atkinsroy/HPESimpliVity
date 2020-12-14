@@ -1,14 +1,14 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
 # Get-SVTexternalStore
 
 ## SYNOPSIS
-Displays information on the available external datastores configurated in HPE SimpliVity
+Displays information on the available external datastores configured in HPE SimpliVity
 
 ## SYNTAX
 
@@ -17,9 +17,13 @@ Get-SVTexternalStore [[-ExternalStoreName] <String[]>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Displays external stores that have been registered. Upon creation, external datastores are associated with a specific SimpliVity cluster, but are subsequently available to all clusters in the cluster group to which the specified cluster is a member.
+Displays external stores that have been registered.
+Upon creation, external datastores are associated
+with a specific SimpliVity cluster, but are subsequently available to all clusters in the cluster group
+to which the specified cluster is a member.
 
-External Stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped backups to HPE SimpliVity.
+External Stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped 
+backups to HPE SimpliVity.
 
 ## EXAMPLES
 

@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -18,7 +18,11 @@ New-SVTbackup [-VmName] <String> [[-DestinationName] <String>] [[-BackupName] <S
 ```
 
 ## DESCRIPTION
-Creates a backup of one or more virtual machines hosted on HPE SimpliVity. Either specify the VM names via the VmName parameter or use Get-SVTvm output to pass in the HPE SimpliVity VM objects to backup. Backups are directed to the specified destination cluster or external store, or to the local cluster for each VM if no destination name is specified.
+Creates a backup of one or more virtual machines hosted on HPE SimpliVity.
+Either specify the VM names 
+via the VmName parameter or use Get-SVTvm output to pass in the HPE SimpliVity VM objects to backup. 
+Backups are directed to the specified destination cluster or external store, or to the local cluster 
+for each VM if no destination name is specified.
 
 ## EXAMPLES
 
@@ -34,7 +38,10 @@ Backup the specified VM to the specified SimpliVity cluster, using the default b
 New-SVTbackup MyVm StoreOnce-Data01 -RetentionDay 365 -ConsistencyType DEFAULT
 ```
 
-Backup the specified VM to the specified external datastore, using the default backup name and retain the backup for 1 year. A consistency type of DEFAULT creates a VMware snapshot to quiesce the disk prior to taking the backup
+Backup the specified VM to the specified external datastore, using the default backup name and retain the
+backup for 1 year.
+A consistency type of DEFAULT creates a VMware snapshot to quiesce the disk prior to 
+taking the backup
 
 ### EXAMPLE 3
 ```
@@ -70,7 +77,10 @@ Accept wildcard characters: False
 ```
 
 ### -DestinationName
-The destination cluster name or external store name. If nothing is specified, the virtual machine(s) is/are backed up locally. If there is a cluster with the same name as an external store, the cluster wins.
+The destination cluster name or external store name.
+If nothing is specified, the virtual machine(s) 
+is/are backed up locally.
+If there is a cluster with the same name as an external store, the cluster wins.
 
 ```yaml
 Type: String

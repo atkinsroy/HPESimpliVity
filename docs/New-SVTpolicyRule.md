@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -41,7 +41,7 @@ New-SVTpolicyRule [-PolicyName] <String> [-LastDay] [-DestinationName <String>] 
 ```
 
 ## DESCRIPTION
-Create backup policies within an existing HPE Simplivity backup policy.
+Create backup policies within an existing HPE SimpliVity backup policy.
 Optionally,
 You can replace all the existing policy rules with the new policy rule.
 

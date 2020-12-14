@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -26,7 +26,8 @@ Calculates the throughput between each pair of omnistack_clusters in the federat
 Get-SVTthroughput
 ```
 
-Displays the throughput information for the first cluster in the Federation, (alphabetically, by name)
+Displays the throughput information for the first cluster in the Federation, (alphabetically,
+by name)
 
 ### EXAMPLE 2
 ```

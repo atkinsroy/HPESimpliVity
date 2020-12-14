@@ -1,14 +1,14 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Copy-SVTbackup.md
 schema: 2.0.0
 ---
 
 # Copy-SVTbackup
 
 ## SYNOPSIS
-Copy HPE SimpliVity backups to another cluster or an external store
+Copy HPE SimpliVity backups to another cluster or to an external store
 
 ## SYNTAX
 
@@ -19,15 +19,17 @@ Copy-SVTbackup [-DestinationName] <String> [-BackupId] <String> [<CommonParamete
 ## DESCRIPTION
 Copy HPE SimpliVity backups between SimpliVity clusters and backups to and from external stores.
 
-Note, backups currently on external stores can only be copied to the cluster they were backed 
+Note that currently backups on external stores can only be copied to the cluster they were backed 
 up from.
-A backup on an external store cannot be copied to another external store.
+In addition, a backup on an external store cannot be copied to another external store. 
 
-If you try to copy a backup to a destination where is already exists, the task will fail with a "Duplicate
+If you try to copy a backup to a destination where it already exists, the task will fail with a "Duplicate
 name exists" message. 
 
-BackupId is the only unique identifier for backup objects (e.g. multiple backups can have the same name). 
-This makes using this command a little cumbersome by itself. However, you can use Get-SVTBackup to 
+BackupId is the only unique identifier for backup objects (i.e.
+backups for each VM have the same name). 
+This makes using this command a little cumbersome by itself.
+However, you can use Get-SVTBackup to 
 identify the backups you want to target and then pass the output to this command.
 
 ## EXAMPLES
@@ -102,3 +104,6 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ## NOTES
 
 ## RELATED LINKS
+
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Copy-SVTbackup.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Copy-SVTbackup.md)
+

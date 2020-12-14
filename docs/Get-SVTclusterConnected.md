@@ -1,14 +1,14 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTclusterConnected.md
 schema: 2.0.0
 ---
 
 # Get-SVTclusterConnected
 
 ## SYNOPSIS
-Displays information about other HPE SimpliVity clusters
+Displays information about the connected HPE SimpliVity clusters in a Federation
 
 ## SYNTAX
 
@@ -38,7 +38,7 @@ Displays information about the first cluster in the federation (by cluster name,
 ## PARAMETERS
 
 ### -ClusterName
-Specify a 'source' cluster name to display other clusters directly connected to it
+Specify a 'source' cluster name to display information about the SimpliVity clusters directly connected to it
 
 If no cluster is specified, the first cluster in the Federation is used (alphabetically)
 
@@ -66,3 +66,6 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ## NOTES
 
 ## RELATED LINKS
+
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTclusterConnected.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTclusterConnected.md)
+

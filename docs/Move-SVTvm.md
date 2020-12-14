@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -17,14 +17,25 @@ Move-SVTvm [-VmName] <String> [-DataStoreName] <String> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Relocates the specified virtual machine(s) to a different datastore in the federation. The datastore can be in the same or a different datacenter.
-
+Relocates the specified virtual machine(s) to a different datastore in the federation.
+The datastore can be
+in the same or a different datacenter.
 Consider the following when moving a virtual machine:
-* You must power off the OS guest before moving, otherwise the operation fails
-* In its new location, make sure the moved VM(s) boots up after the local OVC and shuts down before it
-* Any pre-move backups (local or remote) stay associated with the VM(s) after it/they moves. You can use these backups to restore the moved VM(s).
-* HPE OmniStack only supports one move operation per VM at a time. You must wait for the task to complete before attempting to move the same VM again
-* If moving VM(s) out of the current cluster, DRS rules (created by the Intelligent Workload Optimizer) will vMotion the moved VM(s) to the destination
+1.
+You must power off the OS guest before moving, otherwise the operation fails
+2.
+In its new location, make sure the moved VM(s) boots up after the local OVC and shuts down before it
+3.
+Any pre-move backups (local or remote) stay associated with the VM(s) after it/they moves.
+You can 
+   use these backups to restore the moved VM(s).
+4.
+HPE OmniStack only supports one move operation per VM at a time.
+You must wait for the task to 
+   complete before attempting to move the same VM again
+5.
+If moving VM(s) out of the current cluster, DRS rules (created by the Intelligent Workload Optimizer) 
+   will vMotion the moved VM(s) to the destination
 
 ## EXAMPLES
 

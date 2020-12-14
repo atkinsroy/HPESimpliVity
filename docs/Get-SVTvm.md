@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -43,7 +43,10 @@ Get-SVTvm [-HostName <String>] [-State <String[]>] [-Limit <Int32>] [<CommonPara
 ```
 
 ## DESCRIPTION
-Display information about virtual machines running in the HPE SimpliVity Federation. Accepts parameters to limit the objects returned. Also accepts output from Get-SVThost as input.
+Display information about virtual machines running in the HPE SimpliVity Federation.
+Accepts
+parameters to limit the objects returned.
+Also accepts output from Get-SVThost as input.
 
 Verbose is automatically turned on to show more information about what this command is doing.
 
@@ -63,9 +66,11 @@ PS C:\> Get-SVTvm -Name Server2016-01
 PS C:\> Get-SVTvm Server2016-01
 ```
 
-All three commands perform the same action - show information about the specified virtual machine(s) with state "ALIVE", which is the default state
+All three commands perform the same action - show information about the specified virtual machine(s) with 
+state "ALIVE", which is the default state
 
-The first command uses the parameter name; the second uses an alias for VmName; the third uses positional parameter, which accepts a VM name.
+The first command uses the parameter name; the second uses an alias for VmName; the third uses positional
+parameter, which accepts a VM name.
 
 ### EXAMPLE 3
 ```

@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -26,7 +26,9 @@ Get the REST API version and SVTFS version of the HPE SimpliVity environment
 Get-SVTversion
 ```
 
-Shows version information for the REST API and SVTFS. It also shows whether you are connecting to an Omnistack Virtual Appliance (OVA) or a Managed Virtual Appliance (MVA).
+Shows version information for the REST API and SVTFS.
+It also shows whether you are
+connecting to an Omnistack Virtual Appliance (OVA) or a Managed Virtual Appliance (MVA).
 
 ## PARAMETERS
 

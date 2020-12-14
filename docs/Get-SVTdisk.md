@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version:
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -17,7 +17,10 @@ Get-SVTdisk [[-HostName] <String[]>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Shows physical disk information for the specified host(s). This includes the installed storage kit, which is not provided by the API, but it derived from the host model, the number of disks and the disk capacities.
+Shows physical disk information for the specified host(s).
+This includes the
+installed storage kit, which is not provided by the API, but it derived from
+the host model, the number of disks and the disk capacities.
 
 ## EXAMPLES
 
@@ -26,28 +29,28 @@ Shows physical disk information for the specified host(s). This includes the ins
 Get-SVTdisk
 ```
 
-Shows physical disk information for all SimpliVity hosts in the federation
+Shows physical disk information for all SimpliVity hosts in the federation.
 
 ### EXAMPLE 2
 ```
 Get-SVTdisk -HostName Host01
 ```
 
-Shows physical disk information for the specified SimpliVity host
+Shows physical disk information for the specified SimpliVity host.
 
 ### EXAMPLE 3
 ```
 Get-SVTdisk -HostName Host01 | Select-Object -First 1 | Format-List
 ```
 
-Show all of the available information about the first disk on the specified host
+Show all of the available information about the first disk on the specified host.
 
 ### EXAMPLE 4
 ```
 Get-SVThost -Cluster PROD | Get-SVTdisk
 ```
 
-Shows physical disk information for all hosts in the specified cluster
+Shows physical disk information for all hosts in the specified cluster.
 
 ### EXAMPLE 5
 ```
