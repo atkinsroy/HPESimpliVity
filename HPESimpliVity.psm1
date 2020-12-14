@@ -216,15 +216,15 @@ function Get-SVTdateRange {
 
         Write-Verbose "Date and time specified, showing backups with this explicit creation date/time"
         $StartDate = Get-Date -Date "$Date"
-        $EndDate = $StartDate
+        $BothDate = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
 
         [PSCustomObject] @{
-            After  = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
-            Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
+            After  = $BothDate
+            Before = $BothDate
         }
     }
     catch {
-        $Message = "Invalid data specified. The date must be in the form of '$LocalFull'" 
+        $Message = "Invalid data specified. The date or date/time must be in the form of '$LocalFull'" 
         throw $Message
     }
 }
@@ -264,7 +264,7 @@ Function Get-SVTbackupDestination {
         }
         catch {
             if ($_.Exception.Message -eq 'FoundMultipleDestinationTypes') {
-                throw 'Destinations must be of type cluster or external store, not both'
+                throw 'Backup destinations must be of type cluster or external store, not both'
             }
             else {
                 # Get-SVTcluster must have failed. Try External Store
@@ -289,7 +289,7 @@ Function Get-SVTbackupDestination {
         }
         catch {
             if ($_.Exception.Message -eq 'FoundMultipleDestinationTypes') {
-                throw 'Destinations must be of type cluster or external store, not both'
+                throw 'Backup destinations must be of type cluster or external store, not both'
             }
             else {
                 $DestinationNotFound += $Destination
@@ -304,7 +304,7 @@ Function Get-SVTbackupDestination {
         $ReturnObject | Sort-Object | Select-Object -Unique
     }
     else {
-        throw 'Invalid destination name specified. Enter a valid cluster or external store name.'
+        throw 'Invalid backup destination name specified. Enter a valid cluster or external store name.'
     }
 }
 
