@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.25'
+$HPESimplivityVersion = '2.1.26'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -207,7 +207,7 @@ function Get-SVTdateRange {
         return
     }
     catch { 
-        Write-verbose "Date only not specified, trying date/time"
+        Write-verbose "Date by itself not specified, trying full date and time"
     }
 
     try {
@@ -224,9 +224,34 @@ function Get-SVTdateRange {
         }
     }
     catch {
-        $Message = "Invalid data specified. The date or date/time must be in the form of '$LocalFull'" 
+        $Message = "Invalid date specified. The date or full date and time must be in the form of '$LocalFull'" 
         throw $Message
     }
+}
+
+# Helper function for Get-SVTbackup when the -Sort parameter is specified. The function returns the property name
+# expected by the REST API. The REST API accepts a single property name to sort on. Not all accepted property names
+# are implemented here - only the ones deemed useful.
+function Get-SVTsortString {
+    [CmdletBinding()]
+    param (
+        # Parameter validation is performed by Get-SVTbackup, no need here
+        [Parameter(Mandatory = $true, Position = 0)]
+        [System.String]$Sort
+    )
+
+    $ValidProperty = @{
+        VMname        = 'virtual_machine_name'
+        BackupName    = 'name'
+        BackupSize    = 'size'
+        CreateDate    = 'created_at'
+        ExpiryDate    = 'expiration_time'
+        ClusterName   = 'omnistack_cluster_name'
+        DatastoreName = 'datastore_name'
+    }
+
+    # return the value that matches the specified sort string
+    $ValidProperty.$Sort
 }
 
 # Helper function used by Get/New/Copy-SVTbackup and New/Update-SVTpolicyRule to return the backup 
@@ -311,6 +336,7 @@ Function Get-SVTbackupDestination {
 # Helper function for Invoke-RestMethod to handle all REST requests and errors in one place. 
 # This cmdlet either returns a HPE.SimpliVity.Task object if the REST API response is a task object, 
 # or otherwise the raw JSON for the calling function to deal with.
+
 function Invoke-SVTrestMethod {
     [CmdletBinding()]
     param (
@@ -1458,6 +1484,12 @@ function Get-SVTimpactReport {
 .PARAMETER Hour
     Display backups created within the specified last number of hours. By default, backups from the last 24 hours 
     are shown. This parameter is ignored when any other date related parameter is also specified.
+.PARAMETER Sort
+    Display backups sorted by a specified property. By default, the sort order is descending, based on backup 
+    creation date (CreateDate). Other accepted properties are VMname, BackupName, BackupSize, ExpiryDate, 
+    ClusterName and DatastoreName.
+.PARAMETER Ascending
+    Display backups sorted by a specified property in ascending order.
 .PARAMETER All
     Bypass the default 500 record limit (and the upper maximum limit of 3000 records). When this parameter is 
     specified, multiple calls are made to the SimpliVity API using an offset, until all backups are retrieved. 
@@ -1468,94 +1500,101 @@ function Get-SVTimpactReport {
     useful to use with -Verbose, to quickly show how many backups would be returned with a higher limit. Limit 
     is ignored if -All is specified.
 .EXAMPLE
-    PS C:\> Get-SVTbackup
+    PS C:\>Get-SVTbackup
 
     Show the last 24 hours of backups from the SimpliVity Federation.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -Date 23/04/2020
-    PS C:\> Get-SVTBackup -Date '23/04/2020 10:00:00 AM' -VmName Server2016-04,Server2016-08
+    PS C:\>Get-SVTbackup -Date 23/04/2020
+    PS C:\>Get-SVTBackup -Date '23/04/2020 10:00:00 AM' -VmName Server2016-04,Server2016-08
 
     The first command shows all backups from the specified date (24 hour period), up to the default limit of 500 
     backups. The second command show the specific backup from the specified date and time (using local date/time 
     format) for the specified virtual machines.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -CreatedAfter "04/04/2020 10:00 AM" -CreatedBefore "04/04/2020 02:00 PM"
+    PS C:\>Get-SVTbackup -CreatedAfter "04/04/2020 10:00 AM" -CreatedBefore "04/04/2020 02:00 PM"
 
     Show backups created between the specified dates/times. (using local date/time format). Limited to 500 
     backups by default.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -ExpiresAfter "04/04/2020" -ExpiresBefore "05/04/2020" -Limit 100
+    PS C:\>Get-SVTbackup -ExpiresAfter "04/04/2020" -ExpiresBefore "05/04/2020" -Limit 100
 
     Show backups that will expire between the specified dates/times. (using local date/time format). Limited to 
     display up to 100 backups.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -Hour 48 -Limit 1000 | 
+    PS C:\>Get-SVTbackup -Hour 48 -Limit 1000 | 
         Select-Object VmName, DataStoreName, SentMB, UniqueSizeMB | Format-Table -Autosize
 
     Show backups up to 48 hours old and display specific properties. Limited to display up to 1000 backups.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -All
+    PS C:\>Get-SVTbackup -All
 
     Shows all backups with no limit. This command may take a long time to complete because it makes multiple
     calls to the SimpliVity API until all backups are returned. It is recommended to use other parameters with
     the -All parameter to restrict the number of backups returned. (such as -DatastoreName or -VMname)
 .EXAMPLE
-    PS C:\> Get-SVTbackup -DatastoreName DS01 -All
+    PS C:\>Get-SVTbackup -DatastoreName DS01 -All
 
     Shows all backups for the specified Datastore with no upper limit. This command will take a long time 
     to complete.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -VmName Vm1,Vm2 -BackupName 2020-03-28T16:00+10:00 
-    PS C:\> Get-SVTbackup -VmName Vm1,Vm2,Vm3 -Hour 2
+    PS C:\>Get-SVTbackup -VmName Vm1,Vm2 -BackupName 2020-03-28T16:00+10:00 
+    PS C:\>Get-SVTbackup -VmName Vm1,Vm2,Vm3 -Hour 2
 
     The first command shows backups for the specified VMs with the specified backup name.
     The second command shows the backups taken within the last 2 hours for each specified VM.
     The use of multiple, comma separated values works when connected to a Managed Virtual Appliance only. 
 .EXAMPLE
-    PS C:\> Get-SVTbackup -VMname VM1 -BackupName '2019-04-26T16:00:00+10:00'
+    PS C:\>Get-SVTbackup -VMname VM1 -BackupName '2019-04-26T16:00:00+10:00'
 
     Display the backup for the specified virtual machine in the specified backup
 .EXAMPLE
-    PS C:\> Get-SVTbackup -VMname VM1 -BackupName '2019-05-05T00:00:00-04:00' -DestinationName SVTcluster
+    PS C:\>Get-SVTbackup -VMname VM1 -BackupName '2019-05-05T00:00:00-04:00' -DestinationName SVTcluster
 
     If you have backup policies with more than one rule, further refine the filter by specifying the destination
     SimpliVity cluster or external store.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -Datastore DS01,DS02 -Limit 1000
+    PS C:\>Get-SVTbackup -Datastore DS01,DS02 -Limit 1000
 
     Shows all backups on the specified SimpliVity datastores, up to the specified limit
 .EXAMPLE
-    PS C:\> Get-SVTbackup -ClusterName cluster1 -Limit 100
-    PS C:\> Get-SVTbackup -ClusterName cluster1 -Limit 1 -Verbose
+    PS C:\>Get-SVTbackup -ClusterName cluster1 -Limit 100
+    PS C:\>Get-SVTbackup -ClusterName cluster1 -Limit 1 -Verbose
 
     The first command shows the most recent 100 backups for all VMs located on the specified cluster.
     The second command shows a quick way to determine the number of backups on a cluster without showing them
     all. The verbose message will always display the number of backups that meet the command criteria.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -DestinationName cluster1
+    PS C:\>Get-SVTbackup -DestinationName cluster1
 
     Show backups located on the specified cluster or external store.
 
     You can specify multiple destinations, but they must all be of the same type. i.e. SimpliVity clusters
     or external stores.
 .EXAMPLE
-    PS C:\> Get-SVTbackup -DestinationName StoreOnce-Data02,StoreOnce-Data03 -ExpireAfter 31/12/2020
+    PS C:\>Get-SVTbackup -DestinationName StoreOnce-Data02,StoreOnce-Data03 -ExpireAfter 31/12/2020
 
     Shows backups on the specified external datastores that will expire after the specified date (using local 
     date/time format)
 .EXAMPLE
-    Get-SVTbackup -BackupState FAILED -Limit 20
+    PS C:\>Get-SVTbackup -BackupState FAILED -Limit 20
 
     Show a list of failed backups, limited to 20 backups.
 .EXAMPLE
-    Get-SVTbackup -Datastore DS01 -BackupType MANUAL
+    PS C:\>Get-SVTbackup -Datastore DS01 -BackupType MANUAL
 
     Show a list of backups that were manually taken for VMs residing on the specified datastore.
 .EXAMPLE
-    PS C:\> Get-SVTvm -ClusterName cluster1 | Foreach-Object { Get-SVTbackup -VmName $_.VmName -Limit 1 }
-    PS C:\> Get-SVTvm -Name Vm1,Vm2,Vm3 | Foreach-Object { Get-SVTbackup -VmName $_.VmName -Limit 1 }
+    PS C:\>Get-SVTvm -ClusterName cluster1 | Foreach-Object { Get-SVTbackup -VmName $_.VmName -Limit 1 }
+    PS C:\>Get-SVTvm -Name Vm1,Vm2,Vm3 | Foreach-Object { Get-SVTbackup -VmName $_.VmName -Limit 1 }
 
     Display the latest backup for each specified VM
+.EXAMPLE
+    PS C:\>Get-SVTbackup -Sort BackupSize
+    PS C:\>Get-SVTbackup -Sort ExpiryDate -Ascending
+
+    Display backups sorted by a specified property. By default, the sort order is descending but this can be
+    overiden using the -Ascending switch. Accepted properties are VMname, BackupName, BackupSize, CreateDate,
+    ExpiryDate, ClusterName and DatastoreName. The default sort property is CreateDate.
 .INPUTS
     System.String
 .OUTPUTS
@@ -1649,6 +1688,17 @@ function Get-SVTbackup {
         [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
         [ValidateRange(1, 175400)]   # up to 20 years
         [System.String]$Hour,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [ValidateSet('VMname', 'BackupName', 'BackupSize', 'CreateDate', 'ExpiryDate', 'ClusterName', 'DatastoreName')]
+        [System.String]$Sort = 'CreateDate',
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByDatastoreName')]
+        [switch]$Ascending,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ByVmName')]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByClusterName')]
@@ -1766,8 +1816,16 @@ function Get-SVTbackup {
         $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
         $Uri += "&expires_before=$Before"
     }
+
+    $SortProperty = Get-SVTsortString -Sort $Sort
+    $Uri += "&sort=$SortProperty"
+    if ($PSBoundParameters.ContainsKey('Ascending')) {
+        # by default, backups are displayed in descending order. This can be overridden using the -Ascending switch 
+        $Uri += "&order=ascending"
+    }
+
     if ($PSBoundParameters.ContainsKey('Hour')) {
-        # Ignore -Hour if any other date related parameter is specified
+        # -Hour specified but ignore if any other date related parameter is specified
         $ParamList = @('Date', 'CreatedAfter', 'CreatedBefore', 'ExpiresAfter', 'ExpiresBefore')
         $ParamFound = @()
         foreach ($Param in $ParamList) {
@@ -1776,7 +1834,7 @@ function Get-SVTbackup {
             }
         }
         if ($ParamFound) {
-            $Message = "$($ParamFound -join ',') specified, ignoring Hour parameter"
+            $Message = "$($ParamFound -join ',') specified, ignoring -Hour parameter"
             Write-Verbose $Message
         }
         else {
@@ -1792,7 +1850,7 @@ function Get-SVTbackup {
     else {
         # -Hour not specified. Show the last 24 hours by default, but only when no other parameters are specified.
         # This approach is safer than counting passed in parameters - the user may specify -Verbose or other 
-        # common parameters, which would affect the behavior. -Limit is allowed.
+        # common parameters, which would affect the behavior. -Limit, -Sort and -Ascending are allowed.
         $ParamList = @('VmName', 'ClusterName', 'DatastoreName', 'BackupId', 'DestinationName', 'BackupName', 
             'BackupState', 'BackupType', 'MinSizeMB', 'MaxSizeMB', 'All', 'Date', 'CreatedAfter', 
             'CreatedBefore', 'ExpiresAfter', 'ExpiresBefore')
@@ -2054,7 +2112,7 @@ function New-SVTbackup {
                 [array]$AllTask += $Task
             }
             catch {
-                Write-Warning "$($_.Exception.Message), backup failed for VM $VM" 
+                Write-Warning "$($_.Exception.Message) Backup failed for VM $VM" 
             }
         } #end foreach
     } #end process

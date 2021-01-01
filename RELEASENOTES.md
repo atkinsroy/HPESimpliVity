@@ -1,3 +1,7 @@
+# Version 2.1.26
+
+* Refactored the Get-SVTbackup command. The -Sort parameter has been added to support displaying backups sorted by a specific property. Accepted properties are VMname, BackupName, BackupSize, CreateDate, ExpiryDate, ClusterName and DatastoreName. The default sort property is now CreateDate, which is more useful than the REST API default of backup name. In addition a new -Ascending parameter has been added to reverse the sort order.
+
 # Version 2.1.25
 
 * Refactored the Restore-SVTvm command. Formally, this command supported restoring multiple VMs at once, based on the backup objects passed in from Get-SVTbackup. Restored VMs retain the original VM names with a timestamp suffix to ensure naming uniqueness. The command now supports restoring a single backup with a specified VM name. This will only work for the first backup object passed into the command. Subsequent restores will not be attempted and an error will be displayed. For example:
@@ -57,7 +61,7 @@ Metrics | Capacity
 # Version 2.1.4
 
 * Added support for the new features in HPE SimpliVity V4.0.1
-* Added two new commands; Set-SVTexternalStore and Remove-SVTexternalStore. The first command allows you to change the credentials used by the HPE StoreOnce appliance for the specified external store. The second command allows you to unregister the specified external store
+* Added two new commands; Set-SVTexternalStore and Remove-SVTexternalStore. The first command allows you to change the credentials used by the HPE StoreOnce appliance for the specified external store. The second command allows you to un-register the specified external store
 * Added a new parameter -RetentionHour to New-SVTpolicyRule and Update-SVTpolicyRule. You can now specify retention by day or by hour; if both are specified, hour takes precedence
 * Added RetentionHour and RetentionMinute properties to Get-SVTpolicy
 * Added AvailabilityZoneEffective and AvailabilityZonePlanned properties to Get-SVThost
@@ -84,7 +88,7 @@ Metrics | Capacity
 * Tested the HPEsimpliVity module with the new Management Virtual Appliance in V4.0.0
 * Refactored the cmdlets that deal with external stores. Cmdlets now support a single parameter called -DestinationName rather than -ClusterName and -ExternalStoreName. This is a breaking change
 * Added default parameters to New-SVTclone and Get-SVTclusterConnected cmdlets
-* Refactored Get-SVTbackup to improve performance, specfically with the -Hour parameter
+* Refactored Get-SVTbackup to improve performance, specifically with the -Hour parameter
 * Added additional new attributes provided by API to some cmdlets
 * Bug fixes
 
@@ -93,11 +97,11 @@ Metrics | Capacity
 * Added support for new HPE SimpliVity V4.0.0 features. Specifically, the ability to create new and show external stores with two new cmdlets (New-SVTexternalStore and Get-SVTexternalStore, respectively). In addition, the following cmdlets have been updated to support external stores:
     * Get-SVTbackup - displays 'DestinationName' showing either a SimpliVity cluster or an external store
     * New-SVTbackup - has a new parameter -ExternalStoreName to specify the destination for a new backup
-    * Copy-SVTbackup - has a new parameter -ExternalStoreName to specfiy the destination for an existing backup
+    * Copy-SVTbackup - has a new parameter -ExternalStoreName to specify the destination for an existing backup
     * New-SVTpolicyRule - has a new parameter -ExternalStoreName to specify the destination for a new policy rule
     * Update-SvtPolicyRule - has a new parameter -ExternalStoreName to update an existing policy rule
 
-**Note:** Remove-SVTbackup and Restore-SVTvm work without change with backups stored on external stores, although restoring with the -RestoreToOrignal switch enabled is currently not supported with external store backups.
+**Note:** Remove-SVTbackup and Restore-SVTvm work without change with backups stored on external stores, although restoring with the -RestoreToOriginal switch enabled is currently not supported with external store backups.
 
 **Note:** The new HPE StoreOnce Catalyst datastore must be added via the StoreOnce management console with appropriate permissions prior to registering it as a SimpliVity external store
 * Added support for more meaningful run time errors, by determining the error message embedded in the body of the response from the API and passing this through in the cmdlets
@@ -145,7 +149,7 @@ Similarly, Get-SVTcapacity also has a new -Chart switch. Use the following comma
 * Renamed Stop-SVTovc to Start-SVTshutdown
 * Renamed Undo-SVTovcShutdown to Stop-SVTshutdown and implemented this cmdlet 
 * Renamed Get-SVTovcShutdownStatus to Get-SVTshutdownStatus
-* Minor display format changes for some cmdlets to accomodate long hostnames
+* Minor display format changes for some cmdlets to accomidate long hostnames
 * Verbose automatically turned on for some commands
 
 # Version 1.1.3
