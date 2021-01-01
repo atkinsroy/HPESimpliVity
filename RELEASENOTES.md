@@ -6,7 +6,7 @@
 
 * Refactored the Restore-SVTvm command. Formally, this command supported restoring multiple VMs at once, based on the backup objects passed in from Get-SVTbackup. Restored VMs retain the original VM names with a timestamp suffix to ensure naming uniqueness. The command now supports restoring a single backup with a specified VM name. This will only work for the first backup object passed into the command. Subsequent restores will not be attempted and an error will be displayed. For example:
 
-````powershell
+````
     PS C:\> Get-SVTbackup -VM VM1 -Limit 1 | Restore-SVTvm -NewVMname NewVM1
 ````
 This command will restore the last backup of VM1 to a new VM called NewVM1. By default, this VM will be located on the same datastore as the original, but can be created on an alternative datastore using -DatastoreName.
@@ -15,7 +15,7 @@ This command will restore the last backup of VM1 to a new VM called NewVM1. By d
 * Refactored the Get-SVTbackup command. The -Date parameter formally accepted just a date and showed the whole 24 hour range of backups. Now, the -Date parameter can also accept a date and time specified in the locale for your system.
 For example:
 
-````powershell
+````
     PS C:\> Get-SVTbackup -VM VM1,VM3 -Date '12/12/2020 10:00:00 AM'
 ````
 This command will show the backup with the specified creation date for the two virtual machines.
@@ -25,7 +25,7 @@ This command will show the backup with the specified creation date for the two v
 * Added 'RemainingLife' property to Get-SVTdisk. This shows up as a percentage.
 * Refactored the Get-SVTbackup command. Added the ability to use the -ExpiresBefore and -ExpiresAfter parameters along with the -Date parameter. For Example:
 
-````powershell
+````
     PS C:\> Get-SVTbackup -Date 18/07/2020 -ExpiresAfter '22/08/2020 10:00:00 PM'
 ````
 
@@ -71,7 +71,7 @@ Metrics | Capacity
 * Removed -ApplicationConsistent switch from the policy and backup commands. Application consistency is assumed to be false if ConsistencyType is set to NONE. For all other consistency types (DEFAULT and VSS), application consistency is true. This removes confusion, with multiple parameters doing similar things
 * Added multi-value support for most "Get" commands, where supported by the API. For example: 
 
-````powershell
+````
     PS C:\> Get-SVTvm -ClusterName cluster1,cluster2 -State ALIVE,REMOVED,DELETED
     PS C:\> Get-SVTbackup -VmName Vm1,Vm2,Vm3
     PS C:\> Get-SVThost Host1,Host2,Host3
@@ -118,7 +118,7 @@ Metrics | Capacity
 * Added the Get-SVTdisk command. The information here was mostly already available from Get-SVThardware, but this command makes it much more readily available. It includes a list of physical disks with health, serial number, firmware and capacity. In addition, the installed storage kit is shown, derived from the host model, as well as number and capacity of the disks.
 * Updates to the Start-SVTshutdown command. This command now detects if the target virtual controller is the last one operational in the cluster and correctly handles shutting it down. It also automatically reconnects to another operational virtual controller in the federation, if one exists, following the shutdown of the target virtual controller. Finally, the command waits for the virtual controller to completely shutdown (allowing the storage IP to failover), which ensures proper sequential shutdown. This allows you to pass in multiple hosts at once. For example, to shutdown an entire cluster and be prompted before doing so, enter the following:
 
-```powershell
+```
     PS C:\> Get-SVThost -cluster <target cluster> | Foreach-Object {Start-SVTshutdown -HostName $_.Hostname -Confirm:$True}
 ```
   In addition, the  command now has -Confirm and -Whatif parameters
@@ -132,7 +132,7 @@ Metrics | Capacity
 
 * Added -Chart parameter to the Get-SVTmetric and Get-SVTcapacity cmdlets. For example:
 
-```powershell
+```
     PS C:\> Get-SVThost | Select-Object -First 1 | Get-SVTmetric -Hour 48 -Chart
 ```
 
@@ -140,7 +140,7 @@ This will create a single chart for the first host in the Federation using the s
 
 Similarly, Get-SVTcapacity also has a new -Chart switch. Use the following command to create a chart for each host in the federation.
 
-```powershell
+```
     PS C:\> Get-SVTHost server01 | Get-SVTcapacity -Chart
 ```
 
