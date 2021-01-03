@@ -1,6 +1,8 @@
-# Version 2.1.26
+# Version 2.1.27
 
-* Refactored the Get-SVTbackup command. The -Sort parameter has been added to support displaying backups sorted by a specific property. Accepted properties are VMname, BackupName, BackupSize, CreateDate, ExpiryDate, ClusterName and DatastoreName. The default sort property is now CreateDate, which is more useful than the REST API default of backup name. In addition a new -Ascending parameter has been added to reverse the sort order.
+* Refactored the Get-SVTbackup command. The -Sort parameter has been added to support displaying backups sorted by a single, specified property. Accepted properties are VMname, BackupName, BackupSize, CreateDate, ExpiryDate, ClusterName and DatastoreName. The default sort property is now CreateDate, which is more useful than the REST API default of backup name. In addition a new -Ascending parameter has been added to reverse the sort order, if required.
+
+* Fixed a bug with how backup names are displayed when using PowerShell 7.0 (Core). Policy based backup names are now correctly displayed as UTC date/time strings rather than a locally converted date object. NOTE: a future version of PowerShell Core will apparently rectify or allow suppression of automatic UTC date conversions.
 
 # Version 2.1.25
 
