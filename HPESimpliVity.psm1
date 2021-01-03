@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.26'
+$HPESimplivityVersion = '2.1.27'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -1927,7 +1927,22 @@ function Get-SVTbackup {
                 $Destination = $_.external_store_name
             }
 
-            # Converting numeric strings to numbers so that sorting is possible. Must use locale to format correctly
+            if ($PSEdition -eq 'Core') {
+                # When converting from json, PowerShell Core 'conveniently' converts UTC dates into local date 
+                # objects. This is not what we want for the backup name, so convert the date object back to a UTC
+                # string, as per output from the REST API. This is not quite ISO 8601 (sortable time) format, as
+                # displayed with Get-Date -format s, nor RF1123 as displayed by Get-Date -Format r. 
+                # NOTE: a future version of PowerShell Core will allow suppression of this automatic conversion of 
+                # UTC dates.
+                $BackupNameString = Get-Date -Format 'yyyy-MM-ddThh:mm:sszzz' -Date $_.name
+            }
+            else {
+                # Windows PowerShell doesn't mess with UTC strings
+                $BackupNameString = $_.name
+            }
+
+            # Converting numeric strings to numbers so that subsequent sorting is possible. Must use locale to 
+            # format correctly
             [PSCustomObject]@{
                 PSTypeName        = 'HPE.SimpliVity.Backup'
                 VmName            = $_.virtual_machine_name
@@ -1953,7 +1968,7 @@ function Get-SVTbackup {
                 SizeGB            = [single]::Parse('{0:n2}' -f ($_.size / 1gb), $LocalCulture)
                 SizeMB            = [single]::Parse('{0:n0}' -f ($_.size / 1mb), $LocalCulture)
                 VmState           = $_.virtual_machine_state
-                BackupName        = $_.name
+                BackupName        = $BackupNameString
                 DatastoreId       = $_.datastore_id
                 DataCenterName    = $_.compute_cluster_parent_name
                 HypervisorType    = $_.hypervisor_type
