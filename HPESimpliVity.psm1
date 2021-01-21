@@ -1727,11 +1727,13 @@ function Get-SVTbackup {
     $Uri = "$($global:SVTconnection.OVC)/api/backups?case=sensitive"
 
     if ($PSBoundParameters.ContainsKey('All')) {
-        $Message = 'This command may take a long time to complete. Consider using other parameters ' +
-        'with -All to limit output'
-        Write-Warning $Message
         $Limit = 3000
         $Uri += "&limit=$Limit"
+        if ($PSBoundParameters.Count -le 1) {
+            $Message = 'This command may take a long time to complete. Consider using other parameters ' +
+            'with -All to limit the output'
+            Write-Warning $Message
+        }
     }
     else {
         # Using default (500) or some user specified limit (1-3000)
@@ -1898,25 +1900,8 @@ function Get-SVTbackup {
             }
         }
 
-        if (-not $Response.Backups.Name) {
-            if ($PSBoundParameters.ContainsKey('VmName')) {
-                throw "Backups for specified virtual machine(s) $VmName not found"
-            }
-            if ($PSBoundParameters.ContainsKey('ClusterName')) {
-                throw "Backups with specified cluster $ClusterName not found"
-            }
-            if ($PSBoundParameters.ContainsKey('DatastoreName')) {
-                throw "Backups with specified datastore $DatastoreName not found"
-            }
-            if ($PSBoundParameters.ContainsKey('DestinationName')) {
-                throw "Backups with specified destination $DestinationName not found"
-            }
-            if ($PSBoundParameters.ContainsKey('BackupName')) {
-                throw "Specified backup name(s) $BackupName* not found"
-            }
-            if ($PSBoundParameters.ContainsKey('BackupId')) {
-                throw "Specified backup ID(s) $BackupId not found"
-            }
+        if (-not $Response.Backups.Name -and $PSBoundParameters.Count -gt 0) {
+            throw "No matching backups found using the specified parameter(s)" 
         }
 
         $Response.backups | ForEach-Object {
@@ -1934,7 +1919,7 @@ function Get-SVTbackup {
                 # displayed with Get-Date -format s, nor RF1123 as displayed by Get-Date -Format r. 
                 # NOTE: a future version of PowerShell Core will allow suppression of this automatic conversion of 
                 # UTC dates.
-                $BackupNameString = Get-Date -Format 'yyyy-MM-ddThh:mm:sszzz' -Date $_.name
+                $BackupNameString = Get-Date -Date $_.name -Format 'yyyy-MM-ddThh:mm:sszzz'
             }
             else {
                 # Windows PowerShell doesn't mess with UTC strings
