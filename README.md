@@ -6,7 +6,7 @@ All cmdlets are written as advanced cmdlets, with comment-based help and the maj
 
 Most "Get" commands display default properties. Use Format-List or Select-Object to show all the properties. For example:
 
-```ps
+```
     PS C:\> Connect-SVT -OVC 192.168.1.11 -Credential $Cred
     PS C:\> Get-SVThost
 
@@ -70,7 +70,7 @@ Set-SVTtimezone
 
 * Install or update the HPESimplivity module from the PowerShell Gallery using one of the following commands:
 
-```ps
+```
     PS C:\> Install-Module -Name HPESimpliVity
     # or
     PS C:\> Update-Module -Name HPESimpliVity
@@ -80,13 +80,13 @@ The module is signed, so it will work with an execution policy set to 'Remote Si
 
 * Restart Powershell to load the module, or type:
 
-```ps
+```
     PS C:\> Import-Module HPESimpliVity -Force
 ```
 
 * After this, the module will automatically load in new PowerShell sessions. Issue the following commands to confirm:
 
-```ps
+```
     PS C:\> Get-Command -Module HPESimpliVity
     PS C:\> Get-Help Connect-SVT
     PS C:\> Get-Help Get-SVTbackup
@@ -94,7 +94,7 @@ The module is signed, so it will work with an execution policy set to 'Remote Si
 
 * Once installed, you're ready to connect to the OmniStack virtual controller or Management Virtual Appliance, as follows:
 
-```ps
+```
     PS C:\> $Cred = Get-Credential -Message 'Enter OVC/MVA Credentials'
     PS C:\> Connect-SVT -OVC <IP or FQDN of an OVC or MVA> -Credential $Cred
     PS C:\> Get-SVThost
@@ -102,13 +102,13 @@ The module is signed, so it will work with an execution policy set to 'Remote Si
 
 * Or, if you need to run commands in batch (non-interactively), save your credentials to a file first:
 
-```ps
+```
     PS C:\> $Cred = Get-Credential -Username 'administrator@vsphere.local' | Export-Clixml .\OVCcred.XML 
 ```
 
 and then in your script, import the credential:
 
-```ps
+```
     PS C:\> $Cred = Import-CLIXML .\OVCcred.XML
     PS C:\> Connect-SVT -OVC <IP or FQDN of an OVC or MVA> -Credential $Cred
     PS C:\> Get-SVThost
@@ -123,7 +123,7 @@ The API has some documented and undocumented issues:
 * OMNI-69918: GET /virtual_machines fails with OutOfMemoryError. The HPE SimpliVity module limits the number of VMs returned to 8000, as per the recommendation
 * OMNI-46361: REST API GET operations for backup objects and sorting filtering constraints. Comma separated lists for filtering backup objects is not supported when connecting to OmniStack Virtual Controllers. Comma separated lists CAN be used when connected to a Management Virtual Appliance. For example, the following commands all work when connected to an MVA:
 
-```ps
+```
     PS C:\> Get-SVTbackup -VmName Vm1,Vm2,Vm3
     PS C:\> Get-SVTbackup -Destination Cluster1,Cluster2
     PS C:\> Get-SVTbackup -Destination StoreOnce-Data01,StoreOnce-Data02
