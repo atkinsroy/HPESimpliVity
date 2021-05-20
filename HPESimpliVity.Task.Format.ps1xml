@@ -28,7 +28,7 @@
                                 <PropertyName>State</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>TaskID</PropertyName>
+                                <PropertyName>TaskId</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>ErrorMessage</PropertyName>

@@ -57,7 +57,7 @@
                                 <PropertyName>BackupName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>VMname</PropertyName>
+                                <PropertyName>VmName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>CreateDate</PropertyName>
@@ -69,7 +69,7 @@
                                 <PropertyName>BackupState</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>DataStoreName</PropertyName>
+                                <PropertyName>DatastoreName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>DestinationName</PropertyName>

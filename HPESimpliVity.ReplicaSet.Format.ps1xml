@@ -38,7 +38,7 @@
                     <TableRowEntry>
                         <TableColumnItems>
                             <TableColumnItem>
-                                <PropertyName>VMname</PropertyName>
+                                <PropertyName>VmName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>State</PropertyName>
