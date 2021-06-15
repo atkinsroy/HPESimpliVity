@@ -1,42 +1,43 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Stop-SVTshutdown
+# Stop-SvtShutdown
 
 ## SYNOPSIS
-Cancel the previous shutdown command for one or more OmniStack Virtual Controllers
+
+Cancel the previous shutdown command for one or more SimpliVity Virtual Appliances
 
 ## SYNTAX
 
-```
-Stop-SVTshutdown [-HostName] <String[]> [<CommonParameters>]
+```PowerShell
+Stop-SvtShutdown [-HostName] <String[]> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Cancels a previously executed shutdown request for one or more OmniStack Virtual Controllers
 
-This RESTAPI call only works if executed on the local OVC.
-So this cmdlet iterates through the specified 
-hosts and connects to each specified host to sequentially shutdown the local OVC.
+Cancels a previously executed shutdown request for one or more SimpliVity Virtual Appliances
 
-Note, once executed, you'll need to reconnect back to a surviving OVC, using Connect-SVT to continue
-using the HPE SimpliVity cmdlets.
+This RESTAPI call only works if executed on the local SVA. So this cmdlet iterates through the specified hosts and connects to each specified host to sequentially shutdown the local SVA.
+
+Note, once executed, you'll need to reconnect back to a surviving SVA, using Connect-Svt to continue using the HPE SimpliVity cmdlets.
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Stop-SVTshutdown -HostName Host01
+
+```PowerShell
+Stop-SvtShutdown -HostName Host01
 ```
 
 ## PARAMETERS
 
 ### -HostName
-Specify the HostName running the OmniStack virtual controller to cancel the shutdown task on
+
+Specify the HostName running the SimpliVity Virtual Appliance to cancel the shutdown task on
 
 ```yaml
 Type: String[]
@@ -51,15 +52,21 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ### HPE.SimpliVity.Host
+
 ## OUTPUTS
 
 ### System.Management.Automation.PSCustomObject
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

@@ -1,31 +1,32 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Resize-SVTdatastore
+# Resize-SvtDatastore
 
 ## SYNOPSIS
+
 Resize a HPE SimpliVity Datastore
 
 ## SYNTAX
 
-```
-Resize-SVTdatastore [-DatastoreName] <String> [-SizeGB] <Int32> [<CommonParameters>]
+```PowerShell
+Resize-SvtDatastore [-DatastoreName] <String> [-SizeGB] <Int32> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Resizes a specified datastore to the specified size in GB.
-The datastore size can be
-between 1GB and 1,048,576 GB (1,024TB).
+
+Resizes a specified datastore to the specified size in GB. The datastore size can be between 1GB and 1,048,576 GB (1,024TB).
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Resize-SVTdatastore -DatastoreName ds01 -SizeGB 1024
+
+```PowerShell
+Resize-SvtDatastore -DatastoreName ds01 -SizeGB 1024
 ```
 
 Resizes the specified datastore to 1TB
@@ -33,6 +34,7 @@ Resizes the specified datastore to 1TB
 ## PARAMETERS
 
 ### -DatastoreName
+
 Apply to specified datastore
 
 ```yaml
@@ -48,6 +50,7 @@ Accept wildcard characters: False
 ```
 
 ### -SizeGB
+
 The new total size of the datastore in GB
 
 ```yaml
@@ -63,14 +66,19 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ## OUTPUTS
 
 ### HPE.SimpliVity.Task
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

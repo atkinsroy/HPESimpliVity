@@ -1,22 +1,24 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Get-SVTdisk
+# Get-SvtDisk
 
 ## SYNOPSIS
+
 Display HPE SimpliVity physical disk information
 
 ## SYNTAX
 
-```
-Get-SVTdisk [[-HostName] <String[]>] [<CommonParameters>]
+```PowerShell
+Get-SvtDisk [[-HostName] <String[]>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
+
 Shows physical disk information for the specified host(s).
 This includes the
 installed storage kit, which is not provided by the API, but it derived from
@@ -25,36 +27,41 @@ the host model, the number of disks and the disk capacities.
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Get-SVTdisk
+
+```PowerShell
+Get-SvtDisk
 ```
 
 Shows physical disk information for all SimpliVity hosts in the federation.
 
 ### EXAMPLE 2
-```
-Get-SVTdisk -HostName Host01
+
+```PowerShell
+Get-SvtDisk -HostName Host01
 ```
 
 Shows physical disk information for the specified SimpliVity host.
 
 ### EXAMPLE 3
-```
-Get-SVTdisk -HostName Host01 | Select-Object -First 1 | Format-List
+
+```PowerShell
+Get-SvtDisk -HostName Host01 | Select-Object -First 1 | Format-List
 ```
 
 Show all of the available information about the first disk on the specified host.
 
 ### EXAMPLE 4
-```
-Get-SVThost -Cluster PROD | Get-SVTdisk
+
+```PowerShell
+Get-SvtHost -Cluster PROD | Get-SvtDisk
 ```
 
 Shows physical disk information for all hosts in the specified cluster.
 
 ### EXAMPLE 5
-```
-Get-SVThost Host1,Host2,Host3
+
+```PowerShell
+Get-SvtHost Host1,Host2,Host3 | Get-SvtDisk
 ```
 
 Shows physical disk information for all hosts in the specified list
@@ -62,6 +69,7 @@ Shows physical disk information for all hosts in the specified list
 ## PARAMETERS
 
 ### -HostName
+
 Show information for the specified host only
 
 ```yaml
@@ -77,15 +85,21 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ### HPE.SimpliVity.Host
+
 ## OUTPUTS
 
-### HPE.SimpliVity.Hardware
+### HPE.SimpliVity.Disk
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

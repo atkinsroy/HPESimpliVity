@@ -1,29 +1,32 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Get-SVTtimezone
+# Get-SvtTimezone
 
 ## SYNOPSIS
+
 Displays the timezones that HPE SimpliVity supports
 
 ## SYNTAX
 
-```
-Get-SVTtimezone
+```PowerShell
+Get-SvtTimezone
 ```
 
 ## DESCRIPTION
+
 Displays the timezones that HPE SimpliVity supports
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Get-SVTtimezone
+
+```PowerShell
+Get-SvtTimezone
 ```
 
 ## PARAMETERS
@@ -31,9 +34,13 @@ Get-SVTtimezone
 ## INPUTS
 
 ### None
+
 ## OUTPUTS
 
-### PSCustomObject
+### System.Management.Automation.PSCustomObject
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

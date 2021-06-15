@@ -2,7 +2,7 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTHostTable</Name>
+            <Name>SvtHostTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.Host</TypeName>
             </ViewSelectedBy>
@@ -10,30 +10,37 @@
                 <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>HostName</Label>
                         <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>DataCenterName</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ClusterName</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>FreeSpaceGB</Label>
                         <Width>14</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ManagementIP</Label>
                         <Width>16</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>StorageIP</Label>
                         <Width>16</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>FederationIP</Label>
                         <Width>16</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
@@ -51,7 +58,21 @@
                                 <PropertyName>ClusterName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>FreeSpaceGB</PropertyName>
+                                <!--PropertyName>FreeSpaceGB</PropertyName-->
+                                <ScriptBlock>
+                                if ($host.name -match 'Console') {
+                                    $PercentUsed = 100 * (($_.AllocatedCapacityGB-$_.FreespaceGB) / $_.AllocatedCapacityGB)
+                                    switch ($PercentUsed) {
+                                        {$PSItem -gt 90 } {$ansi = "[38;5;9m"; break} #8bit red
+                                        {$PSItem -gt 80 } {$ansi = "[38;5;11m"; break} #8bit yellow
+                                        default { $ansi = "[38;5;10m"} #8bit green 
+                                    }
+                                    "$([char]27)$ansi$($_.FreeSpaceGB)$([char]27)[0m"
+                                }
+                                else {
+                                    $_.FreespaceGB
+                                }
+                                </ScriptBlock>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>ManagementIP</PropertyName>

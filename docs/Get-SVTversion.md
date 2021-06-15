@@ -1,29 +1,32 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Get-SVTversion
+# Get-SvtVersion
 
 ## SYNOPSIS
+
 Get the REST API version and SVTFS version of the HPE SimpliVity environment
 
 ## SYNTAX
 
-```
-Get-SVTversion
+```PowerShell
+Get-SvtVersion
 ```
 
 ## DESCRIPTION
+
 Get the REST API version and SVTFS version of the HPE SimpliVity environment
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Get-SVTversion
+
+```PowerShell
+Get-SvtVersion
 ```
 
 Shows version information for the REST API and SVTFS.
@@ -35,9 +38,13 @@ connecting to an Omnistack Virtual Appliance (OVA) or a Managed Virtual Applianc
 ## INPUTS
 
 ### None
+
 ## OUTPUTS
 
 ### System.Management.Automation.PSCustomObject
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

@@ -48,20 +48,20 @@ OTHER DEALINGS IN THE SOFTWARE.
     downloaded locally from each virtual controller.
 
     This script requires direct SSH (port 22) and HTTPS (port 443) access to each 
-    HPE SimplVity virtual controller.
+    HPE SimpliVity virtual controller.
 
     This script depends on a third party module called Posh-SSH, which
-    provides the ability to enter username and password via a credential to eastablish
+    provides the ability to enter username and password via a credential to establish
     SSH sessions. This has the advantage of not having to upload an ssh public key to 
-    every OVC, but it is less secure. It is assumed that the same credentials can be used
+    every SVA, but it is less secure. It is assumed that the same credentials can be used
     for each virtual controller.
  
     Install the required Posh-SSH using the following command: 
     PS:\> Install-Module Posh-SSH
-.PARAMETER OVC
+.PARAMETER VA
     Accepts one or more FQDN's or IP Addresses. By default the script
-    will look for a CSV called .\ovclist.csv in the local folder. The file
-    must contain a heading of "OVC" on the first line. FQDN's or IP addresses
+    will look for a CSV called .\SVAList.csv in the local folder. The file
+    must contain a heading of "SVA" on the first line. FQDN's or IP addresses
     for each virtual controller must be entered one per line, with no commas.
 .PARAMETER Silent
     Do not prompt for credentials. This is possible, if you have previously saved
@@ -73,7 +73,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 .EXAMPLE
     PS C:\> Install-Module Posh-SSH
     PS C:\> Get-Credential -Message 'Enter password' -UserName 'administrator@vsphere.local' | Export-Clixml cred.xml
-    PS C:\> Get-SupportCaptureFile -OVC 192.168.1.1 -Silent
+    PS C:\> Get-SupportCaptureFile -VA 192.168.1.1 -Silent
 
     The first command installs the required PowerShell module called Posh-SSH from the
     PowerShell Gallery. 
@@ -85,12 +85,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 .EXAMPLE
     PS C:\> Get-SupportCaptureFile
 
-    This command requires a file called .\ovclist.csv containing a list of virtual controllers
+    This command requires a file called .\SVAList.csv containing a list of virtual controllers
     to connect to. Because -Silent was not entered, you will be prompted enter credentials.
 .EXAMPLE
-    PS C:\> Get-SupportCaptureFile -OVC '192.168.1.1','192.168.2.1' -Purge
+    PS C:\> Get-SupportCaptureFile -VA '192.168.1.1','192.168.2.1' -Purge
 
-    This command will connect to the two specfied virtual controllers and delete any pre-existing
+    This command will connect to the two specified virtual controllers and delete any pre-existing
     support capture files before initiating a new capture.
 .INPUTS
     System.PSobject
@@ -102,7 +102,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #>
 
 param (
-    [object]$OVC = (Import-CSV -Path .\ovclist.csv | Select-Object -ExpandProperty OVC),
+    [object]$VA = (Import-CSV -Path .\SVAList.csv | Select-Object -ExpandProperty VA),
 
     [switch]$Silent,
 
@@ -126,8 +126,8 @@ else {
     $cred = Get-Credential -Message 'Enter Password' -UserName 'administrator@vsphere.local'
 }
 
-# Connect to each OVC
-foreach ($controller in $OVC) {
+# Connect to each SVA
+foreach ($controller in $VA) {
     try {
         New-SSHSession -ComputerName $controller -port 22 -Credential $cred -ErrorAction Stop
     }
@@ -150,7 +150,7 @@ If ($PSBoundParameters.ContainsKey('Purge')) {
     }
 }
 
-# Run the capture on all the OVCs together - wait 7 minutes for the capture(s) to complete.
+# Run the capture on all the SVAs together - wait 7 minutes for the capture(s) to complete.
 # The capture(s) continue and complete regardless, but the ssh command may timeout. The Timeout
 # parameter isn't really needed, as we check for completion later - but it does reduce the "wait..."
 # messages generated later.

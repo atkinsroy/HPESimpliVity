@@ -1,52 +1,50 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# New-SVTpolicy
+# New-SvtPolicy
 
 ## SYNOPSIS
+
 Create a new HPE SimpliVity backup policy
 
 ## SYNTAX
 
-```
-New-SVTpolicy [-PolicyName] <String> [<CommonParameters>]
+```PowerShell
+New-SvtPolicy [-PolicyName] <String> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Create a new, empty HPE SimpliVity backup policy.
-To create or replace rules for the new backup 
-policy, use New-SVTpolicyRule. 
 
-To assign the new backup policy, use Set-SVTdatastorePolicy to assign it to a datastore, or 
-Set-SVTvmPolicy to assign it to a virtual machine.
+Create a new, empty HPE SimpliVity backup policy. To create or replace rules for the new backup policy, use New-SvtPolicyRule.
+
+To assign the new backup policy, use Set-SvtDatastorePolicy to assign it to a datastore, or Set-SvtVmPolicy to assign it to a virtual machine.
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-New-SVTpolicy -Policy Silver
+
+```PowerShell
+New-SvtPolicy -Policy Silver
 ```
 
-Creates a new blank backup policy.
-To create or replace rules for the new backup policy, 
-use New-SVTpolicyRule.
+Creates a new blank backup policy. To create or replace rules for the new backup policy, use New-SvtPolicyRule.
 
 ### EXAMPLE 2
-```
-New-SVTpolicy Gold
+
+```PowerShell
+New-SvtPolicy Gold
 ```
 
-Creates a new blank backup policy.
-To create or replace rules for the new backup policy, 
-use New-SVTpolicyRule.
+Creates a new blank backup policy. To create or replace rules for the new backup policy, use New-SvtPolicyRule.
 
 ## PARAMETERS
 
 ### -PolicyName
+
 The new backup policy name to create
 
 ```yaml
@@ -62,14 +60,19 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ## OUTPUTS
 
 ### HPE.SimpliVity.Task
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

@@ -2,37 +2,44 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTCapacityTable</Name>
+            <Name>SvtCapacityTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.Capacity</TypeName>
             </ViewSelectedBy>
             <TableControl>
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>Date</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>AllocatedCapacity</Label>
                         <Width>17</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>UsedCapacity</Label>
                         <Width>17</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>UsedLogicalCapacity</Label>
                         <Width>19</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>CompressionRatio</Label>
                         <Width>16</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>EfficiencyRatio</Label>
                         <Width>15</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>HostName</Label>
                         <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
@@ -59,7 +66,7 @@
                                 <PropertyName>EfficiencyRatio</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>Hostname</PropertyName>
+                                <PropertyName>HostName</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>

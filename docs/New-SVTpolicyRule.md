@@ -1,105 +1,107 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# New-SVTpolicyRule
+# New-SvtPolicyRule
 
 ## SYNOPSIS
+
 Create a new backup policy rule in a HPE SimpliVity backup policy
 
 ## SYNTAX
 
 ### ByWeekDay (Default)
-```
-New-SVTpolicyRule [-PolicyName] <String> -WeekDay <Array> [-DestinationName <String>] [-StartTime <String>]
+
+```PowerShell
+New-SvtPolicyRule [-PolicyName] <String> -WeekDay <Array> [-DestinationName <String>] [-StartTime <String>]
  [-EndTime <String>] [-FrequencyMin <String>] [-RetentionDay <Int32>] [-RetentionHour <Int32>]
  [-ConsistencyType <String>] [-ReplaceRules] [-ImpactReportOnly] [<CommonParameters>]
 ```
 
 ### ByAllDay
-```
-New-SVTpolicyRule [-PolicyName] <String> [-All] [-DestinationName <String>] [-StartTime <String>]
+
+```PowerShell
+New-SvtPolicyRule [-PolicyName] <String> [-All] [-DestinationName <String>] [-StartTime <String>]
  [-EndTime <String>] [-FrequencyMin <String>] [-RetentionDay <Int32>] [-RetentionHour <Int32>]
  [-ConsistencyType <String>] [-ReplaceRules] [-ImpactReportOnly] [<CommonParameters>]
 ```
 
 ### ByMonthDay
-```
-New-SVTpolicyRule [-PolicyName] <String> -MonthDay <Array> [-DestinationName <String>] [-StartTime <String>]
+
+```PowerShell
+New-SvtPolicyRule [-PolicyName] <String> -MonthDay <Array> [-DestinationName <String>] [-StartTime <String>]
  [-EndTime <String>] [-FrequencyMin <String>] [-RetentionDay <Int32>] [-RetentionHour <Int32>]
  [-ConsistencyType <String>] [-ReplaceRules] [-ImpactReportOnly] [<CommonParameters>]
 ```
 
 ### ByLastDay
-```
-New-SVTpolicyRule [-PolicyName] <String> [-LastDay] [-DestinationName <String>] [-StartTime <String>]
+
+```PowerShell
+New-SvtPolicyRule [-PolicyName] <String> [-LastDay] [-DestinationName <String>] [-StartTime <String>]
  [-EndTime <String>] [-FrequencyMin <String>] [-RetentionDay <Int32>] [-RetentionHour <Int32>]
  [-ConsistencyType <String>] [-ReplaceRules] [-ImpactReportOnly] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Create backup policies within an existing HPE SimpliVity backup policy.
-Optionally,
-You can replace all the existing policy rules with the new policy rule.
+
+Create backup policies within an existing HPE SimpliVity backup policy. Optionally, You can replace all the existing policy rules with the new policy rule.
 
 You can also display an impact report rather than performing the change.
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-New-SVTpolicyRule -PolicyName Silver -All -DestinationName cluster1 -ReplaceRules
+
+```PowerShell
+New-SvtPolicyRule -PolicyName Silver -All -DestinationName cluster1 -ReplaceRules
 ```
 
-Replaces all existing backup policy rules with a new rule, backup every day to the specified cluster, 
-using the default start time (00:00), end time (00:00), Frequency (1440, or once per day), retention of 
-1 day and no application consistency.
+Replaces all existing backup policy rules with a new rule, backup every day to the specified cluster, using the default start time (00:00), end time (00:00), Frequency (1440, or once per day), retention of 1 day and no application consistency.
 
 ### EXAMPLE 2
-```
-New-SVTpolicyRule -PolicyName Bronze -Last -ExternalStoreName StoreOnce-Data02 -RetentionDay 365
+
+```PowerShell
+New-SvtPolicyRule -PolicyName Bronze -Last -ExternalStoreName StoreOnce-Data02 -RetentionDay 365
 ```
 
-Backup VMs on the last day of the month, storing them on the specified external datastore and retaining the
-backup for one year.
+Backup VMs on the last day of the month, storing them on the specified external datastore and retaining the backup for one year.
 
-PS C:\\\> New-SVTpolicyRule -PolicyName Silver -Weekday Mon,Wed,Fri -DestinationName cluster01 -RetentionDay 7
+PS C:\\\> New-SvtPolicyRule -PolicyName Silver -Weekday Mon,Wed,Fri -DestinationName cluster01 -RetentionDay 7
 
 Adds a new rule to the specified policy to run backups on the specified weekdays and retain backup for a week.
 
 ### EXAMPLE 3
-```
-New-SVTpolicyRule ShortTerm -RetentionHour 4 -FrequencyMin 60 -StartTime 09:00 -EndTime 17:00
+
+```PowerShell
+New-SvtPolicyRule ShortTerm -RetentionHour 4 -FrequencyMin 60 -StartTime 09:00 -EndTime 17:00
 ```
 
-Add a new rule to a policy called ShortTerm, to backup once per hour during office hours and retain the
-backup for 4 hours.
+Add a new rule to a policy called ShortTerm, to backup once per hour during office hours and retain the backup for 4 hours.
 (Note: -RetentionHour takes precedence over -RetentionDay if both are specified)
 
 ### EXAMPLE 4
-```
-New-SVTpolicyRule Silver -LastDay -DestinationName Prod -RetentionDay 30 -ConsistencyType VSS
+
+```PowerShell
+New-SvtPolicyRule Silver -LastDay -DestinationName Prod -RetentionDay 30 -ConsistencyType VSS
 ```
 
-Add a new rule to the specified policy to run an application consistent backup on the last day 
-of each month, retaining it for 1 month.
+Add a new rule to the specified policy to run an application consistent backup on the last day of each month, retaining it for 1 month.
 
 ### EXAMPLE 5
-```
-New-SVTpolicyRule Silver -All -DestinationName Prod -FrequencyMin 15 -RetentionDay 365 -ImpactReportOnly
+
+```PowerShell
+New-SvtPolicyRule Silver -All -DestinationName Prod -FrequencyMin 15 -RetentionDay 365 -ImpactReportOnly
 ```
 
-No changes are made.
-Displays an impact report showing the effects that creating this new policy rule would 
-make to the system.
-The report shows projected daily backup rates and total retained backup rates.
+No changes are made. Displays an impact report showing the effects that creating this new policy rule would make to the system. The report shows projected daily backup rates and total retained backup rates.
 
 ## PARAMETERS
 
 ### -PolicyName
+
 The backup policy to add/replace backup policy rules
 
 ```yaml
@@ -115,6 +117,7 @@ Accept wildcard characters: False
 ```
 
 ### -All
+
 Specifies every day to run backup
 
 ```yaml
@@ -130,6 +133,7 @@ Accept wildcard characters: False
 ```
 
 ### -WeekDay
+
 Specifies the Weekday(s) to run backup, e.g.
 "Mon", "Mon,Tue" or "Mon,Wed,Fri"
 
@@ -146,6 +150,7 @@ Accept wildcard characters: False
 ```
 
 ### -MonthDay
+
 Specifies the day(s) of the month to run backup, e.g.
 1 or 1,11,21
 
@@ -162,6 +167,7 @@ Accept wildcard characters: False
 ```
 
 ### -LastDay
+
 Specifies the last day of the month to run a backup
 
 ```yaml
@@ -177,11 +183,9 @@ Accept wildcard characters: False
 ```
 
 ### -DestinationName
-Specifies the destination HPE SimpliVity cluster name or external store name.
-If not specified, the
-destination will be the local cluster.
-If an external store has the same name as a cluster, the cluster
-wins.
+
+Specifies the destination HPE SimpliVity cluster name or external store name. If not specified, the
+destination will be the local cluster. If an external store has the same name as a cluster, the cluster wins.
 
 ```yaml
 Type: String
@@ -196,8 +200,8 @@ Accept wildcard characters: False
 ```
 
 ### -StartTime
-Specifies the start time (24 hour clock) to run backup, e.g.
-22:00
+
+Specifies the start time (24 hour clock) to run backup, e.g. 22:00
 
 ```yaml
 Type: String
@@ -212,8 +216,8 @@ Accept wildcard characters: False
 ```
 
 ### -EndTime
-Specifies the start time (24 hour clock) to run backup, e.g.
-00:00
+
+Specifies the start time (24 hour clock) to run backup, e.g. 00:00
 
 ```yaml
 Type: String
@@ -228,8 +232,8 @@ Accept wildcard characters: False
 ```
 
 ### -FrequencyMin
-Specifies the frequency, in minutes (how many times a day to run). 
-Must be between 1 and 1440 minutes (24 hours).
+
+Specifies the frequency, in minutes (how many times a day to run). Must be between 1 and 1440 minutes (24 hours).
 
 ```yaml
 Type: String
@@ -244,6 +248,7 @@ Accept wildcard characters: False
 ```
 
 ### -RetentionDay
+
 Specifies the retention, in days.
 
 ```yaml
@@ -259,8 +264,8 @@ Accept wildcard characters: False
 ```
 
 ### -RetentionHour
-Specifies the retention, in hours.
-This parameter takes precedence if RetentionDay is also specified.
+
+Specifies the retention, in hours. This parameter takes precedence if RetentionDay is also specified.
 
 ```yaml
 Type: Int32
@@ -275,15 +280,12 @@ Accept wildcard characters: False
 ```
 
 ### -ConsistencyType
+
 Available options are:
-1.
-NONE - This is the default and creates a crash consistent backup
-2.
-DEFAULT - Create application consistent backups using VMware Snapshot
-3.
-VSS - Create application consistent backups using Microsoft VSS in the guest operating system.
-Refer 
-   to the admin guide for requirements and supported applications
+
+1. NONE - This is the default and creates a crash consistent backup
+2. DEFAULT - Create application consistent backups using VMware Snapshot
+3. VSS - Create application consistent backups using Microsoft VSS in the guest operating system. Refer to the admin guide for requirements and supported applications
 
 ```yaml
 Type: String
@@ -298,8 +300,8 @@ Accept wildcard characters: False
 ```
 
 ### -ReplaceRules
-If this switch is specified, ALL existing rules in the specified backup policy are removed and 
-replaced with this new rule.
+
+If this switch is specified, ALL existing rules in the specified backup policy are removed and replaced with this new rule.
 
 ```yaml
 Type: SwitchParameter
@@ -314,10 +316,8 @@ Accept wildcard characters: False
 ```
 
 ### -ImpactReportOnly
-Rather than create the policy rule, display a report showing the impact this change would make.
-The report 
-shows projected daily backup rates and new total retained backups given the frequency and retention settings
-for the specified backup policy.
+
+Rather than create the policy rule, display a report showing the impact this change would make. The report shows projected daily backup rates and new total retained backups given the frequency and retention settings for the specified backup policy.
 
 ```yaml
 Type: SwitchParameter
@@ -332,15 +332,21 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ## OUTPUTS
 
 ### HPE.SimpliVity.Task
-### PSCustomObject
+
+### System.Management.Automation.PSCustomObject
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

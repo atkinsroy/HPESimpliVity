@@ -1,5 +1,5 @@
 New-Manifest.ps1
-UtilityScripts/Test-HPEsimpliVity.ps1
+UtilityScripts/Run-Coverage.ps1
 UtilityScripts/HPEsimpliVity.Tests.ps1
 UtilityScripts/SignCode.ps1
 UtilityScripts/New-Docs.ps1

@@ -1,31 +1,34 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Remove-SVTpolicy
+# Remove-SvtPolicy
 
 ## SYNOPSIS
+
 Removes a HPE SimpliVity backup policy
 
 ## SYNTAX
 
-```
-Remove-SVTpolicy [-PolicyName] <String> [<CommonParameters>]
+```PowerShell
+Remove-SvtPolicy [-PolicyName] <String> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
+
 Removes a HPE SimpliVity backup policy, providing it is not in use be any datastores or virtual machines.
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Get-SVTvm | Select VmName, PolicyName
-PS C:\> Get-SVTdatastore | Select DatastoreName, PolicyName
-PS C:\> Remove-SVTpolicy -PolicyName Silver
+
+```PowerShell
+Get-SvtVm | Select VmName, PolicyName
+PS C:\> Get-SvtDatastore | Select DatastoreName, PolicyName
+PS C:\> Remove-SvtPolicy -PolicyName Silver
 ```
 
 Confirm there are no datastores or VMs using the backup policy and then delete it.
@@ -33,6 +36,7 @@ Confirm there are no datastores or VMs using the backup policy and then delete i
 ## PARAMETERS
 
 ### -PolicyName
+
 The policy to delete
 
 ```yaml
@@ -48,14 +52,19 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ## OUTPUTS
 
 ### HPE.SimpliVity.Task
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

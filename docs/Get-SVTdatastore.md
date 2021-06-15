@@ -1,43 +1,48 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastore.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastore.md
 schema: 2.0.0
 ---
 
-# Get-SVTdatastore
+# Get-SvtDatastore
 
 ## SYNOPSIS
+
 Display HPE SimpliVity datastore information
 
 ## SYNTAX
 
-```
-Get-SVTdatastore [[-DatastoreName] <String[]>] [<CommonParameters>]
+```PowerShell
+Get-SvtDatastore [[-DatastoreName] <String[]>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
+
 Shows datastore information from the SimpliVity Federation
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Get-SVTdatastore
+
+```PowerShell
+Get-SvtDatastore
 ```
 
 Shows all datastores in the Federation
 
 ### EXAMPLE 2
-```
-Get-SVTdatastore -Name DS01 | Export-CSV Datastore.csv
+
+```PowerShell
+Get-SvtDatastore -Name DS01 | Export-CSV Datastore.csv
 ```
 
 Writes the specified datastore information into a CSV file
 
 ### EXAMPLE 3
-```
-Get-SVTdatastore DS01,DS02,DS03 | Select-Object Name, SizeGB, Policy
+
+```PowerShell
+Get-SvtDatastore DS01,DS02,DS03 | Select-Object Name, SizeGB, Policy
 ```
 
 Shows the specified properties for the HPE SimpliVity datastores
@@ -45,6 +50,7 @@ Shows the specified properties for the HPE SimpliVity datastores
 ## PARAMETERS
 
 ### -DatastoreName
+
 Show information for the specified datastore only
 
 ```yaml
@@ -60,17 +66,21 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ## OUTPUTS
 
-### HPE.SimpliVity.DataStore
+### HPE.SimpliVity.Datastore
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastore.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastore.md)
-
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastore.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastore.md)

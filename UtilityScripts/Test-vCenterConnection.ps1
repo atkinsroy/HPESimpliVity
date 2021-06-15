@@ -6,7 +6,7 @@
 #
 # This script depends on a third party module called Posh-SSH which
 # allows you to enter username and password via a credential. This has
-# the advantage of not having to upload an ssh public key to every OVC, but
+# the advantage of not having to upload an ssh public key to every SVA, but
 # it is less secure.
 #
 # Roy Atkins, HPE Pointnext Services
@@ -15,15 +15,15 @@
 # Requirements - You need to install Posh-SSH
 # PS:\> Install-Module Posh-SSH
 #
-# Get a list of OVCs to connect to. By default, an existing CSV file with 
+# Get a list of SVAs/MVAs to connect to. By default, an existing CSV file with 
 # a list of IP addresses is assumed. Other ways:
 #
-# $OVC = @('192.168.1.1','192.168.2.1')
-# $OVC = (Get-SVThost).ManagementIP
+# $VA = @('192.168.1.1','192.168.2.1')
+# $VA = (Get-SvtHost).ManagementIP
 #
-# or specify the -OVC parameter with a comma seperated list of IPs.
+# or specify the -VA parameter with a comma seperated list of IPs.
 param (
-    [object]$OVC = (Import-CSV -Path .\ovclist.csv | Select-Object -ExpandProperty OVC),
+    [object]$VA = (Import-CSV -Path .\SVAList.csv | Select-Object -ExpandProperty VA),
     [switch]$Silent,
 
     [string]$vCenter = '<Enter your Default vCenter IP address here>' 
@@ -48,9 +48,9 @@ $sshcommand = @(
     "nc -zv $vCenter 443"
 )
 
-# Connect to each OVC
+# Connect to each SVA
 "Connecting to specified virtual controllers..."
-foreach ($controller in $OVC) {
+foreach ($controller in $VA) {
     try {
         New-SSHSession -ComputerName $controller -port 22 -Credential $cred
     }
@@ -59,7 +59,7 @@ foreach ($controller in $OVC) {
     }
 }
 
-# Run the commands on all the OVCs together
+# Run the commands on all the SVAs together
 "Executing each specified command on all specified virtual controllers..." 
 try {
     $Session = Get-SSHsession

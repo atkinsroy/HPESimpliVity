@@ -7,7 +7,7 @@
 #   need to filter if you have a larger environment. Some examples are provided at the bottom of the file.
 #
 # Requirements:
-#   HPEsimpliVity V1.1.5 and above
+#   HPESimpliVity V1.1.5 and above
 #
 # Website:
 #   https://github.com/atkinsroy/HPESimpliVity
@@ -45,11 +45,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 $IP = '192.168.1.1'
 
 # It is assumed you have previously created a credential file using, for example:
-#Get-Credential -Message 'Enter a password at prompt' -UserName 'administrator@vsphere.local' | Export-Clixml OVCcred.xml
-$Cred = Import-Clixml .\OVCcred.xml
+#Get-Credential -Message 'Enter a password at prompt' -UserName 'administrator@vsphere.local' | Export-Clixml cred.xml
+$Cred = Import-Clixml .\cred.xml
 
 # Connect is an OmniStack Virtual Controller in your environment:
-Connect-SVT -OVC $IP -Credential $Cred
+Connect-Svt -VA $IP -Credential $Cred
 
 # For a report suffix
 $TimeStamp = Get-Date -Format 'yyMMddhhmm'
@@ -68,10 +68,10 @@ $Monthly = (Get-Date).AddDays(28)
 # Get 'all' backups. This example will be limited to 3000 backup objects. So, if you have more than 3000 backup 
 # objects in the federation, you'll need to filter on a property (by backupName, datastore, cluster or VM, see below) 
 # and then iterate, ensuring that each call returns less than 3000 backup objects)
-$AllBackup = Get-SVTbackup -All
+$AllBackup = Get-SvtBackup -All
 
 # For comparison, dates in PowerShell must be "region-neutral", meaning US format.
-# But Get-SVTbackup stores dates as strings honouring the local culture. So to compare with Get-Date, the expiry 
+# But Get-SvtBackup stores dates as strings honouring the local culture. So to compare with Get-Date, the expiry 
 # date must be parsed to convert it to a "region-neutral" date.
 $AllBackup | ForEach-Object {
     $ExpiryDate = [datetime]::parse($_.ExpiryDate)
@@ -115,21 +115,21 @@ If ($Failed) {
 Get-ChildItem Backup*Report-$TimeStamp.CSV
 
 # Some examples when you have more than 3000 backups in the federation. In each case, you should end up with
-# a full list of backups providing each filtered call to Get-SVTbackup returns less than 3000 backup objects.
+# a full list of backups providing each filtered call to Get-SvtBackup returns less than 3000 backup objects.
  
 # Without "hardcoding" the filter property, for example, by each datastore:
-#  Get-SVTdatastore | Foreach-Object {
-#   [array]$AllBackup += Get-SVTBackup -DatastoreName $_ -Limit 3000
+#  Get-SvtDatastore | Foreach-Object {
+#   [array]$AllBackup += Get-SvtBackup -DatastoreName $_ -Limit 3000
 #  }
 
 # by hardcoded data store, for example:
-#  $AllBackup = Get-SVTBackup -DataStoreName "DataStore01" -Limit 3000
-#  $AllBackup += Get-SVTBackup -DataStoreName "DataStore02" -Limit 3000
+#  $AllBackup = Get-SvtBackup DatastoreName "DataStore01" -Limit 3000
+#  $AllBackup += Get-SvtBackup DatastoreName "DataStore02" -Limit 3000
 
 # by hardcoded VM, for example:
-#  $AllBackup = Get-SVTBackup -VMname "VM01" -Limit 3000
-#  $AllBackup += Get-SVTBackup -VMname "VM02" -Limit 3000
+#  $AllBackup = Get-SvtBackup -VmName "VM01" -Limit 3000
+#  $AllBackup += Get-SvtBackup -VmName "VM02" -Limit 3000
 
 # by hardcoded cluster, for example:
-#  $AllBackup = Get-SVTBackup -ClusterName "Production01" -Limit 3000
-#  $AllBackup += Get-SVTBackup -ClusterName "DR01" -Limit 3000
+#  $AllBackup = Get-SvtBackup -ClusterName "Production01" -Limit 3000
+#  $AllBackup += Get-SvtBackup -ClusterName "DR01" -Limit 3000
