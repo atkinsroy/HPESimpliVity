@@ -2,7 +2,7 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTDataStoreTable</Name>
+            <Name>SvtExternalStoreTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.ExternalStore</TypeName>
             </ViewSelectedBy>
@@ -10,22 +10,27 @@
                 <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>ExternalStoreName</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>Type</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ManagementIP</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ManagementPort</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>StoragePort</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>

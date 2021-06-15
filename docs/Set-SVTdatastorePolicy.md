@@ -1,33 +1,32 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Set-SVTdatastorePolicy
+# Set-SvtDatastorePolicy
 
 ## SYNOPSIS
+
 Sets/changes the backup policy on a HPE SimpliVity Datastore
 
 ## SYNTAX
 
-```
-Set-SVTdatastorePolicy [-DatastoreName] <String> [-PolicyName] <String> [<CommonParameters>]
+```PowerShell
+Set-SvtDatastorePolicy [-DatastoreName] <String> [-PolicyName] <String> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-A SimpliVity datastore must have a backup policy assigned to it.
-A default backup policy
-is assigned when a datastore is created.
-This command allows you to change the backup
-policy for the specified datastore
+
+A SimpliVity datastore must have a backup policy assigned to it. A default backup policy is assigned when a datastore is created. This command allows you to change the backup policy for the specified datastore
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Set-SVTdatastorePolicy -DatastoreName ds01 -PolicyName Weekly
+
+```PowerShell
+Set-SvtDatastorePolicy -DatastoreName ds01 -PolicyName Weekly
 ```
 
 Assigns a new backup policy to the specified datastore
@@ -35,6 +34,7 @@ Assigns a new backup policy to the specified datastore
 ## PARAMETERS
 
 ### -DatastoreName
+
 Apply to specified datastore
 
 ```yaml
@@ -50,6 +50,7 @@ Accept wildcard characters: False
 ```
 
 ### -PolicyName
+
 The new backup policy for the specified datastore
 
 ```yaml
@@ -65,14 +66,19 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ## OUTPUTS
 
 ### HPE.SimpliVity.Task
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

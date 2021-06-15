@@ -2,7 +2,7 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTBackupTable</Name>
+            <Name>SvtBackupTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.Backup</TypeName>
             </ViewSelectedBy>
@@ -10,42 +10,52 @@
                 <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>BackupName</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>VmName</Label>
                         <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>CreateDate</Label>
                         <Width>22</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ExpiryDate</Label>
                         <Width>22</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>BackupState</Label>
                         <Width>12</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>DatastoreName</Label>
                         <Width>20</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>DestinationName</Label>
                         <Width>20</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>SizeGB</Label>
                         <Width>10</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>SentMb</Label>
                         <Width>6</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>SentDuration</Label>
                         <Width>12</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
@@ -66,7 +76,20 @@
                                 <PropertyName>ExpiryDate</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>BackupState</PropertyName>
+                                <!--PropertyName>BackupState</PropertyName-->
+                                <ScriptBlock>
+                                if ($host.name -match 'Console') {
+                                    Switch ($_.BackupState) {
+                                        "PROTECTED" {$ansi = "[37m"}  #white
+                                        "FAILED" {$ansi = "[38;5;9m"} #8bit red
+                                        default {$ansi = "[38;5;11m"} #8bit yellow
+                                    }
+                                    "$([char]27)$ansi$($_.BackupState)$([char]27)[0m"
+                                }
+                                else {
+                                    $_.BackupState
+                                }
+                                </ScriptBlock>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>DatastoreName</PropertyName>

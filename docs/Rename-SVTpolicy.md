@@ -1,38 +1,41 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Rename-SVTpolicy
+# Rename-SvtPolicy
 
 ## SYNOPSIS
+
 Rename a HPE SimpliVity backup policy
 
 ## SYNTAX
 
-```
-Rename-SVTpolicy [-PolicyName] <String> [-NewPolicyName] <String> [<CommonParameters>]
+```PowerShell
+Rename-SvtPolicy [-PolicyName] <String> [-NewPolicyName] <String> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
+
 Rename a HPE SimpliVity backup policy
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Get-SVTpolicy
-PS C:\> Rename-SVTpolicy -PolicyName Silver -NewPolicyName Gold
+
+```PowerShell
+Get-SvtPolicy
+PS C:\> Rename-SvtPolicy -PolicyName Silver -NewPolicyName Gold
 ```
 
-The first command confirms the new policy name doesn't exist. 
-The second command renames the backup policy as specified.
+The first command confirms the new policy name doesn't exist. The second command renames the backup policy as specified.
 
 ### EXAMPLE 2
-```
-Rename-SVTpolicy Silver Gold
+
+```PowerShell
+Rename-SvtPolicy Silver Gold
 ```
 
 Renames the backup policy as specified
@@ -40,6 +43,7 @@ Renames the backup policy as specified
 ## PARAMETERS
 
 ### -PolicyName
+
 The existing backup policy name
 
 ```yaml
@@ -55,6 +59,7 @@ Accept wildcard characters: False
 ```
 
 ### -NewPolicyName
+
 The new name for the backup policy
 
 ```yaml
@@ -70,14 +75,19 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ## OUTPUTS
 
 ### HPE.SimpliVity.Task
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

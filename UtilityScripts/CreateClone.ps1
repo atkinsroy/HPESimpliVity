@@ -3,10 +3,10 @@
 #
 # Description:
 #   This script creates clones of virtual machines hosted on HPE SimpliVity storage
-#   You can create multiple clones of the same VM or clones of multple VMs or both.
+#   You can create multiple clones of the same VM or clones of multiple VMs or both.
 #
 # Requirements:
-#   HPEsimpliVity V2.0.24 and above
+#   HPESimpliVity V2.0.24 and above
 #
 # Website:
 #   https://github.com/atkinsroy/HPESimpliVity
@@ -48,9 +48,9 @@ OTHER DEALINGS IN THE SOFTWARE.
      SimpliVity Virtual Machine objects and will execute 4 clone operations
      simultaneously, waiting so that only maximum of 4 clones are executing at once.
 
-     Assumes you have previously connected to an OmniStack Virtual Controller (or Managment 
-     Virtual Appliance) using Connect-SVT. 
-.PARAMETER VMname
+     Assumes you have previously connected to an OmniStack Virtual Controller (or Management 
+     Virtual Appliance) using Connect-Svt. 
+.PARAMETER VmName
     Specify one or more VMs to clone
 .PARAMETER NumberOfClones
     Specify the number of clones, 1 to 20
@@ -58,30 +58,30 @@ OTHER DEALINGS IN THE SOFTWARE.
     The type of backup used for the clone method, DEFAULT is crash-consistent, VSS is
     application-consistent using VSS and NONE is application-consistent using a snapshot
 .EXAMPLE
-    PS C:\> .\CreateClone.ps1 -VMname MyVM1
+    PS C:\> .\CreateClone.ps1 -VmName MyVM1
 
     Creates a new clone with the name of the original VM plus a unique number suffix
 .EXAMPLE
-    PS C:\> Get-SVTvm -VMname MyVM1 | .\CreateClone.ps1
+    PS C:\> Get-SvtVm -VmName MyVM1 | .\CreateClone.ps1
 
     Clones the specified VM by passing in the VM object from the pipeline
 .EXAMPLE
-    PS C:\> $VMlist = Get-SVTvm | ? VMname -match 'SQL'
-    PS C:\> $VMlist | .\CreateClone.ps1
+    PS C:\> $VmList = Get-SvtVm | ? VmName -match 'SQL'
+    PS C:\> $VmList | .\CreateClone.ps1
 
     This clones every VM with 'SQL' in its name, 4 at a time. Use the first command to make sure
     the list of VMs is correct before cloning.
 .EXAMPLE
-    PS C:\> .\CreateClone -VMname NewVM1 -NumberOfClones 3
+    PS C:\> .\CreateClone -VmName NewVM1 -NumberOfClones 3
 
     Clone the specified VM three times.
 .EXAMPLE
-    PS C:\> Get-SVTvm -Datastore Datastore1 | .\CreateClone -NumberOfClones 2
+    PS C:\> Get-SvtVm -Datastore Datastore1 | .\CreateClone -NumberOfClones 2
 
     Clone each VM on the specified datastore twice
 .EXAMPLE
-    PS C:\> Get-SVTvm | ? VMname -match '^RHEL8-\d{2}$'
-    PS C:\> Get-SVTvm | ? VMname -match '^RHEL8-\d{2}$' | .\CreateClone.ps1
+    PS C:\> Get-SvtVm | ? VmName -match '^RHEL8-\d{2}$'
+    PS C:\> Get-SvtVm | ? VmName -match '^RHEL8-\d{2}$' | .\CreateClone.ps1
 
     The first command confirms a list of VMs, in this case is matches 'RHEL8-01', 'RHEL8-02' ... 'RHEL8-99'
     The second command creates 2 clones of each - eg. 'RHEL8-01-01', 'RHEL8-01-02', 'RHEL8-02-01', etc.
@@ -95,8 +95,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 #[CmdletBinding()]
 param (
     [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true,
-        ValueFromPipelinebyPropertyName = $true)]
-    [System.String]$VMname,
+        ValueFromPipelineByPropertyName = $true)]
+    [System.String]$VmName,
 
     [Parameter(Mandatory = $false, Position = 1)]
     [ValidateRange(1, 20)]
@@ -120,19 +120,19 @@ begin {
 
     # Enumerate all VMs first - confirm clone name is unique
     try {
-        $AllVm = Get-SVTvm -ErrorAction Stop -Limit 5000
+        $AllVm = Get-SvtVm -ErrorAction Stop -Limit 5000
     }
     catch {
         throw $_.Exception.Message
     }
 }
 process {
-    foreach ($VM in $VMname) {
+    foreach ($VM in $VmName) {
         [int32]$Suffix = 1
         1..$NumberOfClones | ForEach-Object {
-            $OriginVM = ($AllVm | Where-Object VMname -eq $VM).VMname   # Get the real VM name, ensures the right case
+            $OriginVM = ($AllVm | Where-Object VmName -eq $VM).VmName   # Get the real VM name, ensures the right case
 
-            # Note: SimpliVity RESTAPI limits the VMname to 80 characters. (vCenter 6.5+ supports 128)
+            # Note: SimpliVity RESTAPI limits the VmName to 80 characters. (vCenter 6.5+ supports 128)
             if ($OriginVM.Length -gt 77) {
                 $OriginVM = $OriginVM.Substring(0, 77)
             }
@@ -141,7 +141,7 @@ process {
             $TargetFound = $true
             While ($TargetFound) {
                 $TargetVM = $OriginVM + '-' + '{0:d2}' -f $Suffix
-                if ($TargetVM -in $AllVm.VMname) {
+                if ($TargetVM -in $AllVm.VmName) {
                     Write-Verbose "$TargetVM already exists, incrementing the suffix number"
                 }
                 else {
@@ -151,14 +151,14 @@ process {
                 $Suffix += 1
             }
 
-            $Task = New-SVTclone -VMname $VM -CloneName $TargetVM
+            $Task = New-SvtClone -VmName $VM -CloneName $TargetVM
             [array]$CloneTask += $Task
 
             # Rules are:
             # 1. If cloning the same VM, we will only do 1 at a time
             # 2. If cloning different VMs, we can only do 4 at a time, as per current recommendations
             while ($true) {
-                $ActiveTask = Get-SVTtask -Task $CloneTask |
+                $ActiveTask = Get-SvtTask -Task $CloneTask |
                 Where-Object State -eq "IN_PROGRESS" |
                 Measure-Object |
                 Select-Object -ExpandProperty Count
@@ -176,6 +176,6 @@ process {
     } #end foreach VM
 }
 end {
-    $Global:SVTtask = $CloneTask
-    Get-SVTtask
+    $Global:SvtTask = $CloneTask
+    Get-SvtTask
 }

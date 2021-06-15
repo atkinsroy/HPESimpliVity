@@ -1,36 +1,36 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Remove-SVTpolicyRule
+# Remove-SvtPolicyRule
 
 ## SYNOPSIS
+
 Deletes a backup rule from an existing HPE SimpliVity backup policy
 
 ## SYNTAX
 
-```
-Remove-SVTpolicyRule [-PolicyName] <String> [-RuleNumber] <String> [-ImpactReportOnly] [<CommonParameters>]
+```PowerShell
+Remove-SvtPolicyRule [-PolicyName] <String> [-RuleNumber] <String> [-ImpactReportOnly] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Delete an existing rule from a HPE SimpliVity backup policy.
-You must specify the policy name and 
-the rule number to be removed.
 
-Rule numbers start from 0 and increment by 1.
-Use Get-SVTpolicy to identify the rule you want to delete.
+Delete an existing rule from a HPE SimpliVity backup policy. You must specify the policy name and the rule number to be removed.
+
+Rule numbers start from 0 and increment by 1. Use Get-SvtPolicy to identify the rule you want to delete.
 
 You can also display an impact report rather than performing the change.
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Remove-SVTPolicyRule -Policy Gold -RuleNumber 2
+
+```PowerShell
+Remove-SvtPolicyRule -Policy Gold -RuleNumber 2
 ```
 
 Removes rule number 2 in the specified backup policy
@@ -38,6 +38,7 @@ Removes rule number 2 in the specified backup policy
 ## PARAMETERS
 
 ### -PolicyName
+
 Specify the policy containing the policy rule to delete
 
 ```yaml
@@ -53,8 +54,8 @@ Accept wildcard characters: False
 ```
 
 ### -RuleNumber
-Specify the number assigned to the policy rule to delete.
-Use Get-SVTpolicy to show policy information
+
+Specify the number assigned to the policy rule to delete. Use Get-SvtPolicy to show policy information
 
 ```yaml
 Type: String
@@ -69,10 +70,8 @@ Accept wildcard characters: False
 ```
 
 ### -ImpactReportOnly
-Rather than remove the policy rule, display a report showing the impact this change would make.
-The report 
-shows projected daily backup rates and new total retained backups given the frequency and retention settings
-for the specified backup policy.
+
+Rather than remove the policy rule, display a report showing the impact this change would make. The report shows projected daily backup rates and new total retained backups given the frequency and retention settings for the specified backup policy.
 
 ```yaml
 Type: SwitchParameter
@@ -87,19 +86,21 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ## OUTPUTS
 
 ### HPE.SimpliVity.Task
-### PSCustomObject
+
+### System.Management.Automation.PSCustomObject
+
 ## NOTES
-There seems to be a bug, you cannot remove rule 0 if there are other rules.
-You can use New-SVTpolicyRule 
-with the -ReplaceRules parameter to remove all rules, 
-or remove the other rules first.
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

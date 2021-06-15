@@ -2,7 +2,7 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTVMTable</Name>
+            <Name>SvtVirtualMachineTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.VirtualMachine</TypeName>
             </ViewSelectedBy>
@@ -10,35 +10,48 @@
                 <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>VmName</Label>
                         <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>HostName</Label>
                         <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>DataCenterName</Label>
                         <Width>18</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ClusterName</Label>
                         <Width>18</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>DatastoreName</Label>
                         <Width>18</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>State</Label>
                         <Width>6</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>HAStatus</Label>
                         <Width>8</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>PolicyName</Label>
                         <Width>20</Width>
+                        <Alignment>left</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Label>VmPowerState</Label>
+                        <Width>10</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                 </TableHeaders>
@@ -58,7 +71,7 @@
                                 <PropertyName>ClusterName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>DataStoreName</PropertyName>
+                                <PropertyName>DatastoreName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>State</PropertyName>
@@ -68,6 +81,9 @@
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>PolicyName</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>VmPowerState</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>

@@ -1,46 +1,44 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Remove-SVTexternalStore
+# Remove-SvtExternalStore
 
 ## SYNOPSIS
-Unregister (remove) an external datastore from the specified HPE SimpliVity cluster
+
+Deregister (remove) an external datastore from the specified HPE SimpliVity cluster
 
 ## SYNTAX
 
-```
-Remove-SVTexternalStore [-ExternalStoreName] <String> [-ClusterName] <String> [<CommonParameters>]
+```PowerShell
+Remove-SvtExternalStore [-ExternalStoreName] <String> [-ClusterName] <String> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Unregister an external datastore.
-Removes the external store as a backup destination for the cluster.
+
+Deregister an external datastore. Removes the external store as a backup destination for the cluster.
 Backups remain on the external store, but they can no longer be managed by HPE SimpliVity.
 
-External stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped 
-backups to HPE SimpliVity.
-Once unregistered, the Catalyst store remains on the StoreOnce appliance but
-is inaccessible to HPE SimpliVity.
+External stores are preconfigured Catalyst stores on HPE StoreOnce appliances that provide air gapped backups to HPE SimpliVity. Once deregistered, the Catalyst store remains on the StoreOnce appliance but is inaccessible to HPE SimpliVity.
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Remove-SVTexternalStore -ExternalstoreName StoreOnce-Data03 -ClusterName SVTcluster
+
+```PowerShell
+Remove-SvtExternalStore -ExternalstoreName StoreOnce-Data03 -ClusterName SvtCluster
 ```
 
-Unregister (remove) the external datastore called StoreOnce-Data03 from the specified 
-HPE SimpliVity Cluster
+Deregister (remove) the external datastore called StoreOnce-Data03 from the specified HPE SimpliVity Cluster
 
 ## PARAMETERS
 
 ### -ExternalStoreName
-External datastore name.
-This is the pre-existing Catalyst store name on HPE StoreOnce
+
+External datastore name. This is the pre-existing Catalyst store name on HPE StoreOnce
 
 ```yaml
 Type: String
@@ -55,9 +53,8 @@ Accept wildcard characters: False
 ```
 
 ### -ClusterName
-The HPE SimpliVity cluster name to associate this external store.
-Once created, the external store is
-available to all clusters in the cluster group
+
+The HPE SimpliVity cluster name to associate this external store. Once created, the external store is available to all clusters in the cluster group
 
 ```yaml
 Type: String
@@ -72,15 +69,21 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
-### system.string
+### System.String
+
 ## OUTPUTS
 
 ### HPE.SimpliVity.Task
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
+
 This command works with HPE SimpliVity 4.0.1 and above
 
 ## RELATED LINKS

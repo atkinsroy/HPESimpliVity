@@ -2,41 +2,49 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTPolicyTable</Name>
+            <Name>SvtMetricTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.Metric</TypeName>
             </ViewSelectedBy>
             <TableControl>
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>Date</Label>
                         <Width>24</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ThroughputRead</Label>
                         <Width>14</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ThroughputWrite</Label>
                         <Width>15</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>LatencyRead</Label>
                         <Width>12</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>LatencyWrite</Label>
                         <Width>12</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>IopsRead</Label>
                         <Width>8</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>IopsWrite</Label>
                         <Width>9</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ObjectName</Label>
                         <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>

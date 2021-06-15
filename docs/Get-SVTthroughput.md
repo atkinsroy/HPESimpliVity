@@ -1,37 +1,41 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Get-SVTthroughput
+# Get-SvtThroughput
 
 ## SYNOPSIS
+
 Display information about HPE SimpliVity cluster throughput
 
 ## SYNTAX
 
-```
-Get-SVTthroughput [[-ClusterName] <String>] [[-Hour] <Int32>] [[-OffsetHour] <Int32>] [<CommonParameters>]
+```PowerShell
+Get-SvtThroughput [[-ClusterName] <String>] [[-Hour] <Int32>] [[-OffsetHour] <Int32>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
+
 Calculates the throughput between each pair of omnistack_clusters in the federation
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Get-SVTthroughput
+
+```PowerShell
+Get-SvtThroughput
 ```
 
 Displays the throughput information for the first cluster in the Federation, (alphabetically,
 by name)
 
 ### EXAMPLE 2
-```
-Get-SVTthroughput -Cluster Prod01
+
+```PowerShell
+Get-SvtThroughput -Cluster Prod01
 ```
 
 Displays the throughput information for the specified cluster
@@ -39,6 +43,7 @@ Displays the throughput information for the specified cluster
 ## PARAMETERS
 
 ### -ClusterName
+
 Specify a cluster name
 
 ```yaml
@@ -48,13 +53,14 @@ Aliases:
 
 Required: False
 Position: 1
-Default value: (Get-SVTcluster | 
+Default value: (Get-SvtCluster | 
             Sort-Object ClusterName | Select-Object -ExpandProperty ClusterName -First 1)
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
 ### -Hour
+
 Show throughput for the specified number of hours (starting from OffsetHour)
 
 ```yaml
@@ -70,6 +76,7 @@ Accept wildcard characters: False
 ```
 
 ### -OffsetHour
+
 Show throughput starting from the specified offset (hours from now, default is now)
 
 ```yaml
@@ -85,14 +92,19 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### None
+
 ## OUTPUTS
 
-### PSCustomObject
+### System.Management.Automation.PSCustomObject
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

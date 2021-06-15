@@ -2,21 +2,24 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTTaskTable</Name>
+            <Name>SvtTaskTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.Task</TypeName>
             </ViewSelectedBy>
             <TableControl>
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>State</Label>
                         <Width>15</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>TaskId</Label>
                         <Width>110</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ErrorMessage</Label>
                         <Width>30</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>

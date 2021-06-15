@@ -1,113 +1,97 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Get-SVTfile
+# Get-SvtFile
 
 ## SYNOPSIS
+
 Display the virtual disk, partition and file information from a SimpliVity backup
 
 ## SYNTAX
 
-```
-Get-SVTfile -BackupId <String> [[-VirtualDisk] <String>] [[-PartitionNumber] <String>] [[-FilePath] <String>]
+```PowerShell
+Get-SvtFile -BackupId <String> [[-VirtualDisk] <String>] [[-PartitionNumber] <String>] [[-FilePath] <String>]
  [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Displays the backed up files inside a SimpliVity backup.
-Different output is produced, depending on the 
-parameters provided.
-BackupId is a mandatory parameter and can be passed in from Get-SVTbackup.
 
-If no optional parameters are provided, or if VirtualDisk is not specified, the virtual disks contained 
-in the backup are shown.
-If a virtual disk name is provided, the partitions within the specified virtual 
-disk are shown.
-If the virtual disk and partition are provided, the files in the root path for the partition 
-are shown.
-If all three optional parameters are provided, the specified backed up files are shown.
+Displays the backed up files inside a SimpliVity backup. Different output is produced, depending on the parameters provided BackupId is a mandatory parameter and can be passed in from Get-SvtBackup.
+
+If no optional parameters are provided, or if VirtualDisk is not specified, the virtual disks contained in the backup are shown. If a virtual disk name is provided, the partitions within the specified virtual disk are shown.
+If the virtual disk and partition are provided, the files in the root path for the partition are shown. If all three optional parameters are provided, the specified backed up files are shown.
 
 Notes:
-1.
-This command only works on backups from guests running Microsoft Windows.
-Backed up virtual disks and 
-   partitions only can be displayed with backups of Linux guests.
-2.
-This command only works with native SimpliVity backups.
-(Backups on StoreOnce appliances do not work)
-3.
-Virtual disk names and folder paths are case sensitive
+
+1. This command only works on backups from guests running Microsoft Windows. Backed up virtual disks and partitions only can be displayed with backups of Linux guests.
+2. This command only works with native SimpliVity backups. (Backups on StoreOnce appliances do not work)
+3. Virtual disk names and folder paths are case sensitive
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-$Backup = Get-SVTbackup -VmName Server2016-01 -Limit 1
-PS C:\> $Backup | Get-SVTfile
+
+```PowerShell
+$Backup = Get-SvtBackup -VmName Server2016-01 -Limit 1
+PS C:\> $Backup | Get-SvtFile
 ```
 
 The first command identifies the most recent backup of the specified VM.
 The second command displays the virtual disks contained within the backup
 
 ### EXAMPLE 2
-```
-$Backup = Get-SVTbackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
-PS C:\> $Backup | Get-SVTfile -VirtualDisk Server2016-01.vmdk
+
+```PowerShell
+$Backup = Get-SvtBackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
+PS C:\> $Backup | Get-SvtFile -VirtualDisk Server2016-01.vmdk
 ```
 
-The first command identifies the most recent backup of the specified VM taken on a specific date. 
-The second command displays the partitions within the specified virtual disk.
-Virtual disk names are 
-case sensitive
+The first command identifies the most recent backup of the specified VM taken on a specific date. The second command displays the partitions within the specified virtual disk. Virtual disk names are case sensitive
 
 ### EXAMPLE 3
-```
-Get-SVTfile -BackupId 5f5f7f06...0b509609c8fb -VirtualDisk Server2016-01.vmdk -PartitionNumber 4
+
+```PowerShell
+Get-SvtFile -BackupId 5f5f7f06...0b509609c8fb -VirtualDisk Server2016-01.vmdk -PartitionNumber 4
 ```
 
 Shows the contents of the root folder on the specified partition inside the specified backup
 
 ### EXAMPLE 4
-```
-$Backup = Get-SVTbackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
-PS C:\> $Backup | Get-SVTfile Server2016-01.vmdk 4
+
+```PowerShell
+$Backup = Get-SvtBackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
+PS C:\> $Backup | Get-SvtFile Server2016-01.vmdk 4
 ```
 
 Shows the backed up files at the root of the specified partition, using positional parameters
 
 ### EXAMPLE 5
-```
-$Backup = Get-SVTbackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
-PS C:\> $Backup | Get-SVTfile Server2016-01.vmdk 4 /Users/Administrator/Documents
+
+```PowerShell
+$Backup = Get-SvtBackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
+PS C:\> $Backup | Get-SvtFile Server2016-01.vmdk 4 /Users/Administrator/Documents
 ```
 
-Shows the specified backed up files within the specified partition, using positional parameters.
-File 
-names are case sensitive.
+Shows the specified backed up files within the specified partition, using positional parameters. File names are case sensitive.
 
 ### EXAMPLE 6
-```
+
+```PowerShell
 $Backup = '5f5f7f06-a485-42eb-b4c0-0b509609c8fb' # This is a valid Backup ID
-PS C:\> $Backup | Get-SVTfile -VirtualDisk Server2016-01_1.vmdk -PartitionNumber 2 -FilePath '/Log Files'
+PS C:\> $Backup | Get-SvtFile -VirtualDisk Server2016-01_1.vmdk -PartitionNumber 2 -FilePath '/Log Files'
 ```
 
-The first command identifies the desired backup.
-The second command displays the specified backed up 
-files using named parameters.
-Quotes are used because the file path contains a space.
-File names are 
-case sensitive.
+The first command identifies the desired backup. The second command displays the specified backed up files using named parameters. Quotes are used because the file path contains a space. File names are case sensitive.
 
 ## PARAMETERS
 
 ### -BackupId
-The Backup Id for the desired backup.
-Use Get-SVTbackup to output the required backup as input for 
-this command
+
+The Backup Id for the desired backup. Use Get-SvtBackup to output the required backup as input for this command
 
 ```yaml
 Type: String
@@ -122,6 +106,7 @@ Accept wildcard characters: False
 ```
 
 ### -VirtualDisk
+
 The virtual disk name contained within the backup, including file suffix (".vmdk")
 
 ```yaml
@@ -137,6 +122,7 @@ Accept wildcard characters: False
 ```
 
 ### -PartitionNumber
+
 The partition number within the specified virtual disk
 
 ```yaml
@@ -152,6 +138,7 @@ Accept wildcard characters: False
 ```
 
 ### -FilePath
+
 The folder path for the backed up files
 
 ```yaml
@@ -167,17 +154,25 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ### HPE.SimpliVity.Backup
+
 ## OUTPUTS
 
 ### HPE.SimpliVity.VirtualDisk
+
 ### HPE.SimpliVity.Partition
+
 ### HPE.SimpliVity.File
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

@@ -1,57 +1,67 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTdatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
-# Get-SVThost
+# Get-SvtHost
 
 ## SYNOPSIS
+
 Display HPE SimpliVity host information
 
 ## SYNTAX
 
 ### ByHostName (Default)
-```
-Get-SVThost [[-HostName] <String[]>] [<CommonParameters>]
+
+```PowerShell
+Get-SvtHost [[-HostName] <String[]>] [<CommonParameters>]
 ```
 
 ### ByClusterName
-```
-Get-SVThost [-ClusterName <String[]>] [<CommonParameters>]
+
+```PowerShell
+Get-SvtHost [-ClusterName <String[]>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
+
 Shows host information from the SimpliVity Federation.
+
+Free Space is shown in green if at least 20% of the allocated storage is free, yellow if free space is between 10% and 20% and red if less than 10% is free.
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Get-SVThost
+
+```PowerShell
+Get-SvtHost
 ```
 
 Shows all hosts in the Federation
 
 ### EXAMPLE 2
-```
-Get-SVThost -Name Host01
-PS C:\> Get-SVThost Host01,Host02
+
+```PowerShell
+Get-SvtHost -Name Host01
+PS C:\> Get-SvtHost Host01,Host02
 ```
 
 Shows the specified host(s)
 
 ### EXAMPLE 3
-```
-Get-SVThost -ClusterName MyCluster
+
+```PowerShell
+Get-SvtHost -ClusterName MyCluster
 ```
 
 Shows hosts in specified HPE SimpliVity cluster(s)
 
 ### EXAMPLE 4
-```
-Get-SVTHost | Where-Object DataCenter -eq MyDC | Format-List *
+
+```PowerShell
+Get-SvtHost | Where-Object DataCenter -eq MyDC | Format-List *
 ```
 
 Shows all properties for all hosts in the specified Datacenter
@@ -59,6 +69,7 @@ Shows all properties for all hosts in the specified Datacenter
 ## PARAMETERS
 
 ### -HostName
+
 Show the specified host only
 
 ```yaml
@@ -74,6 +85,7 @@ Accept wildcard characters: False
 ```
 
 ### -ClusterName
+
 Show hosts from the specified SimpliVity cluster only
 
 ```yaml
@@ -89,14 +101,19 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ## OUTPUTS
 
 ### HPE.SimpliVity.Host
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS

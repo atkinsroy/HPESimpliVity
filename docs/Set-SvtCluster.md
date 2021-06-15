@@ -5,73 +5,62 @@ online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-
 schema: 2.0.0
 ---
 
-# Suspend-SvtPolicy
+# Set-SvtCluster
 
 ## SYNOPSIS
 
-Suspends the HPE SimpliVity backup policy for a host, a cluster or the federation
+Set properties of a HPE SimpliVity cluster
 
 ## SYNTAX
 
-### ByHost (Default)
+### TimeZone (Default)
 
 ```PowerShell
-Suspend-SvtPolicy [-HostName] <String> [<CommonParameters>]
+Set-SvtCluster [-ClusterName] <String> [-TimeZone] <String> [<CommonParameters>]
 ```
 
-### ByCluster
+### EnableIWO
 
 ```PowerShell
-Suspend-SvtPolicy -ClusterName <String> [<CommonParameters>]
-```
-
-### ByFederation
-
-```PowerShell
-Suspend-SvtPolicy [-Federation] [<CommonParameters>]
+Set-SvtCluster [-ClusterName] <String> [-EnableIWO] <Boolean> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
 
-Suspend the HPE SimpliVity backup policy for a host, a cluster or the federation
+Either sets the timezone or enables/disables the Intelligent Workload Optimizer (IWO) on a HPE SimpliVity cluster. Read the product documentation for more information about IWO.
+
+Use 'Get-SvtTimezone' to see a list of valid timezones
+Use 'Get-SvtCluster | Select-Object ClusterName,TimeZone' to see the currently set timezone
+Use 'Get-SvtCluster | Select-Object ClusterName, IwoEnabled' to see if IWO is currently enabled
 
 ## EXAMPLES
 
 ### EXAMPLE 1
 
 ```PowerShell
-Suspend-SvtPolicy -Federation
+Set-SvtCluster -Cluster PROD -Timezone 'Australia/Sydney'
 ```
 
-Suspends backup policies for the entire federation
-
-NOTE: This command will only work when connected to a SimpliVity Virtual Appliance, (not when connected to a Managed Virtual Appliance)
+Sets the time zone for the specified cluster
 
 ### EXAMPLE 2
 
 ```PowerShell
-Suspend-SvtPolicy -ClusterName Prod
+Set-SvtCluster -EnableIWO:$true
 ```
 
-Suspend backup policies for the specified cluster
-
-### EXAMPLE 3
-
-```PowerShell
-Suspend-SvtPolicy -HostName host01
-```
-
-Suspend backup policies for the specified host
+Enables IWO on the specified cluster.
+This command requires v4.1.0 or above.
 
 ## PARAMETERS
 
-### -HostName
+### -ClusterName
 
-Apply to specified host name
+Specify the cluster you want to change
 
 ```yaml
 Type: String
-Parameter Sets: ByHost
+Parameter Sets: (All)
 Aliases:
 
 Required: True
@@ -81,33 +70,33 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -ClusterName
+### -TimeZone
 
-Apply to specified Cluster name
+Specify a valid timezone. Use Get-Timezone to see a list of valid timezones
 
 ```yaml
 Type: String
-Parameter Sets: ByCluster
+Parameter Sets: TimeZone
 Aliases:
 
 Required: True
-Position: Named
+Position: 2
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Federation
+### -EnableIWO
 
-Apply to federation
+Specify either $true or $false to enable or disable IWO
 
 ```yaml
-Type: SwitchParameter
-Parameter Sets: ByFederation
+Type: Boolean
+Parameter Sets: EnableIWO
 Aliases:
 
 Required: True
-Position: Named
+Position: 2
 Default value: False
 Accept pipeline input: False
 Accept wildcard characters: False

@@ -2,7 +2,7 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTVMTable</Name>
+            <Name>SvtReplicaSetTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.ReplicaSet</TypeName>
             </ViewSelectedBy>
@@ -10,26 +10,32 @@
                 <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>VmName</Label>
                         <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>State</Label>
                         <Width>12</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>HAstatus</Label>
                         <Width>12</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ClusterName</Label>
                         <Width>20</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>Primary</Label>
                         <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>Secondary</Label>
                         <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>

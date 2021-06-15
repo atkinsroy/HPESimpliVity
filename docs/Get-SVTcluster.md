@@ -1,44 +1,51 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTcluster.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtCluster.md
 schema: 2.0.0
 ---
 
-# Get-SVTcluster
+# Get-SvtCluster
 
 ## SYNOPSIS
+
 Display HPE SimpliVity cluster information
 
 ## SYNTAX
 
-```
-Get-SVTcluster [[-ClusterName] <String[]>] [<CommonParameters>]
+```PowerShell
+Get-SvtCluster [[-ClusterName] <String[]>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
+
 Shows cluster information from the SimpliVity Federation
+
+Free Space is shown in green if at least 20% of the allocated storage is free, yellow if free space is between 10% and 20% and red if less than 10% is free.
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Get-SVTcluster
+
+```PowerShell
+Get-SvtCluster
 ```
 
 Shows information about all clusters in the Federation
 
 ### EXAMPLE 2
-```
-Get-SVTcluster Prod01
-PS C:\> Get-SVTcluster -Name Prod01
+
+```PowerShell
+Get-SvtCluster Prod01
+PS C:\> Get-SvtCluster -Name Prod01
 ```
 
 Shows information about the specified cluster
 
 ### EXAMPLE 3
-```
-Get-SVTcluster cluster1,cluster2
+
+```PowerShell
+Get-SvtCluster cluster1,cluster2
 ```
 
 Shows information about the specified clusters
@@ -46,6 +53,7 @@ Shows information about the specified clusters
 ## PARAMETERS
 
 ### -ClusterName
+
 Show information about the specified cluster only
 
 ```yaml
@@ -61,17 +69,21 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ## OUTPUTS
 
 ### HPE.SimpliVity.Cluster
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTcluster.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTcluster.md)
-
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtCluster.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtCluster.md)

@@ -1,36 +1,40 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTclusterConnected.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtClusterConnected.md
 schema: 2.0.0
 ---
 
-# Get-SVTclusterConnected
+# Get-SvtClusterConnected
 
 ## SYNOPSIS
+
 Displays information about the connected HPE SimpliVity clusters in a Federation
 
 ## SYNTAX
 
-```
-Get-SVTclusterConnected [[-ClusterName] <String>] [<CommonParameters>]
+```PowerShell
+Get-SvtClusterConnected [[-ClusterName] <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
+
 Displays information about other HPE SimpliVity clusters directly connected to the specified cluster
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
-Get-SVTclusterConnected -ClusterName Production
+
+```PowerShell
+Get-SvtClusterConnected -ClusterName Production
 ```
 
 Displays information about the clusters directly connected to the specified cluster
 
 ### EXAMPLE 2
-```
-Get-SVTclusterConnected
+
+```PowerShell
+Get-SvtClusterConnected
 ```
 
 Displays information about the first cluster in the federation (by cluster name, alphabetically)
@@ -38,6 +42,7 @@ Displays information about the first cluster in the federation (by cluster name,
 ## PARAMETERS
 
 ### -ClusterName
+
 Specify a 'source' cluster name to display information about the SimpliVity clusters directly connected to it
 
 If no cluster is specified, the first cluster in the Federation is used (alphabetically)
@@ -55,17 +60,21 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
+
 ## OUTPUTS
 
-### PSCustomObject
+### System.Management.Automation.PSCustomObject
+
 ## NOTES
+
+Author: Roy Atkins, HPE Pointnext Services
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTclusterConnected.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SVTclusterConnected.md)
-
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtClusterConnected.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtClusterConnected.md)

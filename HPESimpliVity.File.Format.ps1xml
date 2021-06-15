@@ -2,7 +2,7 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTClusterTable</Name>
+            <Name>SvtFileTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.File</TypeName>
             </ViewSelectedBy>
@@ -10,30 +10,37 @@
                 <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>VirtualDisk</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>PartitionNumber</Label>
                         <Width>15</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>FileName</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>Directory</Label>
                         <Width>9</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>SizeMB</Label>
                         <Width>6</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>SymbolicLink</Label>
                         <Width>12</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>LastModified</Label>
                         <Width>22</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
