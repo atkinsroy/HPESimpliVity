@@ -1,10 +1,10 @@
-# PowerShell Module for HPE SimpliVity Release Notes
+# HPE SimpliVity PowerShell Module Release Notes
 
 ## Version 2.1.29
 
 * Added support for new HPE SimpliVity V4.1.0 features:
 
-  * Ability to create and show single replica datastores with New-SvtDataStore and Get-SvtDatastore respectively.
+  * Ability to create and show single replica datastores with New-SvtDatastore and Get-SvtDatastore respectively.
   * Ability to enable and disable Intelligent Workload Optimizer within a SimpliVity cluster. For example:
 
 ````PowerShell
@@ -17,7 +17,7 @@
     Set-SvtCluster -TimeZone <timezone>
 ````
 
-* Removed references 'OVC' within the module. The '-OVC' parameter for the Connect-Svt command is replaced with -VirtualAppliance or -VA. -OVC will continue to work, but is depreciated.
+* Removed references 'OVC' within the module. The '-OVC' parameter for the Connect-Svt command is replaced with '-VirtualAppliance' or '-VA'. The '-OVC' parameter will continue to work, but is depreciated.
 
 * Performance improvements with a number of cmdlets that accept hostname as input. Formally, an API call was made to enumerate fully qualified hostnames. This information is now cached in a global variable called $SvtHost. As a result commands such as Get-Disk and Get-Hardware run faster in large environments.
 
