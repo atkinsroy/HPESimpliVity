@@ -98,7 +98,7 @@ Show backups created between the specified dates/times. (using local date/time f
 Get-SvtBackup -ExpiresAfter "04/04/2020" -ExpiresBefore "05/04/2020" -Limit 100
 ```
 
-Show backups that will expire between the specified dates/times.(using local date/time format).Limited to display up to 100 backups.
+Show backups that will expire between the specified dates/times.(using local date/time format).Limited to display up to 500 backups.
 
 ### EXAMPLE 5
 
