@@ -8,13 +8,13 @@
   * Ability to enable and disable Intelligent Workload Optimizer within a SimpliVity cluster. For example:
 
 ````PowerShell
-    Set-SvtCluster -EnableIWO:$true
+    Set-SvtCluster -EnableIWO:$true -ClusterName TwoDogs
 ````
 
 * Removed Set-SvtTimezone command. This has been replaced with:
 
 ````PowerShell
-    Set-SvtCluster -TimeZone <timezone>
+    Set-SvtCluster -TimeZone <timezone> -ClusterName TwoDogs
 ````
 
 * Removed references 'OVC' within the module. The '-OVC' parameter for the Connect-Svt command is replaced with '-VirtualAppliance' or '-VA'. The '-OVC' parameter will continue to work, but is depreciated.
