@@ -14,7 +14,7 @@
 * Removed Set-SvtTimezone command. This has been replaced with:
 
 ````PowerShell
-    Set-SvtCluster -TimeZone <timezone> -ClusterName TwoDogs
+    Set-SvtCluster -TimeZone 'Australia/Sydney' -ClusterName TwoDogs
 ````
 
 * Removed references 'OVC' within the module. The '-OVC' parameter for the Connect-Svt command is replaced with '-VirtualAppliance' or '-VA'. The '-OVC' parameter will continue to work, but is depreciated.
