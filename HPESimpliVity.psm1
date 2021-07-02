@@ -472,6 +472,8 @@ function Invoke-SvtRestMethod {
     test REST API calls
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtTask.md
 #>
 function Get-SvtTask {
     [CmdletBinding(DefaultParameterSetName = 'ByObject')]
@@ -517,9 +519,9 @@ function Get-SvtTask {
     using the OAuth authentication method. Once obtained, you can pass the resulting access token via the
     HTTP header using an Authorisation Bearer token.
 
-    The access token is stored in a global variable accessible to all HPESimpliVity cmdlets in the PowerShell
-    session. Note that the access token times out after 10 minutes of inactivity. However, the HPESimpliVity
-    module will automatically recreate a new token using cached credentials.
+    The access token is stored in a global variable called $SvtConnection and is accessible to all HPESimpliVity
+    cmdlets in the PowerShell session. Note that the access token times out after 10 minutes of inactivity. However,
+    the HPESimpliVity module will automatically recreate a new token using cached credentials.
 .PARAMETER VirtualAppliance
     The Fully Qualified Domain Name (FQDN) or IP address of any SimpliVity Virtual Appliance or Managed Virtual
     Appliance in the SimpliVity Federation.
@@ -542,7 +544,7 @@ function Get-SvtTask {
     This will securely prompt you for credentials
 .EXAMPLE
     PS C:\> $Cred = Get-Credential -Message 'Enter Credentials'
-    PS C:\> Connect-Svt -VA <FQDN or IP Address of SVA or MVA> -Credential $Cred
+    PS C:\> Connect-Svt -VA 10.1.1.16 -Credential $Cred
 
     Create the credential first, then pass it as a parameter.
 .EXAMPLE
@@ -562,7 +564,6 @@ function Get-SvtTask {
     Author: Roy Atkins, HPE Pointnext Services
 .LINK
     https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Connect-Svt.md
-
 #>
 function Connect-Svt {
     [CmdletBinding()]
@@ -675,6 +676,8 @@ function Connect-Svt {
     connecting to an Omnistack Virtual Appliance (OVA) or a Managed Virtual Appliance (MVA).
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVersion.md
 #>
 function Get-SvtVersion {
     $Header = @{
@@ -782,6 +785,8 @@ function Get-SvtVersion {
     HPE.SimpliVity.Metric
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtMetric.md
 #>
 function Get-SvtMetric {
     [CmdletBinding(DefaultParameterSetName = 'Host')]
@@ -1439,8 +1444,7 @@ function Get-SvtImpactReport {
 
     -All will display all backups, regardless of limit. Be careful, this command will take a long time to
     complete because it returns ALL backups. It does this by calling the SimpliVity API multiple times (using
-    an offset value with limit set to 3000). It is recommended to use other parameters with the -All parameter
-    to limit the output.
+    an offset value of 3000). It is recommended to use other parameters with the -All parameter to limit the output.
 
     The use of -Verbose is recommended because it shows information about what the command is doing. It also shows
     the total number of matching backups. If matching backups is higher than -Limit (500 by default), then you are
@@ -1450,14 +1454,14 @@ function Get-SvtImpactReport {
     Multi-value parameters currently fail when connected to a SimpliVity Virtual Appliance. For this reason, using
     an MVA (centralized configuration) is highly recommended.
 .PARAMETER VmName
-    Show all backups for the specified virtual machine(s). By default a limit of 500 backups are shown, but
-    this can be increased.
+    Show backups for the specified virtual machine(s). By default a limit of 500 backups are shown, but this can be
+    increased too 3000 using -Limit, or removed using -All.
 .PARAMETER ClusterName
-    Show all backups sourced from a specified HPE SimpliVity cluster name or names. By default a limit of 500
-    backups are shown, but this can be increased.
+    Show backups sourced from a specified HPE SimpliVity cluster name or names. By default a limit of 500 backups are
+    shown.
 .PARAMETER DatastoreName
-    Show all backups sourced from a specified SimpliVity datastore or datastores. By default a limit of 500
-    backups are shown, but this can be increased.
+    Show backups sourced from a specified SimpliVity datastore or datastores. By default a limit of 500 backups are
+    shown.
 .PARAMETER DestinationName
     Show backups located on the specified destination HPE SimpliVity cluster name or external datastore name.
     Multiple destinations can be specified, but they must all be of one type (i.e. cluster or external store)
@@ -1475,7 +1479,8 @@ function Get-SvtImpactReport {
 .PARAMETER MaxSizeMB
     Show backups with the specified maximum size
 .PARAMETER Date
-    Display backups created on the specified date. This takes precedence over CreatedAfter and CreatedBefore.
+    Display backups created on the specified date. This takes precedence over CreatedAfter and CreatedBefore. You can
+    specify a date only (shows 24 hours worth of backups) or a date and time, using the local date/time format.
 .PARAMETER CreatedAfter
     Display backups created after the specified date. This parameter is ignored if -Date is also specified.
 .PARAMETER CreatedBefore
@@ -1505,29 +1510,29 @@ function Get-SvtImpactReport {
 .EXAMPLE
     PS C:\>Get-SvtBackup
 
-    Show the last 24 hours of backups from the SimpliVity Federation.
+    Show the last 24 hours of backups from the SimpliVity Federation, limited to 500 backups.
 .EXAMPLE
     PS C:\>Get-SvtBackup -Date 23/04/2020
-    PS C:\>Get-SvtBackup -Date '23/04/2020 10:00:00 AM' -VmName Server2016-04,Server2016-08
+    PS C:\>Get-SvtBackup -Date '23/04/2020 10:00:00 AM'
 
     The first command shows all backups from the specified date (24 hour period), up to the default limit of 500
-    backups. The second command show the specific backup from the specified date and time (using local date/time
-    format) for the specified virtual machines.
+    backups. The second command shows the specific backup from the specified date and time (using local date/time
+    format).
 .EXAMPLE
     PS C:\>Get-SvtBackup -CreatedAfter "04/04/2020 10:00 AM" -CreatedBefore "04/04/2020 02:00 PM"
 
     Show backups created between the specified dates/times. (using local date/time format). Limited to 500
     backups by default.
 .EXAMPLE
-    PS C:\>Get-SvtBackup -ExpiresAfter "04/04/2020" -ExpiresBefore "05/04/2020" -Limit 100
+    PS C:\>Get-SvtBackup -ExpiresAfter "04/04/2020" -ExpiresBefore "05/04/2020" -Limit 3000
 
     Show backups that will expire between the specified dates/times. (using local date/time format). Limited to
-    display up to 100 backups.
+    display up to the maximum of 3000 backups.
 .EXAMPLE
-    PS C:\>Get-SvtBackup -Hour 48 -Limit 1000 |
+    PS C:\>Get-SvtBackup -Hour 48 -Limit 2000 |
         Select-Object VmName, DatastoreName, SentMB, UniqueSizeMB | Format-Table -Autosize
 
-    Show backups up to 48 hours old and display specific properties. Limited to display up to 1000 backups.
+    Show backups up to 48 hours old and display specific properties. Limited to display up to 2000 backups.
 .EXAMPLE
     PS C:\>Get-SvtBackup -All -Verbose
 
@@ -1547,10 +1552,6 @@ function Get-SvtImpactReport {
     The second command shows the backups taken within the last 2 hours for each specified VM.
     The use of multiple, comma separated values works when connected to a Managed Virtual Appliance only.
 .EXAMPLE
-    PS C:\>Get-SvtBackup -VmName VM1 -BackupName '2019-04-26T16:00:00+10:00'
-
-    Display the backup for the specified virtual machine in the specified backup
-.EXAMPLE
     PS C:\>Get-SvtBackup -VmName VM1 -BackupName '2019-05-05T00:00:00-04:00' -DestinationName SvtCluster
 
     If you have backup policies with more than one rule, further refine the filter by specifying the destination
@@ -1560,12 +1561,11 @@ function Get-SvtImpactReport {
 
     Shows all backups on the specified SimpliVity datastores, up to the specified limit
 .EXAMPLE
-    PS C:\>Get-SvtBackup -ClusterName cluster1 -Limit 100
+
     PS C:\>Get-SvtBackup -ClusterName cluster1 -Limit 1 -Verbose
 
-    The first command shows the most recent 100 backups for all VMs located on the specified cluster.
-    The second command shows a quick way to determine the number of backups on a cluster without showing them
-    all. The verbose message will always display the number of backups that meet the command criteria.
+    Shows a quick way to determine the number of backups on a cluster without showing them
+    all. The -Verbose parameter will always display the number of backups that meet the command criteria.
 .EXAMPLE
     PS C:\>Get-SvtBackup -DestinationName cluster1
 
@@ -2020,6 +2020,8 @@ function Get-SvtBackup {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtBackup.md
 #>
 function New-SvtBackup {
     [CmdletBinding()]
@@ -2186,6 +2188,8 @@ function New-SvtBackup {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Restore-SvtVm.md
 #>
 function Restore-SvtVm {
     # calling this function 'restore VM' rather than 'restore backup' as per the API, because it makes more sense
@@ -2355,6 +2359,8 @@ function Restore-SvtVm {
     There is another REST API DELETE call (/api/backups/<bkpId>) which only works locally (i.e. when
     connected to a SimpliVity Virtual Appliance where the backup resides), but this fails when trying to delete
     remote backups.
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtBackup.md
 #>
 function Remove-SvtBackup {
     [CmdletBinding()]
@@ -2417,6 +2423,8 @@ function Remove-SvtBackup {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Stop-SvtBackup.md
 #>
 function Stop-SvtBackup {
     [CmdletBinding()]
@@ -2574,6 +2582,8 @@ function Copy-SvtBackup {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Lock-SvtBackup.md
 #>
 function Lock-SvtBackup {
     [CmdletBinding()]
@@ -2636,6 +2646,8 @@ function Lock-SvtBackup {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Rename-SvtBackup.md
 #>
 function Rename-SvtBackup {
     [CmdletBinding()]
@@ -2716,6 +2728,8 @@ function Rename-SvtBackup {
     Author: Roy Atkins, HPE Pointnext Services
 
     OMNI-53536: Setting the retention time to a time that causes backups to be deleted fails
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtBackupRetention.md
 #>
 function Set-SvtBackupRetention {
     [CmdletBinding(DefaultParameterSetName = 'ByDay')]
@@ -2824,6 +2838,8 @@ function Set-SvtBackupRetention {
     This command only updates the backups in the local cluster. Login to a SimpliVity Virtual Appliance in a remote
     cluster to update the backups there. The UniqueSizeDate property is updated on the backup object(s) when you run
     this command
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Update-SvtBackupUniqueSize.md
 #>
 function Update-SvtBackupUniqueSize {
     [CmdletBinding()]
@@ -2932,6 +2948,8 @@ function Update-SvtBackupUniqueSize {
     HPE.SimpliVity.File
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtFile.md
 #>
 function Get-SvtFile {
     [CmdletBinding()]
@@ -3091,6 +3109,8 @@ function Get-SvtFile {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Restore-SvtFile.md
 #>
 function Restore-SvtFile {
     [CmdletBinding()]
@@ -3279,6 +3299,8 @@ function Get-SvtDatastore {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtDatastore.md
 #>
 function New-SvtDatastore {
     [CmdletBinding()]
@@ -3365,6 +3387,8 @@ function New-SvtDatastore {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtDatastore.md
 #>
 function Remove-SvtDatastore {
     [CmdletBinding()]
@@ -3420,6 +3444,8 @@ function Remove-SvtDatastore {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Resize-SvtDatastore.md
 #>
 function Resize-SvtDatastore {
     [CmdletBinding()]
@@ -3476,6 +3502,8 @@ function Resize-SvtDatastore {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtDatastorePolicy.md
 #>
 function Set-SvtDatastorePolicy {
     [CmdletBinding()]
@@ -3534,6 +3562,8 @@ function Set-SvtDatastorePolicy {
     Author: Roy Atkins, HPE Pointnext Services
 
     This command currently works in VMware environments only. Compute nodes are not supported with Hyper-V
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Publish-SvtDatastore.md
 #>
 function Publish-SvtDatastore {
     [CmdletBinding()]
@@ -3589,6 +3619,8 @@ function Publish-SvtDatastore {
     Author: Roy Atkins, HPE Pointnext Services
 
     This command currently works in VMware environments only. Compute nodes are not supported with Hyper-V
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Unpublish-SvtDatastore.md
 #>
 function Unpublish-SvtDatastore {
     [CmdletBinding()]
@@ -3723,6 +3755,8 @@ function Get-SvtDatastoreComputeNode {
     Author: Roy Atkins, HPE Pointnext Services
 
     This command works with HPE SimpliVity 4.0.0 and above
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtExternalStore.md
 #>
 function Get-SvtExternalStore {
     [CmdletBinding()]
@@ -3809,6 +3843,8 @@ function Get-SvtExternalStore {
     Author: Roy Atkins, HPE Pointnext Services
 
     This command works with HPE SimpliVity 4.0.0 and above
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtExternalStore.md
 #>
 function New-SvtExternalStore {
     [CmdletBinding()]
@@ -3903,6 +3939,8 @@ function New-SvtExternalStore {
     Author: Roy Atkins, HPE Pointnext Services
 
     This command works with HPE SimpliVity 4.0.1 and above
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtExternalStore.md
 #>
 function Remove-SvtExternalStore {
     [CmdletBinding()]
@@ -3974,6 +4012,8 @@ function Remove-SvtExternalStore {
     Author: Roy Atkins, HPE Pointnext Services
 
     This command works with HPE SimpliVity 4.0.1 and above
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtExternalStore.md
 #>
 function Set-SvtExternalStore {
     [CmdletBinding()]
@@ -4058,6 +4098,8 @@ function Set-SvtExternalStore {
     HPE.SimpliVity.Host
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtHost.md
 #>
 function Get-SvtHost {
     [CmdletBinding(DefaultParameterSetName = 'ByHostName')]
@@ -4199,6 +4241,8 @@ function Get-SvtHost {
     HPE.SimpliVity.Hardware
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtHardware.md
 #>
 function Get-SvtHardware {
     [CmdletBinding()]
@@ -4295,6 +4339,8 @@ function Get-SvtHardware {
     HPE.SimpliVity.Disk
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDisk.md
 #>
 function Get-SvtDisk {
     [CmdletBinding()]
@@ -4581,6 +4627,8 @@ function Get-SvtCapacity {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtHost.md
 #>
 function Remove-SvtHost {
     param (
@@ -4664,6 +4712,8 @@ function Remove-SvtHost {
     System.Management.Automation.PSCustomObject
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Start-SvtShutdown.md
 #>
 function Start-SvtShutdown {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
@@ -4846,6 +4896,8 @@ function Start-SvtShutdown {
     System.Management.Automation.PSCustomObject
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtShutdownStatus.md
 #>
 function Get-SvtShutdownStatus {
     [CmdletBinding()]
@@ -4939,6 +4991,8 @@ function Get-SvtShutdownStatus {
     System.Management.Automation.PSCustomObject
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Stop-SvtShutdown.md
 #>
 function Stop-SvtShutdown {
     [CmdletBinding()]
@@ -5132,6 +5186,8 @@ function Get-SvtCluster {
     System.Management.Automation.PSCustomObject
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtThroughput.md
 #>
 function Get-SvtThroughput {
     [CmdletBinding()]
@@ -5208,6 +5264,8 @@ function Get-SvtThroughput {
     System.Management.Automation.PSCustomObject
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtTimezone.md
 #>
 function Get-SvtTimezone {
     $Header = @{
@@ -5255,6 +5313,8 @@ function Get-SvtTimezone {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtCluster.md
 #>
 function Set-SvtCluster {
     [CmdletBinding(DefaultParameterSetName = 'TimeZone')]
@@ -5439,6 +5499,8 @@ function Get-SvtClusterConnected {
     HPE.SimpliVity.Policy
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtPolicy.md
 #>
 function Get-SvtPolicy {
     [CmdletBinding()]
@@ -5551,6 +5613,8 @@ function Get-SvtPolicy {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtPolicy.md
 #>
 function New-SvtPolicy {
     [CmdletBinding()]
@@ -5664,6 +5728,8 @@ function New-SvtPolicy {
     System.Management.Automation.PSCustomObject
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtPolicyRule.md
 #>
 function New-SvtPolicyRule {
     [CmdletBinding(DefaultParameterSetName = 'ByWeekDay')]
@@ -5950,6 +6016,8 @@ function New-SvtPolicyRule {
     - Changing ConsistencyType to anything other than None or Default doesn't appear to work.
     - Changing ConsistencyType to anything other than None or Default doesn't appear to work.
     - Use Remove-SvtPolicyRule and New-SvtPolicyRule to update ConsistencyType to VSS.
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Update-SvtPolicyRule.md
 #>
 function Update-SvtPolicyRule {
     [CmdletBinding(DefaultParameterSetName = 'ByWeekDay')]
@@ -6163,7 +6231,8 @@ function Update-SvtPolicyRule {
     System.Management.Automation.PSCustomObject
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
-
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtPolicyRule.md
 #>
 function Remove-SvtPolicyRule {
     [CmdletBinding()]
@@ -6255,6 +6324,8 @@ function Remove-SvtPolicyRule {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Rename-SvtPolicy.md
 #>
 function Rename-SvtPolicy {
     [CmdletBinding()]
@@ -6315,6 +6386,8 @@ function Rename-SvtPolicy {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtPolicy.md
 #>
 function Remove-SvtPolicy {
     [CmdletBinding()]
@@ -6410,6 +6483,8 @@ function Remove-SvtPolicy {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Suspend-SvtPolicy.md
 #>
 function Suspend-SvtPolicy {
     [CmdletBinding(DefaultParameterSetName = 'ByHost')]
@@ -6508,6 +6583,8 @@ function Suspend-SvtPolicy {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Resume-SvtPolicy.md
 #>
 function Resume-SvtPolicy {
     [CmdletBinding(DefaultParameterSetName = 'ByHost')]
@@ -6589,6 +6666,8 @@ function Resume-SvtPolicy {
     System.Management.Automation.PSCustomObject
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtPolicyScheduleReport.md
 #>
 function Get-SvtPolicyScheduleReport {
     $Header = @{
@@ -6686,6 +6765,8 @@ function Get-SvtPolicyScheduleReport {
 
     Known issues:
     OMNI-69918 - GET calls for virtual machine objects may result in OutOfMemortError when exceeding 8000 objects
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVm.md
 #>
 function Get-SvtVm {
     [CmdletBinding(DefaultParameterSetName = 'ByVmName')]
@@ -6848,6 +6929,8 @@ function Get-SvtVm {
     System.Management.Automation.PSCustomObject
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVmReplicaSet.md
 #>
 function Get-SvtVmReplicaSet {
     [CmdletBinding(DefaultParameterSetName = 'ByVm')]
@@ -6953,6 +7036,8 @@ function Get-SvtVmReplicaSet {
     System.Management.Automation.PSCustomObject
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtClone.md
 #>
 function New-SvtClone {
     [CmdletBinding()]
@@ -7053,6 +7138,8 @@ function New-SvtClone {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Move-SvtVm.md
 #>
 function Move-SvtVm {
     [CmdletBinding()]
@@ -7191,6 +7278,8 @@ function Move-SvtVm {
     System.Management.Automation.PSCustomObject
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtVm.md
 #>
 function Set-SvtVm {
     [CmdletBinding(DefaultParameterSetName = 'SetPolicy')]
@@ -7388,6 +7477,8 @@ function Set-SvtVm {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Stop-SvtVm.md
 #>
 function Stop-SvtVm {
     [CmdletBinding()]
@@ -7480,6 +7571,8 @@ function Stop-SvtVm {
     HPE.SimpliVity.Task
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
+.LINK
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Start-SvtVm.md
 #>
 function Start-SvtVm {
     [CmdletBinding()]
