@@ -1,5 +1,7 @@
 # HPE SimpliVity PowerShell Module
 
+[![PSGallery Version](https://img.shields.io/powershellgallery/v/HPESimpliVity.png?style=for-the-badge&logo=powershell&label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/HPESimpliVity/) [![PSGallery Downloads](https://img.shields.io/powershellgallery/dt/PSCalendar.png?style=for-the-badge&label=Downloads)](https://www.powershellgallery.com/packages/HPESimpliVity/)
+
 This PowerShell module utilizes the HPE SimpliVity REST API to manage a SimpliVity federation. It works by connecting to any HPE SimpliVity Virtual Appliance in your environment. With the release of HPE SimpliVity V4.0.0 and above, you can now also implement and connect to a Management Virtual Appliance, which is recommended. All cmdlets have comment-based help and the majority have the ability to accept the output from another cmdlet as input. The cmdlets adhere to the current recommendations with the REST API. For example, limiting the number of records when returning virtual machine and backup objects.
 
 Example usage:
