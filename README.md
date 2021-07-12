@@ -60,7 +60,7 @@ Refer to the [documentation](/Docs) for more information.
 
 ## Installation
 
-* Install the HPESimplivity module from the PowerShell Gallery using one of the following commands:
+* Install the HPESimplivity module from the PowerShell Gallery using the following command:
 
 ```PowerShell
     PS C:\> Install-Module -Name HPESimpliVity
@@ -83,7 +83,7 @@ and then in your script, import the credential for a new session:
 
 ```PowerShell
     PS C:\> $Cred = Import-CLIXML .\cred.XML
-    PS C:\> Connect-Svt -VA <IP or FQDN of an SVA or MVA> -Credential $Cred
+    PS C:\> Connect-Svt -VA 192.168.1.11 -Credential $Cred
     PS C:\> Get-SvtHost
 ```
 
