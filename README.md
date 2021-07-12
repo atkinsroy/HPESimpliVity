@@ -50,6 +50,8 @@ Get-SvtTimezone | Start-SvtShutdown | Start-SvtVm
 Get-SvtVersion | Stop-SvtShutdown | Stop-SvtVm
 Set-SvtCluster
 
+Refer to the [documentation](/Docs) for more information.
+
 ## Requirements
 
 * Windows PowerShell V5.1 or PowerShell Core V7.x (PowerShell Core V6.x is not recommended)
@@ -68,7 +70,7 @@ Set-SvtCluster
 
 ```PowerShell
     PS C:\> $Cred = Get-Credential -Message 'Enter credentials'
-    PS C:\> Connect-Svt -VA <IP or FQDN of an SVA or MVA> -Credential $Cred
+    PS C:\> Connect-Svt -VirtualAppliance <IP or FQDN of an SVA or MVA> -Credential $Cred
 ```
 
 * Or, if you need to run commands in batch (non-interactively), save your credentials to a file first:
