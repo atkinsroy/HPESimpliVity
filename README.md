@@ -2,7 +2,7 @@
 
 [![PSGallery Version](https://img.shields.io/powershellgallery/v/HPESimpliVity.png?style=for-the-badge&logo=powershell&label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/HPESimpliVity/) [![PSGallery Downloads](https://img.shields.io/powershellgallery/dt/PSCalendar.png?style=for-the-badge&label=Downloads)](https://www.powershellgallery.com/packages/HPESimpliVity/)
 
-This PowerShell module utilizes the HPE SimpliVity REST API to manage a SimpliVity federation. It works by connecting to any HPE SimpliVity Virtual Appliance in your environment. With the release of HPE SimpliVity V4.0.0 and above, you can now also implement and connect to a Management Virtual Appliance, which is recommended. All cmdlets have comment-based help and the majority have the ability to accept the output from another cmdlet as input. The cmdlets adhere to the current recommendations with the REST API. For example, limiting the number of records when returning virtual machine and backup objects.
+This PowerShell module utilizes the HPE SimpliVity REST API to manage a SimpliVity federation. It connects to any HPE SimpliVity Virtual Appliance in your environment. With the release of HPE SimpliVity V4.0.0 and above, you can now also implement and connect to a Management Virtual Appliance, which is recommended. The cmdlets adhere to the current HPE recommendations with the REST API. For example, limiting the number of records when returning virtual machine and backup objects.
 
 Example usage:
 
@@ -16,17 +16,6 @@ Example usage:
     srvr1.sg.com  SunGod          Production1        2,671  192.168.1.11  192.168.2.1  192.168.3.1
     srvr2.sg.com  SunGod          Production1        2,671  192.168.1.12  192.168.2.2  192.168.3.2
     srvr3.sg.com  SunGod          DR1                2,671  192.170.1.11  192.170.2.1  192.170.3.1
-
-    PS C:\>Get-SvtHost -HostName 192.168.1.1 | Select-Object *
-
-    PolicyEnabled            : True
-    ClusterId                : 3baba7ec-6d02-4fb6-b510-5ce19cd9c1d0
-    StorageMask              : 255.255.255.0
-    Model                    : HPE SimpliVity 380 Series 4000
-    HostName                 : srvr1.sg.com
-    .
-    .
-    .
 ```
 
 ## Latest Update
@@ -75,27 +64,11 @@ Set-SvtCluster
     PS C:\> Install-Module -Name HPESimpliVity
 ```
 
-The module is signed, so it will work with an execution policy set to 'Remote Signed'.
-
-* Restart Powershell to load the module, or type:
-
-```PowerShell
-    PS C:\> Import-Module HPESimpliVity -Force
-```
-
-* After this, the module will automatically load in new PowerShell sessions. Issue the following commands to confirm:
-
-```PowerShell
-    PS C:\> Get-Command -Module HPESimpliVity
-    PS C:\> Get-Help Get-SvtBackup
-```
-
 * Once installed, you're ready to connect to an SVA or MVA, as follows:
 
 ```PowerShell
     PS C:\> $Cred = Get-Credential -Message 'Enter credentials'
     PS C:\> Connect-Svt -VA <IP or FQDN of an SVA or MVA> -Credential $Cred
-    PS C:\> Get-SvtHost
 ```
 
 * Or, if you need to run commands in batch (non-interactively), save your credentials to a file first:
@@ -104,7 +77,7 @@ The module is signed, so it will work with an execution policy set to 'Remote Si
     PS C:\> $Cred = Get-Credential -Username 'administrator@vsphere.local' | Export-Clixml .\cred.XML 
 ```
 
-and then in your script, import the credential:
+and then in your script, import the credential for a new session:
 
 ```PowerShell
     PS C:\> $Cred = Import-CLIXML .\cred.XML
