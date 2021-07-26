@@ -4,20 +4,41 @@
 
 * Added support for new HPE SimpliVity V4.1.0 features:
 
-  * Ability to create and show single replica datastores with New-SvtDatastore and Get-SvtDatastore respectively.
+  * Ability to create and show single replica datastores with New-SvtDatastore and Get-SvtDatastore respectively. For example:
+
   * Ability to enable and disable Intelligent Workload Optimizer within a SimpliVity cluster. For example:
 
-````PowerShell
-    Set-SvtCluster -EnableIWO:$true -ClusterName TwoDogs
-````
+Example use of both:
 
-* Removed Set-SvtTimezone command. This has been replaced with:
+```PowerShell
+    PS> New-SvtDatastore -Name DS2 -ClusterName TwoDogs -PolicyName Bronze -SizeGB 1000 -SingleReplica
+    PS> Get-SvtDatastore
 
-````PowerShell
-    Set-SvtCluster -TimeZone 'Australia/Sydney' -ClusterName TwoDogs
-````
+    DataStoreName   DataCenterName  ClusterName   SizeGB    SingleReplica   PolicyName
+    -------------   --------------  -----------   ------    -------------   ----------
+    DS1             SVTLab          TwoDogs       2,000     False           Silver
+    DS2             SVTLab          TwoDogs       1,000     True            Bronze
+```
 
-* Removed references 'OVC' within the module. The '-OVC' parameter for the Connect-Svt command is replaced with '-VirtualAppliance' or '-VA'. The '-OVC' parameter will continue to work, but is depreciated.
+```PowerShell
+    PS> Set-SvtCluster -EnableIWO:$true -ClusterName TwoDogs
+    PS> (Get-SvtCluster TwoDogs).IWOEnabled
+
+    True
+```
+
+* Removed Set-SvtTimezone command. This has been replaced with the following:
+
+```PowerShell
+    PS> Set-SvtCluster -TimeZone 'Australia/Sydney' -ClusterName TwoDogs
+    PS> Get-SvtCluster TwoDogs | Select Timezone
+
+    TimeZone
+    --------
+    Australia/Sydney
+```
+
+* Removed references to 'OVC' within the module. The '-OVC' parameter for the Connect-Svt command is replaced with '-VirtualAppliance' or '-VA'. The '-OVC' parameter will continue to work, but is depreciated.
 
 * Performance improvements with a number of cmdlets that accept hostname as input. Formally, an API call was made to enumerate fully qualified hostnames. This information is now cached in a global variable called $SvtHost. As a result commands such as Get-Disk and Get-Hardware run faster in large environments.
 
@@ -35,18 +56,18 @@
 
 * Refactored the Restore-SvtVm command. Formally, this command supported restoring multiple VMs at once, based on the backup objects passed in from Get-SvtBackup. Restored VMs retain the original VM names with a timestamp suffix to ensure naming uniqueness. The command now supports restoring a single backup with a specified VM name. This will only work for the first backup object passed into the command. Subsequent restores will not be attempted and an error will be displayed. For example:
 
-````PowerShell
-    PS C:\> Get-SvtBackup -VM VM1 -Limit 1 | Restore-SvtVm -NewVmName NewVM1
-````
+```PowerShell
+    PS> Get-SvtBackup -VM VM1 -Limit 1 | Restore-SvtVm -NewVmName NewVM1
+```
 
 This command will restore the last backup of VM1 to a new VM called NewVM1. By default, this VM will be located on the same datastore as the original, but can be created on an alternative datastore using -DatastoreName.
 
 * Refactored the Get-SvtBackup command. The -Date parameter formally accepted just a date and showed the whole 24 hour range of backups. Now, the -Date parameter can also accept a date and time specified in the locale for your system.
 For example:
 
-````PowerShell
-    PS C:\> Get-SvtBackup -VM VM1,VM3 -Date '12/12/2020 10:00:00 AM'
-````
+```PowerShell
+    PS> Get-SvtBackup -VM VM1,VM3 -Date '12/12/2020 10:00:00 AM'
+```
 
 This command will show the backup with the specified creation date for the two virtual machines.
 
@@ -55,9 +76,9 @@ This command will show the backup with the specified creation date for the two v
 * Added 'RemainingLife' property to Get-SvtDisk. This shows up as a percentage.
 * Refactored the Get-SvtBackup command. Added the ability to use the -ExpiresBefore and -ExpiresAfter parameters along with the -Date parameter. For Example:
 
-````PowerShell
-    PS C:\> Get-SvtBackup -Date 18/07/2020 -ExpiresAfter '22/08/2020 10:00:00 PM'
-````
+```PowerShell
+    PS> Get-SvtBackup -Date 18/07/2020 -ExpiresAfter '22/08/2020 10:00:00 PM'
+```
 
 ## Version 2.1.23
 
@@ -100,11 +121,11 @@ Metrics | Capacity
 * Removed -ApplicationConsistent switch from the policy and backup commands. Application consistency is assumed to be false if ConsistencyType is set to NONE. For all other consistency types (DEFAULT and VSS), application consistency is true. This removes confusion, with multiple parameters doing similar things
 * Added multi-value support for most "Get" commands, where supported by the API. For example:
 
-````PowerShell
-    PS C:\> Get-SVTvm -ClusterName cluster1,cluster2 -State ALIVE,REMOVED,DELETED
-    PS C:\> Get-SvtBackup -VmName Vm1,Vm2,Vm3
-    PS C:\> Get-SvtHost Host1,Host2,Host3
-````
+```PowerShell
+    PS> Get-SVTvm -ClusterName cluster1,cluster2 -State ALIVE,REMOVED,DELETED
+    PS> Get-SvtBackup -VmName Vm1,Vm2,Vm3
+    PS> Get-SvtHost Host1,Host2,Host3
+```
 
 **Note:** multi-value parameters do not work for Get-SvtBackup when connected to an OVC; they do work when connected to an MVA.
 
@@ -151,7 +172,7 @@ Metrics | Capacity
 * Updates to the Start-SvtShutdown command. This command now detects if the target virtual controller is the last one operational in the cluster and correctly handles shutting it down. It also automatically reconnects to another operational virtual controller in the federation, if one exists, following the shutdown of the target virtual controller. Finally, the command waits for the virtual controller to completely shutdown (allowing the storage IP to failover), which ensures proper sequential shutdown. This allows you to pass in multiple hosts at once. For example, to shutdown an entire cluster and be prompted before doing so, enter the following:
 
 ```PowerShell
-    PS C:\> Get-SvtHost -cluster <target cluster> | Foreach-Object {Start-SvtShutdown -HostName $_.Hostname -Confirm:$True}
+    PS> Get-SvtHost -cluster <target cluster> | Foreach-Object {Start-SvtShutdown -HostName $_.Hostname -Confirm:$True}
 ```
 
   In addition, the  command now has -Confirm and -WhatIf parameters
@@ -166,7 +187,7 @@ Metrics | Capacity
 * Added -Chart parameter to the Get-SvtMetric and Get-SvtCapacity cmdlets. For example:
 
 ```PowerShell
-    PS C:\> Get-SvtHost | Select-Object -First 1 | Get-SvtMetric -Hour 48 -Chart
+    PS> Get-SvtHost | Select-Object -First 1 | Get-SvtMetric -Hour 48 -Chart
 ```
 
 This will create a single chart for the first host in the Federation using the specified hourly range. The cmdlet also has a new -Force parameter. By default, up to five charts are created, one for each object passed in. If there are more objects than this in the pipeline, the cmdlet will issue a warning. You can override this limit with the -Force switch. There is potential to create a lot of charts with Get-SVTvm.
@@ -174,7 +195,7 @@ This will create a single chart for the first host in the Federation using the s
 Similarly, Get-SvtCapacity also has a new -Chart switch. Use the following command to create a chart for each host in the federation.
 
 ```PowerShell
-    PS C:\> Get-SVTHost server01 | Get-SvtCapacity -Chart
+    PS> Get-SVTHost server01 | Get-SvtCapacity -Chart
 ```
 
 * Improved Get-SvtBackup so that API filters are used properly - This improves performance and removes some weird results

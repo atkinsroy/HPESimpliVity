@@ -114,22 +114,3 @@ If ($Failed) {
 "-" * 60
 Get-ChildItem Backup*Report-$TimeStamp.CSV
 
-# Some examples when you have more than 3000 backups in the federation. In each case, you should end up with
-# a full list of backups providing each filtered call to Get-SvtBackup returns less than 3000 backup objects.
- 
-# Without "hardcoding" the filter property, for example, by each datastore:
-#  Get-SvtDatastore | Foreach-Object {
-#   [array]$AllBackup += Get-SvtBackup -DatastoreName $_ -Limit 3000
-#  }
-
-# by hardcoded data store, for example:
-#  $AllBackup = Get-SvtBackup DatastoreName "DataStore01" -Limit 3000
-#  $AllBackup += Get-SvtBackup DatastoreName "DataStore02" -Limit 3000
-
-# by hardcoded VM, for example:
-#  $AllBackup = Get-SvtBackup -VmName "VM01" -Limit 3000
-#  $AllBackup += Get-SvtBackup -VmName "VM02" -Limit 3000
-
-# by hardcoded cluster, for example:
-#  $AllBackup = Get-SvtBackup -ClusterName "Production01" -Limit 3000
-#  $AllBackup += Get-SvtBackup -ClusterName "DR01" -Limit 3000
