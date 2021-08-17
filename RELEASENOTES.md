@@ -4,9 +4,9 @@
 
 * Added support for new HPE SimpliVity V4.1.0 features:
 
-  * Ability to create and show single replica datastores with New-SvtDatastore and Get-SvtDatastore respectively. For example:
+  * Ability to create and show single replica datastores with New-SvtDatastore and Get-SvtDatastore respectively.
 
-  * Ability to enable and disable Intelligent Workload Optimizer within a SimpliVity cluster. For example:
+  * Ability to enable and disable Intelligent Workload Optimizer within a SimpliVity cluster.
 
 Example use of both:
 
