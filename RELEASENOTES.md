@@ -40,7 +40,7 @@ Example use of both:
 
 * Removed references to 'OVC' within the module. The '-OVC' parameter for the Connect-Svt command is replaced with '-VirtualAppliance' or '-VA'. The '-OVC' parameter will continue to work, but is depreciated.
 
-* Performance improvements with a number of cmdlets that accept hostname as input. Formally, an API call was made to enumerate fully qualified hostnames. This information is now cached in a global variable called $SvtHost. As a result commands such as Get-Disk and Get-Hardware run faster in large environments.
+* Performance improvements with a number of cmdlets that accept hostname as input. Formally, an API call was made to enumerate fully qualified hostnames. This information is now cached in a global variable called $SvtHost. As a result commands such as Get-SvtDisk and Get-SvtHardware run faster in large environments.
 
 * Some formatting changes; default property changes and color added to some objects to highlight things like failed disks and failed backups.
 
