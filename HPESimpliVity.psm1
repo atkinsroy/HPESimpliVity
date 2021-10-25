@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Pointnext Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.1.29'
+$HPESimplivityVersion = '2.1.30'
 
 <#
 (C) Copyright 2020 Hewlett Packard Enterprise Development LP
@@ -55,10 +55,13 @@ function Resolve-SvtFullHostName {
     }
 
     process {
+        # The first $TestHost command won't generate an error if $SvtHost is not defined, the second $TestHost
+        # command generates a null value error, so only perform the if block it $SvtHost is defined. We want to
+        # generate the standard "Specified host not found" in all error cases.
         foreach ($ThisHost in $HostName) {
             $TestHost = $global:SvtHost.HostName | Where-Object { $_ -eq $ThisHost }
 
-            if (-not $TestHost) {
+            if (-not $TestHost -and $global:SvtHost) {
                 $Message = "Specified host $ThisHost not found, attempting to match host " +
                 'name without domain suffix'
                 Write-Verbose $Message
@@ -74,7 +77,6 @@ function Resolve-SvtFullHostName {
             }
         }
     }
-
     end {
         if ($ReturnHost) {
             # found at least one host
@@ -108,11 +110,11 @@ function Get-SvtError {
             return $ResponseBody.Message
         }
         else {
-            return $_.Exception.Message
+            return $Err.Exception.Message
         }
     }
     else {
-        # Windows PowerShell doesn't have this. Use GetResponseStreams() method.
+        # Windows PowerShell doesn't have ErrorDetails property so use GetResponseStreams() method.
         if ($Err.Exception.Response) {
             $Result = $Err.Exception.Response.GetResponseStream()
             $Reader = New-Object System.IO.StreamReader($Result)
@@ -125,7 +127,7 @@ function Get-SvtError {
             return $ResponseBody.Message
         }
         else {
-            return $_.Exception.Message
+            return $Err.Exception.Message
         }
     }
 }
@@ -388,9 +390,9 @@ function Invoke-SvtRestMethod {
                 throw 'Runtime error: You must first log in using Connect-Svt'
             }
             else {
-                #throw "Runtime error: $($_.Exception.Message)"
                 # Return the embedded error message in the body of the response from the API
                 throw "Runtime error: $(Get-SvtError($_))"
+                #throw "Runtime error: $($_.Exception.Message)"
             }
         }
         catch {
@@ -460,7 +462,7 @@ function Invoke-SvtRestMethod {
 
     Show the current state of the task executed from the New-SvtBackup cmdlet.
 .EXAMPLE
-    PS C:\> New-SvtClone Server2016-01 NewServer2016-01
+    PS C:\> New-SvtClone Win2019-01 NewWin2019-01
     PS C:\> Get-SvtTask | Format-List
 
     The first command clones the specified VM.
@@ -493,6 +495,7 @@ function Get-SvtTask {
         if ($PSBoundParameters.ContainsKey('Id')) {
             $Task = @{ TaskId = $Id }
         }
+        Write-Verbose "$($Task | ConvertTo-Json)"
     }
 
     process {
@@ -1455,7 +1458,7 @@ function Get-SvtImpactReport {
     an MVA (centralized configuration) is highly recommended.
 .PARAMETER VmName
     Show backups for the specified virtual machine(s). By default a limit of 500 backups are shown, but this can be
-    increased too 3000 using -Limit, or removed using -All.
+    increased to 3000 using -Limit, or removed using -All.
 .PARAMETER ClusterName
     Show backups sourced from a specified HPE SimpliVity cluster name or names. By default a limit of 500 backups are
     shown.
@@ -1471,7 +1474,7 @@ function Get-SvtImpactReport {
 .PARAMETER BackupName
     Show backups with the specified backup name only.
 .PARAMETER BackupState
-    Show backups with the specified state. i.e PROTECTED, FAILED or SAVING
+    Show backups with the specified state. i.e. PROTECTED, FAILED or SAVING
 .PARAMETER BackupType
     Show backups with the specified type. i.e. MANUAL or POLICY
 .PARAMETER MinSizeMB
@@ -1596,7 +1599,7 @@ function Get-SvtImpactReport {
     PS C:\>Get-SvtBackup -Sort ExpiryDate -Ascending
 
     Display backups sorted by a specified property. By default, the sort order is descending but this can be
-    overiden using the -Ascending switch. Accepted properties are VmName, BackupName, BackupSize, CreateDate,
+    overridden using the -Ascending switch. Accepted properties are VmName, BackupName, BackupSize, CreateDate,
     ExpiryDate, ClusterName and DatastoreName. The default sort property is CreateDate.
 .INPUTS
     System.String
@@ -1773,8 +1776,8 @@ function Get-SvtBackup {
     }
     if ($PSBoundParameters.ContainsKey('BackupName')) {
         Write-Verbose 'Backup names are case sensitive. Incomplete backup names are matched'
-        # add an asterisk to each backupname to support incomplete name match. Also replace plus symbol
-        $Uri += "&name=$(($BackupName -join '*,') + '*' -replace '\+', '%2B')"
+        # add an asterisk to each backup name to support incomplete name match. Also replace plus symbol
+        $Uri += "&name=$(($BackupName -join '*,') + '*' -replace '\+', '%2B' -replace ':', '%3A')"
     }
     if ($PSBoundParameters.ContainsKey('BackupId')) {
         $Uri += "&id=$($BackupId -join ',')"
@@ -1918,17 +1921,18 @@ function Get-SvtBackup {
             }
 
             if ($PSEdition -eq 'Core' -and $_.name -as [datetime]) {
-                # When converting from json, PowerShell Core 'conveniently' converts UTC dates into local date
-                # objects. This is not what we want for the backup name, so convert the date object back to a UTC
-                # string, as per output from the REST API. This is not quite ISO 8601 (sortable time) format, as
-                # displayed with Get-Date -format s, nor RF1123 as displayed by Get-Date -Format r.
-                # NOTE: a future version of PowerShell Core will allow suppression of this automatic conversion of
-                # UTC dates.
-                $BackupNameString = Get-Date -Date $_.name -Format 'yyyy-MM-ddThh:mm:sszzz'
+                # When converting from json, Invoke-RestMethod with PowerShell Core 'conveniently' converts 
+                # UTC dates into local date objects. This is not what we want for the backup name, the date object 
+                # must be converted back to a UTC string, as per output from the REST API. This is not quite 
+                # ISO 8601 (sortable time) format, as displayed with Get-Date -format s, nor RF1123 as displayed 
+                # by Get-Date -Format r.
+                # NOTE: a future version of PowerShell Core will supposedly allow suppression of this automatic 
+                # conversion of UTC dates.
+                $LocalBackupName = Get-Date -Date $_.name -Format 'yyyy-MM-ddTHH:mm:sszzz'
             }
             else {
                 # Windows PowerShell doesn't mess with UTC strings
-                $BackupNameString = $_.name
+                $LocalBackupName = $_.name
             }
 
             # Converting numeric strings to numbers so that subsequent sorting is possible. Must use locale to
@@ -1958,7 +1962,7 @@ function Get-SvtBackup {
                 SizeGB            = [single]::Parse('{0:n2}' -f ($_.size / 1gb), $LocalCulture)
                 SizeMB            = [single]::Parse('{0:n0}' -f ($_.size / 1mb), $LocalCulture)
                 VmState           = $_.virtual_machine_state
-                BackupName        = $BackupNameString
+                BackupName        = $LocalBackupName
                 DatastoreId       = $_.datastore_id
                 DataCenterName    = $_.compute_cluster_parent_name
                 HypervisorType    = $_.hypervisor_type
@@ -2212,6 +2216,7 @@ function Restore-SvtVm {
 
     begin {
         $DateSuffix = Get-Date -Format 'yyMMddhhmmss'
+        $FirstError = $null
         $Header = @{
             'Authorization' = "Bearer $($global:SvtConnection.Token)"
             'Accept'        = 'application/json'
@@ -2220,7 +2225,7 @@ function Restore-SvtVm {
 
         if (-not $PSBoundParameters.ContainsKey('RestoreToOriginal')) {
             try {
-                $Alldatastore = Get-SvtDatastore -ErrorAction Stop
+                $AllDatastore = Get-SvtDatastore -ErrorAction Stop
                 $Count = 1
             }
             catch {
@@ -2244,6 +2249,9 @@ function Restore-SvtVm {
                 catch {
                     # Don't exit, continue with other restores in the pipeline
                     Write-Error $_.Exception.Message
+                    if (-not $FirstError) {
+                        $FirstError = $_.Exception.Message
+                    }
                     continue
                 }
                 $Uri = $global:SvtConnection.VA + '/api/backups/' + $BkpId + '/restore?restore_original=true'
@@ -2270,6 +2278,9 @@ function Restore-SvtVm {
                     catch {
                         # Don't exit, continue with other restores in the pipeline
                         Write-Error $_.Exception.Message
+                        if (-not $FirstError) {
+                            $FirstError = $_.Exception.Message
+                        }
                         continue
                     }
 
@@ -2289,6 +2300,9 @@ function Restore-SvtVm {
                 catch {
                     # Don't exit, continue with other restores in the pipeline
                     Write-Error $_.Exception.Message
+                    if (-not $FirstError) {
+                        $FirstError = $_.Exception.Message
+                    }
                     continue
                 }
 
@@ -2306,13 +2320,20 @@ function Restore-SvtVm {
                 $Count += 1
             }
             catch {
-                Write-Warning "$($_.Exception.Message), restore failed for VM $RestoreVmName"
+                Write-Error "$($_.Exception.Message), restore failed for VM $RestoreVmName"
+                if (-not $FirstError) {
+                    $FirstError = $_.Exception.Message
+                }
             }
         } #end for
     } # end process
     end {
         $global:SvtTask = $AllTask
         $null = $SvtTask #Stops PSScriptAnalyzer complaining about variable assigned but never used
+
+        if ($FirstError) {
+            throw $FirstError
+        }
     }
 }
 
@@ -2393,7 +2414,7 @@ function Remove-SvtBackup {
             $Task = Invoke-SvtRestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
         }
         catch {
-            Write-Warning "$($_.Exception.Message), failed to remove backup with id $BkpId"
+            throw $_.Exception.Message
         }
         $Task
         $global:SvtTask = $Task
@@ -2407,15 +2428,20 @@ function Remove-SvtBackup {
 .DESCRIPTION
     Stops (cancels) a currently executing HPE SimpliVity backup
 
+    SimpliVity backups finish almost immediately, so cancelling a backup is unlikely. Once the backup is 
+    completed, the backup state is 'Protected' and the backup task cannot be stopped. Backups to external 
+    storage take longer (backup state is shown as 'Saving') and are more likely to be running long enough 
+    to cancel.
+
     BackupId is the only unique identifier for backup objects (e.g. multiple backups can have the same name).
     This makes using this command a little cumbersome by itself. However, you can use Get-SvtBackup to identify
     the backups you want to target and then pass the output to this command.
 .PARAMETER BackupId
     Specify the Backup ID(s) for the backup(s) to cancel
 .EXAMPLE
-    PS C:\> Get-SvtBackup -BackupName '2019-05-12T01:00:00-04:00' | Stop-SvtBackup
+    PS C:\> Get-SvtBackup | Where-Object BackupState -eq 'Saving' | Stop-SvtBackup
 
-    Cancels the backup or backups with the specified backup name.
+    Cancels the backup or backups with the specified backup state.
 .INPUTS
     System.String
     HPE.SimpliVity.Backup
@@ -2440,6 +2466,7 @@ function Stop-SvtBackup {
             'Accept'        = 'application/json'
             'Content-Type'  = 'application/vnd.simplivity.v1.5+json'
         }
+        $FirstError = $null
     }
 
     process {
@@ -2452,7 +2479,10 @@ function Stop-SvtBackup {
                 [array]$AllTask += $Task
             }
             catch {
-                Write-Warning "$($_.Exception.Message), failed to stop backup with id $BkpId"
+                Write-Error "$($_.Exception.Message), failed to stop backup with id $BkpId"
+                if (-not $FirstError) {
+                    $FirstError = $_.Exception.Message
+                }
             }
         }
     }
@@ -2460,6 +2490,10 @@ function Stop-SvtBackup {
     end {
         $global:SvtTask = $AllTask
         $null = $SvtTask #Stops PSScriptAnalyzer complaining about variable assigned but never used
+
+        if ($FirstError) {
+            throw $FirstError
+        }
     }
 }
 
@@ -2485,7 +2519,7 @@ function Stop-SvtBackup {
     Specify the Backup ID(s) to copy. Use the output from an appropriate Get-SvtBackup command to provide
     one or more Backup ID's to copy.
 .EXAMPLE
-    PS C:\> Get-SvtBackup -VmName Server2016-01 | Copy-SvtBackup -DestinationName Cluster02
+    PS C:\> Get-SvtBackup -VmName Win2019-01 | Copy-SvtBackup -DestinationName Cluster02
 
     Copy the last 24 hours of backups for the specified VM to the specified SimpliVity cluster
 .EXAMPLE
@@ -2598,6 +2632,7 @@ function Lock-SvtBackup {
             'Accept'        = 'application/json'
             'Content-Type'  = 'application/vnd.simplivity.v1.5+json'
         }
+        $FirstError = $null
     }
 
     process {
@@ -2610,7 +2645,10 @@ function Lock-SvtBackup {
                 [array]$AllTask += $Task
             }
             catch {
-                Write-Warning "$($_.Exception.Message), failed to lock backup with id $BkpId"
+                Write-Error "$($_.Exception.Message), failed to lock backup with id $BkpId"
+                if (-not $FirstError) {
+                    $FirstError = $_.Exception.Message
+                }
             }
 
         }
@@ -2618,6 +2656,10 @@ function Lock-SvtBackup {
     end {
         $global:SvtTask = $AllTask
         $null = $SvtTask #Stops PSScriptAnalyzer complaining about variable assigned but never used
+
+        if ($FirstError) {
+            throw $FirstError
+        }
     }
 }
 
@@ -2667,6 +2709,7 @@ function Rename-SvtBackup {
             'Accept'        = 'application/json'
             'Content-Type'  = 'application/vnd.simplivity.v1.5+json'
         }
+        $FirstError = $null
     }
 
     process {
@@ -2682,13 +2725,20 @@ function Rename-SvtBackup {
                 [array]$AllTask += $Task
             }
             catch {
-                Write-Warning "$($_.Exception.Message), rename failed for backup $BkpId"
+                Write-Error "$($_.Exception.Message), rename failed for backup $BkpId"
+                if (-not $FirstError) {
+                    $FirstError = $_.Exception.Message
+                }
             }
         }
     }
     end {
         $global:SvtTask = $AllTask
         $null = $SvtTask #Stops PSScriptAnalyzer complaining about variable assigned but never used
+
+        if ($FirstError) {
+            throw $FirstError
+        }
     }
 }
 
@@ -2716,7 +2766,7 @@ function Rename-SvtBackup {
 
     Gets the backups with the specified name and then sets the retention to 21 days.
 .EXAMPLE
-    PS C:\> Get-Backup -VmName Server2016-04 -Limit 1 | Set-SvtBackupRetention -RetentionHour 12
+    PS C:\> Get-Backup -VmName Win2019-04 -Limit 1 | Set-SvtBackupRetention -RetentionHour 12
 
     Get the latest backup of the specified virtual machine and then sets the retention to 12 hours.
 .INPUTS
@@ -2891,8 +2941,8 @@ function Update-SvtBackupUniqueSize {
     are shown. If all three optional parameters are provided, the specified backed up files are shown.
 
     Notes:
-    1. This command only works on backups from guests running Microsoft Windows. Backed up virtual disks and
-       partitions only can be displayed with backups of Linux guests.
+    1. This command only works with backups from Microsoft Windows VMs. with Linux VMs, only backed up 
+       virtual disks and partitions can be displayed (files cannot be displayed).
     2. This command only works with native SimpliVity backups. (Backups on StoreOnce appliances do not work)
     3. Virtual disk names and folder paths are case sensitive
 .PARAMETER BackupId
@@ -2905,36 +2955,36 @@ function Update-SvtBackupUniqueSize {
 .PARAMETER FilePath
     The folder path for the backed up files
 .EXAMPLE
-    PS C:\> $Backup = Get-SvtBackup -VmName Server2016-01 -Limit 1
+    PS C:\> $Backup = Get-SvtBackup -VmName Win2019-01 -Limit 1
     PS C:\> $Backup | Get-SvtFile
 
     The first command identifies the most recent backup of the specified VM.
     The second command displays the virtual disks contained within the backup
 .EXAMPLE
-    PS C:\> $Backup = Get-SvtBackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
-    PS C:\> $Backup | Get-SvtFile -VirtualDisk Server2016-01.vmdk
+    PS C:\> $Backup = Get-SvtBackup -VmName Win2019-02 -Date 26/04/2020 -Limit 1
+    PS C:\> $Backup | Get-SvtFile -VirtualDisk Win2019-01.vmdk
 
     The first command identifies the most recent backup of the specified VM taken on a specific date.
     The second command displays the partitions within the specified virtual disk. Virtual disk names are
     case sensitive
 .EXAMPLE
-    PS C:\> Get-SvtFile -BackupId 5f5f7f06...0b509609c8fb -VirtualDisk Server2016-01.vmdk -PartitionNumber 4
+    PS C:\> Get-SvtFile -BackupId 5f5f7f06...0b509609c8fb -VirtualDisk Win2019-01.vmdk -PartitionNumber 4
 
     Shows the contents of the root folder on the specified partition inside the specified backup
 .EXAMPLE
-    PS C:\> $Backup = Get-SvtBackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
-    PS C:\> $Backup | Get-SvtFile Server2016-01.vmdk 4
+    PS C:\> $Backup = Get-SvtBackup -VmName Win2019-02 -Date 26/04/2020 -Limit 1
+    PS C:\> $Backup | Get-SvtFile Win2019-01.vmdk 4
 
     Shows the backed up files at the root of the specified partition, using positional parameters
 .EXAMPLE
-    PS C:\> $Backup = Get-SvtBackup -VmName Server2016-02 -Date 26/04/2020 -Limit 1
-    PS C:\> $Backup | Get-SvtFile Server2016-01.vmdk 4 /Users/Administrator/Documents
+    PS C:\> $Backup = Get-SvtBackup -VmName Win2019-02 -Date 26/04/2020 -Limit 1
+    PS C:\> $Backup | Get-SvtFile Win2019-01.vmdk 4 /Users/Administrator/Documents
 
     Shows the specified backed up files within the specified partition, using positional parameters. File
     names are case sensitive.
 .EXAMPLE
     PS C:\> $Backup = '5f5f7f06-a485-42eb-b4c0-0b509609c8fb' # This is a valid Backup ID
-    PS C:\> $Backup | Get-SvtFile -VirtualDisk Server2016-01_1.vmdk -PartitionNumber 2 -FilePath '/Log Files'
+    PS C:\> $Backup | Get-SvtFile -VirtualDisk Win2019-01_1.vmdk -PartitionNumber 2 -FilePath '/Log Files'
 
     The first command identifies the desired backup. The second command displays the specified backed up
     files using named parameters. Quotes are used because the file path contains a space. File names are
@@ -3083,7 +3133,7 @@ function Get-SvtFile {
     6. Folder size matters. The restore will fail if file sizes exceed a DVD capacity. When restoring a large
        amount of data, it might be faster to restore the entire virtual machine and recover the required files
        from the restored virtual disk.
-    7. File level restores are resticted to nine virtual disks per virtual controller. When viewing the virtual
+    7. File level restores are restricted to nine virtual disks per virtual controller. When viewing the virtual
        disks with Get-SvtFile, you will only see the first nine disks if they are all attached to the same
        virtual controller. In this case, you must restore the entire VM and restore the required files from the
        restored virtual disk (VMDK) files.
@@ -3092,12 +3142,12 @@ function Get-SvtFile {
 .PARAMETER RestorePath
     An array containing the backup ID and the full path of the folder to restore. This consists of the virtual
     disk name, partition and folder name. The Get-SvtFile provides this parameter in the expected format,
-    e.g. "/Server2016-01.vmdk/4/Users/Administrator/Documents".
+    e.g. "/Win2019-01.vmdk/4/Users/Administrator/Documents".
 
 .EXAMPLE
-    PS C:\> $Backup = Get-SvtBackup -VmName Server2016-01 -Name 2020-04-26T18:00:00+10:10
-    PS C:\> $File = $Backup | Get-SvtFile Server2016-01.vmdk 4 '/Log Files'
-    PS C:\> $File | Restore-SvtFile -VmName Server2016-02
+    PS C:\> $Backup = Get-SvtBackup -VmName Win2019-01 -Name 2020-04-26T18:00:00+10:10
+    PS C:\> $File = $Backup | Get-SvtFile Win2019-01.vmdk 4 '/Log Files'
+    PS C:\> $File | Restore-SvtFile -VmName Win2019-02
 
     The first command identifies the desired backup.
     The second command enumerates the files from the specified virtual disk, partition and file path in the backup
@@ -3885,7 +3935,7 @@ function New-SvtExternalStore {
         Select-Object -ExpandProperty ClusterId
     }
     catch {
-        $_.Exception.Message
+        throw $_.Exception.Message
     }
 
     $Body = @{
@@ -4116,8 +4166,8 @@ function Get-SvtHost {
         'Authorization' = "Bearer $($global:SvtConnection.Token)"
         'Accept'        = 'application/json'
     }
-    $Uri = $global:SvtConnection.VA + '/api/hosts?show_optional_fields=true&case=insensitive' +
-    '&sort=name&order=ascending'
+    # Updated to support older (than 3.7.5) versions of SimpliVity. case=insensitive not supported for host object
+    $Uri = $global:SvtConnection.VA + '/api/hosts?show_optional_fields=true&sort=name&order=ascending'
 
     if ($PSBoundParameters.ContainsKey('HostName')) {
         try {
@@ -4164,7 +4214,7 @@ function Get-SvtHost {
             Model                     = $_.model
             DataCenterId              = $_.compute_cluster_parent_hypervisor_object_id
             HostId                    = $_.id
-            StoreageMTU               = $_.storage_mtu
+            StorageMTU                = $_.storage_mtu
             State                     = $_.state
             UpgradeState              = $_.upgrade_state
             FederationMTU             = $_.federation_mtu
@@ -4609,7 +4659,7 @@ function Get-SvtCapacity {
     equivalent GUI command "Remove from federation"
 
     If there are any virtual machines running on the node or if the node is not HA-compliant, this command
-    will fail. You can specify the force command, but we aware that this could cause data loss.
+    will fail. You can specify the force command, but be aware that this could cause data loss.
 .PARAMETER HostName
     Specify the node to remove.
 .PARAMETER Force
@@ -4621,6 +4671,14 @@ function Get-SvtCapacity {
 
     Removes the node from the federation providing there are no VMs running and providing the
     node is HA-compliant.
+.EXAMPLE
+    PS C:\> Remove-SvtHost -HostName Host01 -Force
+
+    Forcibly removes the host from the federation. This command may cause data loss
+.EXAMPLE
+    PS C:\> Remove-SvtHost -HostName Host01 -WhatIf
+
+    This command provides a report on the intended action only, without actually performing the host removal.
 .INPUTS
     System.String
 .OUTPUTS
@@ -4631,6 +4689,7 @@ function Get-SvtCapacity {
     https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtHost.md
 #>
 function Remove-SvtHost {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
         [Alias('Name')]
@@ -4663,15 +4722,17 @@ function Remove-SvtHost {
     $Body = @{ 'force' = $ForceHostRemoval } | ConvertTo-Json
     Write-Verbose $Body
 
-    try {
-        $Task = Invoke-SvtRestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+    if ($PSCmdlet.ShouldProcess("$HostName", "Remove host")) {
+        try {
+            $Task = Invoke-SvtRestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
+        }
+        catch {
+            throw $_.Exception.Message
+        }
+        $Task
+        $global:SvtTask = $Task
+        $null = $SvtTask #Stops PSScriptAnalyzer complaining about variable assigned but never used
     }
-    catch {
-        throw $_.Exception.Message
-    }
-    $Task
-    $global:SvtTask = $Task
-    $null = $SvtTask #Stops PSScriptAnalyzer complaining about variable assigned but never used
 }
 
 <#
@@ -4730,25 +4791,31 @@ function Start-SvtShutdown {
     }
 
     try {
-        $Allhost = Get-SvtHost -ErrorAction Stop
-        $ThisHost = $Allhost | Where-Object HostName -eq $HostName
-
-        $NextHost = $Allhost | Where-Object { $_.HostName -ne $HostName -and $_.State -eq 'ALIVE' } |
-        Select-Object -First 1 # so we can reconnect afterwards
-        $ThisCluster = $ThisHost | Select-Object -First 1 -ExpandProperty Clustername
-
-        $LiveHost = $Allhost | Where-Object { $_.ClusterName -eq $ThisCluster -and $_.State -eq 'ALIVE' } |
-        Measure-Object | Select-Object -ExpandProperty Count
-
-        $Allhost | Where-Object ClusterName -eq $ThisCluster | ForEach-Object {
-            Write-Verbose "Current state of host $($_.HostName) in cluster $ThisCluster is $($_.State)"
-        }
+        $HostName = Resolve-SvtFullHostName -HostName $HostName -ErrorAction Stop
+        # We get hosts here rather than using $SvtHost variable because we need state of SVA and cluster name
+        # SVA state on target (and other) hosts is likely to be changing during shutdown activities.   
+        $AllHost = Get-SvtHost -ErrorAction Stop
     }
     catch {
         throw $_.Exception.Message
     }
 
-    # Exit if the virtual controller is already off
+    $ThisHost = $Allhost | Where-Object HostName -eq $HostName
+    $ThisCluster = $ThisHost | Select-Object -First 1 -ExpandProperty Clustername
+
+    # display current SVA state for all hosts in the target cluster
+    $Allhost | Where-Object ClusterName -eq $ThisCluster | ForEach-Object {
+        Write-Verbose "Current state of host $($_.HostName) in cluster $ThisCluster is $($_.State)"
+    }
+
+    # so we can reconnect to another SVA in the federation afterwards, if any
+    $NextHost = $Allhost | Where-Object { $_.HostName -ne $HostName -and $_.State -eq 'ALIVE' } |
+    Select-Object -First 1
+
+    $LiveHostCount = $Allhost | Where-Object { $_.ClusterName -eq $ThisCluster -and $_.State -eq 'ALIVE' } |
+    Measure-Object | Select-Object -ExpandProperty Count
+
+    # exit if the SVA is already off
     if ($ThisHost.State -ne 'ALIVE') {
         $ThisHost.State
         throw "The HPE SimpliVity Virtual Appliance on $($ThisHost.HostName) is not running"
@@ -4768,7 +4835,7 @@ function Start-SvtShutdown {
     # Connect to the target virtual controller, using the existing credentials saved to $SvtConnection
     try {
         Write-Verbose "Connecting to $($ThisHost.VirtualControllerName) on host $($ThisHost.HostName)..."
-        Connect-Svt -VirtualAppliance $ThisHost.ManagementIP -Credential $SvtConnection.Credential -ErrorAction Stop | Out-Null
+        $null = Connect-Svt -VirtualAppliance $ThisHost.ManagementIP -Credential $SvtConnection.Credential -ErrorAction Stop
         Write-Verbose "Successfully connected to $($ThisHost.VirtualControllerName) on host $($ThisHost.HostName)"
     }
     catch {
@@ -4776,8 +4843,8 @@ function Start-SvtShutdown {
     }
 
     # Confirm if this is the last running virtual controller in this cluster
-    Write-Verbose "$LiveHost operational HPE SimpliVity Virtual Appliance(s) in the $ThisCluster cluster"
-    if ($LiveHost -lt 2) {
+    Write-Verbose "$LiveHostCount operational HPE SimpliVity Virtual Appliance(s) in the $ThisCluster cluster"
+    if ($LiveHostCount -lt 2) {
         Write-Warning "This is the last SimpliVity Virtual Appliance running in the $ThisCluster cluster"
         $Message = 'Using this command with confirm turned off could result in loss of data if you have ' +
         'not already powered off all virtual machines'
@@ -4796,7 +4863,7 @@ function Start-SvtShutdown {
             throw $_.Exception.Message
         }
 
-        if ($LiveHost -le 1) {
+        if ($LiveHostCount -le 1) {
             Write-Verbose 'Sleeping 10 seconds before issuing final shutdown...'
             Start-Sleep -Seconds 10
 
@@ -4865,9 +4932,9 @@ function Start-SvtShutdown {
     This cmdlet iterates through the specified hosts and connects to each SVA sequentially.
 
     The RESTAPI call only works if status is 'None' (i.e. the SVA is responsive). However, this cmdlet is
-    still useful to identify the unresponsive SVAs (i.e shut down or shutting down).
+    still useful to identify the unresponsive SVAs (i.e. shut down or shutting down).
 
-    Note, the RESTAPI only supports confirmation of the local SVA, so the cmdlet must connecting to each SVA.
+    Note, the RESTAPI only supports confirmation of the local SVA, so the cmdlet must connect to each SVA.
     The connection token will therefore point to the last SVA we successfully connect to. You may want to
     reconnect to your preferred SVA again using Connect-Svt.
 .PARAMETER HostName
@@ -4997,56 +5064,45 @@ function Get-SvtShutdownStatus {
 function Stop-SvtShutdown {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true,
-            ValueFromPipelineByPropertyName = $true)]
-        [System.String[]]$HostName
+        [Parameter(Mandatory = $true, Position = 0)]
+        [System.String]$HostName
     )
 
-    begin {
-        $Header = @{
-            'Authorization' = "Bearer $($global:SvtConnection.Token)"
-            'Accept'        = 'application/json'
-            'Content-Type'  = 'application/json'
-        }
-
-        # Get all the hosts in the Federation.
-        # We will be cancelling shutdown for one or more SVAs; grab all host information before we start
-        try {
-            $Allhost = Get-SvtHost -ErrorAction Stop
-        }
-        catch {
-            throw $_.Exception.Message
-        }
+    $Header = @{
+        'Authorization' = "Bearer $($global:SvtConnection.Token)"
+        'Accept'        = 'application/json'
+        'Content-Type'  = 'application/json'
     }
 
-    process {
-        foreach ($ThisHostName in $HostName) {
-            # grab this host object from the collection
-            $ThisHost = $Allhost | Where-Object HostName -eq $ThisHostName
-            Write-Verbose $($ThisHost | Select-Object HostName, HostId)
+    try {
+        $HostName = Resolve-SvtFullHostName -HostName $HostName -ErrorAction Stop
+        # We get hosts here rather than using $SvtHost variable because we need state of SVA and cluster name
+        # SVA state on target (and other) hosts is likely to be changing during shutdown activities.
+        $AllHost = Get-SvtHost -ErrorAction Stop
+    }
+    catch {
+        throw $_.Exception.Message
+    }
+    
+    $ThisHost = $Allhost | Where-Object HostName -eq $HostName
+    $null = Connect-Svt -VirtualAppliance $ThisHost.ManagementIP -Credential $SvtConnection.Credential
 
-            # Now connect to this host, using the existing credentials saved to global variable
-            Connect-Svt -VirtualAppliance $ThisHost.ManagementIP -Credential $SvtConnection.Credential | Out-Null
-            Write-Verbose $SvtConnection
+    $Uri = $global:SvtConnection.VA + '/api/hosts/' + $ThisHost.HostId +
+    '/cancel_virtual_controller_shutdown'
 
-            $Uri = $global:SvtConnection.VA + '/api/hosts/' + $ThisHost.HostId +
-            '/cancel_virtual_controller_shutdown'
+    try {
+        $Response = Invoke-SvtRestMethod -Uri $Uri -Header $Header -Method Post -ErrorAction Stop
+    }
+    catch {
+        Write-Warning "$($_.Exception.Message), failed to stop the shutdown process on host $ThisHostName"
+    }
 
-            try {
-                $Response = Invoke-SvtRestMethod -Uri $Uri -Header $Header -Method Post -ErrorAction Stop
-            }
-            catch {
-                Write-Warning "$($_.Exception.Message), failed to stop the shutdown process on host $ThisHostName"
-            }
-
-            $Response.cancellation_status | ForEach-Object {
-                [PSCustomObject]@{
-                    VirtualController  = $ThisHost.ManagementIP
-                    CancellationStatus = $_.Status
-                }
-            }
-        } # end foreach host
-    } # end process
+    $Response.cancellation_status | ForEach-Object {
+        [PSCustomObject]@{
+            VirtualController  = $ThisHost.ManagementIP
+            CancellationStatus = $_.Status
+        }
+    }
 }
 
 #endregion Host
@@ -5649,8 +5705,10 @@ function New-SvtPolicy {
 .SYNOPSIS
     Create a new backup policy rule in a HPE SimpliVity backup policy
 .DESCRIPTION
-    Create backup policies within an existing HPE SimpliVity backup policy. Optionally,
-    You can replace all the existing policy rules with the new policy rule.
+    Create backup policies within an existing HPE SimpliVity backup policy. Optionally, all the existing 
+    policy rules can be replaced with the new policy rule. The destination for backups can be a SimpliVity 
+    cluster or an appropriately configured external store (HPE StoreOnce Catalyst store). If no destination 
+    is specified, the default is the local SimpliVity cluster (shown as "<Local>").
 
     You can also display an impact report rather than performing the change.
 .PARAMETER PolicyName
@@ -5709,7 +5767,7 @@ function New-SvtPolicy {
 .EXAMPLE
     PS C:\> New-SvtPolicyRule ShortTerm -RetentionHour 4 -FrequencyMin 60 -StartTime 09:00 -EndTime 17:00
 
-    Add a new rule to a policy called ShortTerm, to backup once per hour during office hours and retain the
+    Add a new rule to a policy called ShortTerm, to backup locally once per hour during office hours and retain the
     backup for 4 hours. (Note: -RetentionHour takes precedence over -RetentionDay if both are specified)
 .EXAMPLE
     PS C:\> New-SvtPolicyRule Silver -LastDay -DestinationName Prod -RetentionDay 30 -ConsistencyType VSS
@@ -6138,7 +6196,7 @@ function Update-SvtPolicyRule {
     }
 
     # The new HTML5 client doesn't expose application consistent tick box - application_consistent must be
-    # true if consitency_type is VSS or DEFAULT. Otherwise the API sets it to NONE.
+    # true if consistency_type is VSS or DEFAULT. Otherwise the API sets it to NONE.
     $ConsistencyType = $ConsistencyType.ToUpper()
     if ($ConsistencyType -eq 'NONE') {
         $ApplicationConsistent = $false
@@ -6729,9 +6787,9 @@ function Get-SvtPolicyScheduleReport {
 
     Shows all virtual machines in the Federation with state "ALIVE", which is the default state
 .EXAMPLE
-    PS C:\> Get-SvtVm -VmName Server2016-01
-    PS C:\> Get-SvtVm -Name Server2016-01
-    PS C:\> Get-SvtVm Server2016-01
+    PS C:\> Get-SvtVm -VmName Win2019-01
+    PS C:\> Get-SvtVm -Name Win2019-01
+    PS C:\> Get-SvtVm Win2019-01
 
     All three commands perform the same action - show information about the specified virtual machine(s) with
     state "ALIVE", which is the default state
@@ -7015,17 +7073,17 @@ function Get-SvtVmReplicaSet {
     Create a clone with the default name 'MyVm1-clone-200212102304', where the suffix is a date stamp in
     the form 'yyMMddhhmmss'
 .EXAMPLE
-    PS C:\> New-SvtClone -VmName Server2016-01 -CloneName Server2016-Clone
-    PS C:\> New-SvtClone -VmName Server2016-01 -CloneName Server2016-Clone -ConsistencyType NONE
+    PS C:\> New-SvtClone -VmName Win2019-01 -CloneName Win2019-Clone
+    PS C:\> New-SvtClone -VmName Win2019-01 -CloneName Win2019-Clone -ConsistencyType NONE
 
     Both commands do the same thing, they create an application consistent clone of the specified
     virtual machine, using a snapshot
 .EXAMPLE
-    PS C:\> New-SvtClone -VmName RHEL8-01 -CloneName RHEL8-01-New -ConsistencyType DEFAULT
+    PS C:\> New-SvtClone -VmName Linux-01 -CloneName Linux-01-New -ConsistencyType DEFAULT
 
     Create a crash-consistent clone of the specified virtual machine
 .EXAMPLE
-    PS C:\> New-SvtClone -VmName Server2016-06 -CloneName Server2016-Clone -ConsistencyType VSS
+    PS C:\> New-SvtClone -VmName Win2019-06 -CloneName Win2019-Clone -ConsistencyType VSS
 
     Creates an application consistent clone of the specified Windows VM, using a VSS snapshot. The clone
     will fail for None-Windows virtual machines.
@@ -7261,13 +7319,13 @@ function Move-SvtVm {
 
     Prompts for the password of the specified account and sets the VSS credentials for the virtual machine.
 .EXAMPLE
-    PS C:\> "VM1", "VM2" | Set-SvtVm -Username sugarstar\backupadmin
+    PS C:\> "VM1", "VM2" | Set-SvtVm -Username twodogs\backupadmin
 
     Prompts for the password of the specified account and sets the VSS credentials for the two virtual machines.
     The command contacts the running Windows guest to confirm the validity of the password before setting it.
 .EXAMPLE
-    PS C:\> Get-VM Server2016-01 | Set-SvtVm -Username administrator
-    PS C:\> Get-VM Server2016-01 | Select-Object VmName, AppAwareVmStatus
+    PS C:\> Get-VM Win2019-01 | Set-SvtVm -Username administrator
+    PS C:\> Get-VM Win2019-01 | Select-Object VmName, AppAwareVmStatus
 
     Set the credentials for the specified virtual machine and then confirm they are set properly.
 .INPUTS
@@ -7467,7 +7525,7 @@ function Set-SvtVm {
 
     Stops all the VMs on the specified datastore
 .EXAMPLE
-    PS C:\> Stop-SvtVm -VmName Server2016-01,Server2016-02,Server2016-03
+    PS C:\> Stop-SvtVm -VmName Win2019-01,Win2019-02,Win2019-03
 
     Stops the specified virtual machines
 .INPUTS
@@ -7561,7 +7619,7 @@ function Stop-SvtVm {
 
     Starts the virtual machines in the specified cluster
 .EXAMPLE
-    PS C:\> Start-SvtVm -VmName Server2016-01,RHEL8-01
+    PS C:\> Start-SvtVm -VmName Win2019-01,Linux-01
 
     Starts the specified virtual machines
 .INPUTS
