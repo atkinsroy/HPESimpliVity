@@ -15,7 +15,7 @@
 $HPESimplivityVersion = '2.1.30'
 
 <#
-(C) Copyright 2020 Hewlett Packard Enterprise Development LP
+(C) Copyright 2021 Hewlett Packard Enterprise Development LP
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -44,14 +44,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 function Resolve-SvtFullHostName {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory)]
         [Alias('Name')]
         [System.String[]]$HostName
     )
 
     begin {
         [System.String[]]$HostNotFound = @()
-        [System.String[]]$ReturnHost = @()
+        [System.String[]]$FoundHost = @()
     }
 
     process {
@@ -70,7 +70,7 @@ function Resolve-SvtFullHostName {
             }
 
             if ($TestHost) {
-                $ReturnHost += $TestHost
+                $FoundHost += $TestHost
             }
             else {
                 $HostNotFound += $ThisHost
@@ -78,12 +78,11 @@ function Resolve-SvtFullHostName {
         }
     }
     end {
-        if ($ReturnHost) {
-            # found at least one host
+        if ($FoundHost) {
             if ($HostNotFound) {
                 Write-Warning "The following host(s) not found: $($HostNotFound -join ', ')"
             }
-            $ReturnHost | Sort-Object | Select-Object -Unique
+            Write-Output $FoundHost | Sort-Object | Select-Object -Unique
         }
         else {
             throw 'Specified host(s) not found'
@@ -96,7 +95,7 @@ function Resolve-SvtFullHostName {
 function Get-SvtError {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory)]
         [System.Object]$Err
     )
 
@@ -107,10 +106,10 @@ function Get-SvtError {
             if ($ResponseBody.StartsWith('{')) {
                 $ResponseBody = $ResponseBody | ConvertFrom-Json
             }
-            return $ResponseBody.Message
+            Write-Output $ResponseBody.Message
         }
         else {
-            return $Err.Exception.Message
+            Write-Output $Err.Exception.Message
         }
     }
     else {
@@ -124,10 +123,10 @@ function Get-SvtError {
             if ($ResponseBody.StartsWith('{')) {
                 $ResponseBody = $ResponseBody | ConvertFrom-Json
             }
-            return $ResponseBody.Message
+            Write-Output $ResponseBody.Message
         }
         else {
-            return $Err.Exception.Message
+            Write-Output $Err.Exception.Message
         }
     }
 }
@@ -140,7 +139,7 @@ function Get-SvtLocalDateFormat {
     # (Some cultures use single digits)
     $DateFormat = "$($Culture.ShortDatePattern)" -creplace '^d/', 'dd/' -creplace '^M/', 'MM/' -creplace '/d/', '/dd/'
     $TimeFormat = "$($Culture.LongTimePattern)" -creplace '^h:mm', 'hh:mm' -creplace '^H:mm', 'HH:mm'
-    return "$DateFormat $TimeFormat"
+    Write-Output "$DateFormat $TimeFormat"
 }
 
 # Helper function that returns the local date/time given the UTC (system) date/time. Used by cmdlets that return
@@ -155,7 +154,7 @@ function ConvertFrom-SvtUtc {
     [CmdletBinding()]
     param (
         # string or date object
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory)]
         $Date
     )
 
@@ -169,13 +168,11 @@ function ConvertFrom-SvtUtc {
         else {
             $ReturnDate = Get-Date -Date $Date -Format $LocalFormat
         }
-        #$Message = "UTC: $Date ($(($date).GetType().FullName)), Local: $ReturnDate ($(($ReturnDate).GetType().FullName))"
-        #Write-Verbose $Message
-        return $ReturnDate
+        Write-Output $ReturnDate
     }
     else {
         # The API returns 'NA' to represent null values.
-        return $null
+        Write-Output $null
     }
 }
 
@@ -185,7 +182,7 @@ function Get-SvtDateRange {
     [CmdletBinding()]
     param (
         # string or date object
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory)]
         $Date
     )
     $Culture = Get-Culture
@@ -198,33 +195,35 @@ function Get-SvtDateRange {
         Write-Verbose "Date only specified, showing 24 hour range"
         $StartDate = Get-Date -Date "$Date"
         $EndDate = $StartDate.AddMinutes(1439)
-        [PSCustomObject] @{
+        $DateRange = [PSCustomObject] @{
             After  = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
             Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
         }
-        return
     }
     catch {
         Write-verbose "Date by itself not specified, trying full date and time"
     }
 
-    try {
-        # Date and time specified
-        $null = [System.DateTime]::ParseExact($Date, $LocalFull, $Culture)
+    if (-Not $DateRange) {
+        try {
+            # Date and time specified
+            $null = [System.DateTime]::ParseExact($Date, $LocalFull, $Culture)
 
-        Write-Verbose "Date and time specified, showing backups with this explicit creation date/time"
-        $StartDate = Get-Date -Date "$Date"
-        $BothDate = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+            Write-Verbose "Date and time specified, showing backups with this explicit creation date/time"
+            $StartDate = Get-Date -Date "$Date"
+            $BothDate = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
 
-        [PSCustomObject] @{
-            After  = $BothDate
-            Before = $BothDate
+            $DateRange = [PSCustomObject] @{
+                After  = $BothDate
+                Before = $BothDate
+            }
+        }
+        catch {
+            $Message = "Invalid date specified. The date or full date and time must be in the form of '$LocalFull'"
+            throw $Message
         }
     }
-    catch {
-        $Message = "Invalid date specified. The date or full date and time must be in the form of '$LocalFull'"
-        throw $Message
-    }
+    Write-Output $DateRange
 }
 
 # Helper function for Get-SvtBackup when the -Sort parameter is specified. The function returns the property name
@@ -234,7 +233,7 @@ function Get-SvtSortString {
     [CmdletBinding()]
     param (
         # Parameter validation is performed by Get-SvtBackup, no need here
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory)]
         [System.String]$Sort
     )
 
@@ -249,7 +248,7 @@ function Get-SvtSortString {
     }
 
     # return the value that matches the specified sort string
-    $ValidProperty.$Sort
+    Write-Output $ValidProperty.$Sort
 }
 
 # Helper function used by Get/New/Copy-SvtBackup and New/Update-SvtPolicyRule to return the backup
@@ -257,7 +256,7 @@ function Get-SvtSortString {
 Function Get-SvtBackupDestination {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory)]
         [Alias('Name')]
         [System.String[]]$DestinationName
     )
@@ -338,27 +337,26 @@ Function Get-SvtBackupDestination {
 function Invoke-SvtRestMethod {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory, Position = 0)]
         [System.Object]$Uri,
 
-        [Parameter(Mandatory = $true, Position = 1)]
+        [Parameter(Mandatory, Position = 1)]
         [System.Collections.IDictionary]$Header,
 
-        [Parameter(Mandatory = $true, Position = 2)]
+        [Parameter(Mandatory, Position = 2)]
         [ValidateSet('get', 'post', 'delete', 'put')]
         [System.String]$Method,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Position = 3)]
         [System.Object]$Body
     )
 
     [System.int32]$Retrycount = 0
-    [bool]$Stoploop = $false
+    [bool]$LoopEnd = $false
 
     do {
         try {
-            #$Param = $PSBoundParameters | ConvertTo-Json
-            #Write-Verbose $Param
+            #Write-Verbose "$($PSBoundParameters | ConvertTo-Json)"
             if ($PSEdition -eq 'Core' -and -not $SvtConnection.SignedCertificate) {
                 # PowerShell Core without a signed cert
                 $Response = Invoke-RestMethod @PSBoundParameters -SkipCertificateCheck
@@ -367,7 +365,7 @@ function Invoke-SvtRestMethod {
                 # Windows PowerShell (with or without a signed cert) or PowerShell Core with a signed cert
                 $Response = Invoke-RestMethod @PSBoundParameters
             }
-            $Stoploop = $true
+            $LoopEnd = $true
         }
         catch [System.Management.Automation.RuntimeException] {
             if ($_.Exception.Message -match 'Unauthorized') {
@@ -399,7 +397,7 @@ function Invoke-SvtRestMethod {
             throw "An unexpected error occurred: $($_.Exception.Message)"
         }
     }
-    until ($Stoploop -eq $true)
+    until ($LoopEnd -eq $true)
 
     # If the JSON output is a task, convert it to a custom object of type 'HPE.SimpliVity.Task' and pass this
     # back to the calling cmdlet.
