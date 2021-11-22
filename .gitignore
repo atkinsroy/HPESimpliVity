@@ -1,4 +1,4 @@
-build.ps1
+UtilityScripts/Build.ps1
 UtilityScripts/Run-Coverage.ps1
 UtilityScripts/HPEsimpliVity.Tests.ps1
 UtilityScripts/SignCode.ps1
