@@ -192,16 +192,16 @@ function Get-SvtDateRange {
         # Date only specified
         $null = [System.DateTime]::ParseExact($Date, $LocalDate, $Culture)
 
-        Write-Verbose "Date only specified, showing 24 hour range"
+        Write-Verbose 'Date only specified, showing 24 hour range'
         $StartDate = Get-Date -Date "$Date"
         $EndDate = $StartDate.AddMinutes(1439)
         $DateRange = [PSCustomObject] @{
-            After  = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
-            Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
+            After  = "$(Get-Date $($StartDate.ToUniversalTime()) -Format s)Z"
+            Before = "$(Get-Date $($EndDate.ToUniversalTime()) -Format s)Z"
         }
     }
     catch {
-        Write-verbose "Date by itself not specified, trying full date and time"
+        Write-Verbose 'Date by itself not specified, trying full date and time'
     }
 
     if (-Not $DateRange) {
@@ -209,9 +209,9 @@ function Get-SvtDateRange {
             # Date and time specified
             $null = [System.DateTime]::ParseExact($Date, $LocalFull, $Culture)
 
-            Write-Verbose "Date and time specified, showing backups with this explicit creation date/time"
+            Write-Verbose 'Date and time specified, showing backups with this explicit creation date/time'
             $StartDate = Get-Date -Date "$Date"
-            $BothDate = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+            $BothDate = "$(Get-Date $($StartDate.ToUniversalTime()) -Format s)Z"
 
             $DateRange = [PSCustomObject] @{
                 After  = $BothDate
@@ -551,16 +551,12 @@ function Get-SvtTask {
 .EXAMPLE
     PS C:\> $CredFile = "$((Get-Location).Path)\SvaCred.XML"
     PS C:\> Get-Credential -Credential '<username@domain>'| Export-CLIXML $CredFile
-
-    Another way is to store the credential in a file (as above), then connect to the SVA using:
-    PS C:\> Connect-Svt -VA <FQDN or IP Address of SVA or MVA> -Credential $(Import-CLIXML $CredFile)
-
-    or:
     PS C:\> $Cred = Import-CLIXML $CredFile
     PS C:\> Connect-Svt -VA <FQDN or IP Address of SVA or MVA> -Credential $Cred
 
-    This method is useful in non-interactive sessions. Once the file is created, run the Connect-Svt
-    command to connect and reconnect to the SVA, as required.
+    Save credential to a file for later use (first 2 commands). This method is useful in non-interactive sessions. 
+    Once the file is created, run the Connect-Svt command to connect and reconnect to the SVA, as required (last 2
+    commands).
 .NOTES
     Author: Roy Atkins, HPE Pointnext Services
 .LINK
@@ -600,7 +596,7 @@ function Connect-Svt {
         else {
             # With Windows PowerShell, use .Net ServicePointManager to create an object of type TrustAllCertsPolicy
             if ( -not ('TrustAllCertsPolicy' -as [type])) {
-                $Source = @"
+                $Source = @'
                     using System.Net;
                     using System.Security.Cryptography.X509Certificates;
                     public class TrustAllCertsPolicy : ICertificatePolicy
@@ -612,7 +608,7 @@ function Connect-Svt {
                             return true;
                         }
                     }
-"@
+'@
                 Add-Type -TypeDefinition $Source
             }
             [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
@@ -901,8 +897,8 @@ function Get-SvtMetric {
                 try {
                     $HostName = Resolve-SvtFullHostName -HostName $Item -ErrorAction Stop
 
-                    $HostId = $global:SvtHost | Where-Object Hostname -eq $HostName |
-                    Select-Object -ExpandProperty HostId
+                    $HostId = $global:SvtHost | Where-Object Hostname -EQ $HostName |
+                        Select-Object -ExpandProperty HostId
 
                     $Uri = $global:SvtConnection.VA + '/api/hosts/' + $HostId + '/metrics'
                     $ObjectName = $Item
@@ -925,7 +921,7 @@ function Get-SvtMetric {
                     throw $_.Exception.Message
                 }
             }
-            Write-verbose "Object name is $ObjectName ($TypeName)"
+            Write-Verbose "Object name is $ObjectName ($TypeName)"
 
             try {
                 $Uri = $Uri + "?time_offset=$Offset&range=$Range&resolution=$Resolution"
@@ -936,7 +932,7 @@ function Get-SvtMetric {
             }
 
             # Unpack the Json into a Custom object. This returns each Metric with a date and some values
-            $CustomObject = $Response.metrics | foreach-object {
+            $CustomObject = $Response.metrics | ForEach-Object {
                 $MetricName = (Get-Culture).TextInfo.ToTitleCase($_.name)
                 $_.data_points | ForEach-Object {
                     [PSCustomObject] @{
@@ -951,33 +947,33 @@ function Get-SvtMetric {
             # Transpose the custom object to return each date with read and write for each metric
             # NOTE: PowerShell Core displays grouped items out of order, so sort again by Name
             $MetricObject = $CustomObject | Sort-Object -Property { $_.Date -as [datetime] } |
-            Group-Object -Property Date | Sort-Object -Property { $_.Name -as [datetime] } |
-            ForEach-Object {
-                $Property = [ordered]@{
-                    PSTypeName = 'HPE.SimpliVity.Metric'
-                    Date       = $_.Name
-                }
-
-                [string]$PrevName = ''
-                $_.Group | Foreach-object {
-                    # We expect one instance each of Iops, Latency and Throughput per date.
-                    # But sometimes the API returns more. Attempting to create a key that already
-                    # exists generates a non-terminating error so, check for duplicates.
-                    if ($_.name -ne $PrevName) {
-                        $Property += [ordered]@{
-                            "$($_.Name)Read"  = $_.Read
-                            "$($_.Name)Write" = $_.Write
-                        }
+                Group-Object -Property Date | Sort-Object -Property { $_.Name -as [datetime] } |
+                ForEach-Object {
+                    $Property = [ordered]@{
+                        PSTypeName = 'HPE.SimpliVity.Metric'
+                        Date       = $_.Name
                     }
-                    $PrevName = $_.Name
-                }
 
-                $Property += [ordered]@{
-                    ObjectType = $TypeName
-                    ObjectName = $ObjectName
+                    [string]$PrevName = ''
+                    $_.Group | ForEach-Object {
+                        # We expect one instance each of Iops, Latency and Throughput per date.
+                        # But sometimes the API returns more. Attempting to create a key that already
+                        # exists generates a non-terminating error so, check for duplicates.
+                        if ($_.name -ne $PrevName) {
+                            $Property += [ordered]@{
+                                "$($_.Name)Read"  = $_.Read
+                                "$($_.Name)Write" = $_.Write
+                            }
+                        }
+                        $PrevName = $_.Name
+                    }
+
+                    $Property += [ordered]@{
+                        ObjectType = $TypeName
+                        ObjectName = $ObjectName
+                    }
+                    New-Object -TypeName PSObject -Property $Property
                 }
-                New-Object -TypeName PSObject -Property $Property
-            }
 
             if ($PSBoundParameters.ContainsKey('Chart')) {
                 Get-SvtMetricChart -Metric $MetricObject -ChartProperty $ChartProperty
@@ -1018,7 +1014,7 @@ function Get-SvtMetricChart {
     $EndDate = $Metric | Select-Object -Last 1 -ExpandProperty Date
     $ChartLabelFont = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 8
     $ChartTitleFont = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 12
-    $Logo = (Split-Path -parent (Get-Module HPESimpliVity | Select-Object -First 1).Path) + '\hpe.png'
+    $Logo = (Split-Path -Parent (Get-Module HPESimpliVity | Select-Object -First 1).Path) + '\hpe.png'
 
     # define an object to determine the best interval on the Y axis, given a maximum value
     $YMax = (0, 2500, 5000, 10000, 20000, 40000, 80000, 160000, 320000, 640000, 1280000, 2560000, 5120000, 10240000, 20480000)
@@ -1033,7 +1029,7 @@ function Get-SvtMetricChart {
     Add-Type -AssemblyName System.Windows.Forms.DataVisualization
 
     foreach ($Instance in $ObjectList) {
-        $DataSource = $Metric | Where-Object ObjectName -eq $Instance | Select-Object $ChartProperty
+        $DataSource = $Metric | Where-Object ObjectName -EQ $Instance | Select-Object $ChartProperty
         $DataPoint = $DataSource | Measure-Object | Select-Object -ExpandProperty Count
 
         # create chart object
@@ -1262,11 +1258,11 @@ function Get-SvtCapacityChart {
     $ChartLabelFont = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 10
     $ChartTitleFont = New-Object System.Drawing.Font [System.Drawing.Font.Fontfamily]::Arial, 13
     $DateStamp = Get-Date -Format 'yyMMddhhmmss'
-    $Logo = (Split-Path -parent (Get-Module HPESimpliVity).Path | Select-Object -First 1) + '\hpe.png'
+    $Logo = (Split-Path -Parent (Get-Module HPESimpliVity).Path | Select-Object -First 1) + '\hpe.png'
 
     $ObjectList = $Capacity.HostName | Select-Object -Unique
     foreach ($Instance in $ObjectList) {
-        $Cap = $Capacity | Where-Object HostName -eq $Instance | Select-Object -Last 1
+        $Cap = $Capacity | Where-Object HostName -EQ $Instance | Select-Object -Last 1
 
         $DataSource = [ordered]@{
             'Allocated Capacity'          = $Cap.AllocatedCapacity / 1GB
@@ -1282,7 +1278,7 @@ function Get-SvtCapacityChart {
         }
 
         # create chart object
-        $Chart1 = New-object System.Windows.Forms.DataVisualization.Charting.Chart
+        $Chart1 = New-Object System.Windows.Forms.DataVisualization.Charting.Chart
         $Chart1.Width = 1200
         $Chart1.Height = 600
         $Chart1.BackColor = [System.Drawing.Color]::WhiteSmoke
@@ -1543,8 +1539,12 @@ function Get-SvtImpactReport {
 .EXAMPLE
     PS C:\>Get-SvtBackup -DatastoreName DS01 -All
 
-    Shows all backups for the specified Datastore with no upper limit. This command will take a long time
-    to complete.
+    Shows all backups for VMs located on the specified Datastore with no upper limit. This command will take 
+    a long time to complete.
+.EXAMPLE
+    PS C:\>Get-SvtBackup -DatastoreName DS01,DS02 -Limit 1000
+
+    Shows all backups for VMs located on the specified SimpliVity datastores, up to the specified limit
 .EXAMPLE
     PS C:\>Get-SvtBackup -VmName Vm1,Vm2 -BackupName 2020-03-28T16:00+10:00
     PS C:\>Get-SvtBackup -VmName Vm1,Vm2,Vm3 -Hour 2
@@ -1556,13 +1556,8 @@ function Get-SvtImpactReport {
     PS C:\>Get-SvtBackup -VmName VM1 -BackupName '2019-05-05T00:00:00-04:00' -DestinationName SvtCluster
 
     If you have backup policies with more than one rule, further refine the filter by specifying the destination
-    SimpliVity cluster or external store.
+    SimpliVity cluster or an external store.
 .EXAMPLE
-    PS C:\>Get-SvtBackup -Datastore DS01,DS02 -Limit 1000
-
-    Shows all backups on the specified SimpliVity datastores, up to the specified limit
-.EXAMPLE
-
     PS C:\>Get-SvtBackup -ClusterName cluster1 -Limit 1 -Verbose
 
     Shows a quick way to determine the number of backups on a cluster without showing them
@@ -1577,14 +1572,14 @@ function Get-SvtImpactReport {
 .EXAMPLE
     PS C:\>Get-SvtBackup -DestinationName StoreOnce-Data02,StoreOnce-Data03 -ExpireAfter 31/12/2020
 
-    Shows backups on the specified external datastores that will expire after the specified date (using local
+    Shows backups on the specified external stores that will expire after the specified date (using local
     date/time format)
 .EXAMPLE
     PS C:\>Get-SvtBackup -BackupState FAILED -Limit 20
 
     Show a list of failed backups, limited to 20 backups.
 .EXAMPLE
-    PS C:\>Get-SvtBackup -Datastore DS01 -BackupType MANUAL
+    PS C:\>Get-SvtBackup -DatastoreName DS01 -BackupType MANUAL
 
     Show a list of backups that were manually taken for VMs residing on the specified datastore.
 .EXAMPLE
@@ -1805,23 +1800,23 @@ function Get-SvtBackup {
     else {
         if ($PSBoundParameters.ContainsKey('CreatedAfter')) {
             $StartDate = Get-Date -Date "$CreatedAfter"
-            $After = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+            $After = "$(Get-Date $($StartDate.ToUniversalTime()) -Format s)Z"
             $Uri += "&created_after=$After"
         }
         if ($PSBoundParameters.ContainsKey('CreatedBefore')) {
             $EndDate = Get-Date -Date "$CreatedBefore"
-            $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
+            $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -Format s)Z"
             $Uri += "&created_before=$Before"
         }
     }
     if ($PSBoundParameters.ContainsKey('ExpiresAfter')) {
         $StartDate = Get-Date -Date "$ExpiresAfter"
-        $After = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+        $After = "$(Get-Date $($StartDate.ToUniversalTime()) -Format s)Z"
         $Uri += "&expires_after=$After"
     }
     if ($PSBoundParameters.ContainsKey('ExpiresBefore')) {
         $EndDate = Get-Date -Date "$ExpiresBefore"
-        $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -format s)Z"
+        $Before = "$(Get-Date $($EndDate.ToUniversalTime()) -Format s)Z"
         $Uri += "&expires_before=$Before"
     }
 
@@ -1829,7 +1824,7 @@ function Get-SvtBackup {
     $Uri += "&sort=$SortProperty"
     if ($PSBoundParameters.ContainsKey('Ascending')) {
         # by default, backups are displayed in descending order. This can be overridden using the -Ascending switch
-        $Uri += "&order=ascending"
+        $Uri += '&order=ascending'
     }
 
     if ($PSBoundParameters.ContainsKey('Hour')) {
@@ -1847,11 +1842,11 @@ function Get-SvtBackup {
         }
         else {
             $StartDate = (Get-Date).AddHours(-$Hour)
-            $CreatedAfter = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+            $CreatedAfter = "$(Get-Date $($StartDate.ToUniversalTime()) -Format s)Z"
             $Uri += "&created_after=$CreatedAfter"
 
             $Message = "Displaying backups from the last $Hour hours, " +
-            "(created after $(Get-date $StartDate -Format $LocalFormat)), limited to $limit backups"
+            "(created after $(Get-Date $StartDate -Format $LocalFormat)), limited to $limit backups"
             Write-Verbose $Message
         }
     }
@@ -1870,10 +1865,10 @@ function Get-SvtBackup {
         }
         if (-not $ParamFound) {
             $StartDate = (Get-Date).AddHours(-24)
-            $CreatedAfter = "$(Get-Date $($StartDate.ToUniversalTime()) -format s)Z"
+            $CreatedAfter = "$(Get-Date $($StartDate.ToUniversalTime()) -Format s)Z"
             $Uri += "&created_after=$CreatedAfter"
             $Message = 'Displaying backups from the last 24 hours,' +
-            "(created after $(Get-date $StartDate -Format $LocalFormat)), limited to $limit backups"
+            "(created after $(Get-Date $StartDate -Format $LocalFormat)), limited to $limit backups"
             Write-Verbose $Message
         }
     }
@@ -1907,7 +1902,7 @@ function Get-SvtBackup {
         }
 
         if (-not $Response.Backups.Name -and $PSBoundParameters.Count -gt 0) {
-            throw "No matching backups found using the specified parameter(s)"
+            throw 'No matching backups found using the specified parameter(s)'
         }
 
         $Response.backups | ForEach-Object {
@@ -2096,7 +2091,7 @@ function New-SvtBackup {
             }
 
             $Body = @{
-                'backup_name'      = $BackupName -replace "'", ""
+                'backup_name'      = $BackupName -replace "'", ''
                 'app_consistent'   = $ApplicationConsistent
                 'consistency_type' = $ConsistencyType
                 'retention'        = $Retention
@@ -2259,7 +2254,7 @@ function Restore-SvtVm {
                 if ($NewVmName) {
                     if ($Count -gt 1) {
                         $global:SvtTask = $AllTask
-                        throw "With multiple restores, you cannot specify a new VM name, only the first backup is restored"
+                        throw 'With multiple restores, you cannot specify a new VM name, only the first backup is restored'
                     }
                     else {
                         # Works for the first VM in the pipeline only
@@ -2271,7 +2266,7 @@ function Restore-SvtVm {
                 else {
                     try {
                         $VmName = Get-SvtBackup -BackupId $BkpId -ErrorAction Stop |
-                        Select-Object -ExpandProperty VmName
+                            Select-Object -ExpandProperty VmName
                     }
                     catch {
                         # Don't exit, continue with other restores in the pipeline
@@ -2292,8 +2287,8 @@ function Restore-SvtVm {
                 $Uri = $global:SvtConnection.VA + '/api/backups/' + $BkpId + '/restore?restore_original=false'
 
                 try {
-                    $DatastoreId = $AllDatastore | Where-Object DatastoreName -eq $DatastoreName |
-                    Select-Object -ExpandProperty DatastoreId
+                    $DatastoreId = $AllDatastore | Where-Object DatastoreName -EQ $DatastoreName |
+                        Select-Object -ExpandProperty DatastoreId
                 }
                 catch {
                     # Don't exit, continue with other restores in the pipeline
@@ -2842,7 +2837,7 @@ function Set-SvtBackupRetention {
 
             # If the attempted retention date is in the past, the list of backup objects is returned.
             if ($Task.Backups) {
-                throw "You cannot set a retention date that would immediately expire the target backup(s)"
+                throw 'You cannot set a retention date that would immediately expire the target backup(s)'
             }
             else {
                 $Task
@@ -3381,10 +3376,10 @@ function New-SvtDatastore {
 
     try {
         $ClusterId = Get-SvtCluster -ClusterName $ClusterName -ErrorAction Stop |
-        Select-Object -ExpandProperty ClusterId
+            Select-Object -ExpandProperty ClusterId
 
         $PolicyID = Get-SvtPolicy -PolicyName $PolicyName -ErrorAction Stop |
-        Select-Object -ExpandProperty PolicyId -Unique
+            Select-Object -ExpandProperty PolicyId -Unique
     }
     catch {
         throw $_.Exception.Message
@@ -3453,7 +3448,7 @@ function Remove-SvtDatastore {
 
     try {
         $DatastoreId = Get-SvtDatastore -DatastoreName $DatastoreName -ErrorAction Stop |
-        Select-Object -ExpandProperty DatastoreId
+            Select-Object -ExpandProperty DatastoreId
 
         $Uri = $global:SvtConnection.VA + '/api/datastores/' + $DatastoreId
     }
@@ -3514,7 +3509,7 @@ function Resize-SvtDatastore {
 
     try {
         $DatastoreId = Get-SvtDatastore -DatastoreName $DatastoreName -ErrorAction Stop |
-        Select-Object -ExpandProperty DatastoreId
+            Select-Object -ExpandProperty DatastoreId
 
         $Uri = $global:SvtConnection.VA + '/api/datastores/' + $DatastoreId + '/resize'
         $Body = @{ 'size' = $SizeGB * 1Gb } | ConvertTo-Json # Size must be in bytes
@@ -3570,12 +3565,12 @@ function Set-SvtDatastorePolicy {
     }
     try {
         $DatastoreId = Get-SvtDatastore -DatastoreName $DatastoreName -ErrorAction Stop |
-        Select-Object -ExpandProperty DatastoreId
+            Select-Object -ExpandProperty DatastoreId
 
         $Uri = $global:SvtConnection.VA + '/api/datastores/' + $DatastoreId + '/set_policy'
 
         $PolicyId = Get-SvtPolicy -PolicyName $PolicyName -ErrorAction Stop |
-        Select-Object -ExpandProperty PolicyId -Unique
+            Select-Object -ExpandProperty PolicyId -Unique
 
         $Body = @{ 'policy_id' = $PolicyId } | ConvertTo-Json
         Write-Verbose $Body
@@ -3631,7 +3626,7 @@ function Publish-SvtDatastore {
 
     try {
         $DatastoreId = Get-SvtDatastore -DatastoreName $DatastoreName -ErrorAction Stop |
-        Select-Object -ExpandProperty DatastoreId
+            Select-Object -ExpandProperty DatastoreId
 
         $Uri = $global:SvtConnection.VA + '/api/datastores/' + $DatastoreId + '/share'
         $Body = @{ 'host_name' = $ComputeNodeName } | ConvertTo-Json
@@ -3692,7 +3687,7 @@ function Unpublish-SvtDatastore {
 
     try {
         $DatastoreId = Get-SvtDatastore -DatastoreName $DatastoreName -ErrorAction Stop |
-        Select-Object -ExpandProperty DatastoreId
+            Select-Object -ExpandProperty DatastoreId
 
         $Uri = $global:SvtConnection.VA + '/api/datastores/' + $DatastoreId + '/unshare'
         $Task = Invoke-SvtRestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
@@ -3750,7 +3745,7 @@ function Get-SvtDatastoreComputeNode {
         foreach ($ThisDatastore in $DatastoreName) {
             try {
                 $DatastoreId = Get-SvtDatastore -DatastoreName $ThisDatastore -ErrorAction Stop |
-                Select-Object -ExpandProperty DatastoreId
+                    Select-Object -ExpandProperty DatastoreId
 
                 $Uri = $global:SvtConnection.VA + '/api/datastores/' + $DatastoreId + '/standard_hosts'
                 $Response = Invoke-SvtRestMethod -Uri $Uri -Header $Header -Method Get -ErrorAction Stop
@@ -3930,7 +3925,7 @@ function New-SvtExternalStore {
 
     try {
         $ClusterId = Get-SvtCluster -ClusterName $ClusterName -ErrorAction Stop |
-        Select-Object -ExpandProperty ClusterId
+            Select-Object -ExpandProperty ClusterId
     }
     catch {
         throw $_.Exception.Message
@@ -4011,7 +4006,7 @@ function Remove-SvtExternalStore {
 
     try {
         $ClusterId = Get-SvtCluster -ClusterName $ClusterName -ErrorAction Stop |
-        Select-Object -ExpandProperty ClusterId
+            Select-Object -ExpandProperty ClusterId
 
         $Body = @{
             'name'                 = $ExternalStoreName
@@ -4192,7 +4187,7 @@ function Get-SvtHost {
         throw "Specified cluster(s) $ClusterName not found"
     }
 
-    $Response.hosts | Foreach-Object {
+    $Response.hosts | ForEach-Object {
         [PSCustomObject]@{
             PSTypeName                = 'HPE.SimpliVity.Host'
             ClusterFeatureLevel       = $_.cluster_feature_level
@@ -4252,7 +4247,7 @@ function Get-SvtHost {
         else {
             Write-Verbose "Create global variable SvtHost with a list of hostnames and id's"
         }
-        $global:SvtHost = $Response.hosts | Foreach-Object {
+        $global:SvtHost = $Response.hosts | ForEach-Object {
             [PSCustomObject]@{
                 HostName = $_.name
                 HostId   = $_.id
@@ -4321,7 +4316,7 @@ function Get-SvtHardware {
 
     process {
         foreach ($Thishost in $HostName) {
-            $HostId = ($global:SvtHost | Where-Object HostName -eq $Thishost).HostId
+            $HostId = ($global:SvtHost | Where-Object HostName -EQ $Thishost).HostId
             $Uri = $global:SvtConnection.VA + '/api/hosts/' + $HostId + '/hardware'
 
             try {
@@ -4422,7 +4417,7 @@ function Get-SvtDisk {
             # This command removes duplicates - all models have at least two logical disks where physical
             # disks would otherwise appear twice in the collection.
             $Disk = $Hardware.logicaldrives.drive_sets.physical_drives |
-            Sort-Object { [system.Int32]($_.Slot -replace '(\d+).*', '$1') } | Get-Unique -AsString
+                Sort-Object { [system.Int32]($_.Slot -replace '(\d+).*', '$1') } | Get-Unique -AsString
 
             # Check capacity of first disk in collection (works ok all most models - 380 H included, for now)
             $DiskCapacity = [int][math]::Ceiling(($Disk | Select-Object -First 1).capacity / 1TB)
@@ -4578,7 +4573,7 @@ function Get-SvtCapacity {
 
     process {
         foreach ($Thishost in $HostName) {
-            $HostId = ($global:SvtHost | Where-Object HostName -eq $Thishost).HostId
+            $HostId = ($global:SvtHost | Where-Object HostName -EQ $Thishost).HostId
 
             $Uri = $global:SvtConnection.VA + '/api/hosts/' + $HostId + '/capacity?time_offset=' +
             $Offset + '&range=' + $Range + '&resolution=' + $Resolution
@@ -4591,46 +4586,46 @@ function Get-SvtCapacity {
             }
 
             # Unpack the Json into a Custom object. This returns each Metric with a date and value
-            $CustomObject = $Response.metrics | foreach-object {
+            $CustomObject = $Response.metrics | ForEach-Object {
                 $MetricName = ($_.name -split '_' |
+                        ForEach-Object {
+                            (Get-Culture).TextInfo.ToTitleCase($_)
+                        }
+                    ) -join ''
+
+                    $_.data_points | ForEach-Object {
+                        [PSCustomObject] @{
+                            Name  = $MetricName
+                            Date  = ConvertFrom-SvtUtc -Date $_.date
+                            Value = $_.value
+                        }
+                    }
+                }
+
+                # Transpose the custom object to return each date with the value for each metric
+                # NOTE: PowerShell Core displays grouped items out of order, so sort again by Name
+                $CapacityObject = $CustomObject | Sort-Object -Property { $_.Date -as [datetime] } |
+                    Group-Object -Property Date | Sort-Object -Property { $_.Name -as [datetime] } |
                     ForEach-Object {
-                        (Get-Culture).TextInfo.ToTitleCase($_)
-                    }
-                ) -join ''
-
-                $_.data_points | ForEach-Object {
-                    [PSCustomObject] @{
-                        Name  = $MetricName
-                        Date  = ConvertFrom-SvtUtc -Date $_.date
-                        Value = $_.value
-                    }
-                }
-            }
-
-            # Transpose the custom object to return each date with the value for each metric
-            # NOTE: PowerShell Core displays grouped items out of order, so sort again by Name
-            $CapacityObject = $CustomObject | Sort-Object -Property { $_.Date -as [datetime] } |
-            Group-Object -Property Date | Sort-Object -Property { $_.Name -as [datetime] } |
-            ForEach-Object {
-                $Property = [ordered]@{
-                    PSTypeName = 'HPE.SimpliVity.Capacity'
-                    Date       = $_.Name
-                }
-                $_.Group | Foreach-object {
-                    if ($_.Name -match 'Ratio') {
-                        $Property += @{
-                            "$($_.Name)" = '{0:n2}' -f $_.Value
+                        $Property = [ordered]@{
+                            PSTypeName = 'HPE.SimpliVity.Capacity'
+                            Date       = $_.Name
                         }
-                    }
-                    else {
-                        $Property += @{
-                            "$($_.Name)" = $_.Value
+                        $_.Group | ForEach-Object {
+                            if ($_.Name -match 'Ratio') {
+                                $Property += @{
+                                    "$($_.Name)" = '{0:n2}' -f $_.Value
+                                }
+                            }
+                            else {
+                                $Property += @{
+                                    "$($_.Name)" = $_.Value
+                                }
+                            }
                         }
+                        $Property += @{ HostName = $Thishost }
+                        New-Object -TypeName PSObject -Property $Property
                     }
-                }
-                $Property += @{ HostName = $Thishost }
-                New-Object -TypeName PSObject -Property $Property
-            }
 
             if ($PSBoundParameters.ContainsKey('Chart')) {
                 $ChartObject += $CapacityObject
@@ -4705,7 +4700,7 @@ function Remove-SvtHost {
     }
     try {
         $HostName = Resolve-SvtFullHostName -HostName $HostName -ErrorAction Stop
-        $HostId = $global:SvtHost | Where-Object HostName -eq $HostName | Select-Object -ExpandProperty HostId
+        $HostId = $global:SvtHost | Where-Object HostName -EQ $HostName | Select-Object -ExpandProperty HostId
         $Uri = $global:SvtConnection.VA + '/api/hosts/' + $HostId + '/remove_from_federation'
     }
     catch {
@@ -4720,7 +4715,7 @@ function Remove-SvtHost {
     $Body = @{ 'force' = $ForceHostRemoval } | ConvertTo-Json
     Write-Verbose $Body
 
-    if ($PSCmdlet.ShouldProcess("$HostName", "Remove host")) {
+    if ($PSCmdlet.ShouldProcess("$HostName", 'Remove host')) {
         try {
             $Task = Invoke-SvtRestMethod -Uri $Uri -Header $Header -Body $Body -Method Post -ErrorAction Stop
         }
@@ -4798,20 +4793,20 @@ function Start-SvtShutdown {
         throw $_.Exception.Message
     }
 
-    $ThisHost = $Allhost | Where-Object HostName -eq $HostName
+    $ThisHost = $Allhost | Where-Object HostName -EQ $HostName
     $ThisCluster = $ThisHost | Select-Object -First 1 -ExpandProperty Clustername
 
     # display current SVA state for all hosts in the target cluster
-    $Allhost | Where-Object ClusterName -eq $ThisCluster | ForEach-Object {
+    $Allhost | Where-Object ClusterName -EQ $ThisCluster | ForEach-Object {
         Write-Verbose "Current state of host $($_.HostName) in cluster $ThisCluster is $($_.State)"
     }
 
     # so we can reconnect to another SVA in the federation afterwards, if any
     $NextHost = $Allhost | Where-Object { $_.HostName -ne $HostName -and $_.State -eq 'ALIVE' } |
-    Select-Object -First 1
+        Select-Object -First 1
 
     $LiveHostCount = $Allhost | Where-Object { $_.ClusterName -eq $ThisCluster -and $_.State -eq 'ALIVE' } |
-    Measure-Object | Select-Object -ExpandProperty Count
+        Measure-Object | Select-Object -ExpandProperty Count
 
     # exit if the SVA is already off
     if ($ThisHost.State -ne 'ALIVE') {
@@ -4898,11 +4893,11 @@ function Start-SvtShutdown {
                 do {
                     $Message = 'Waiting 30 seconds, do not issue additional shutdown commands until this ' +
                     'operation completes...'
-                    Write-verbose $Message
+                    Write-Verbose $Message
                     Start-Sleep -Seconds 30
 
                     $SvaState = Get-SvtHost -HostName $($ThisHost.HostName) -ErrorAction Stop |
-                    Select-Object -ExpandProperty State
+                        Select-Object -ExpandProperty State
 
                     if ($SvaState -eq 'FAULTY') {
                         $SvaRunning = $false
@@ -4995,11 +4990,11 @@ function Get-SvtShutdownStatus {
 
     process {
         foreach ($ThisHostName in $HostName) {
-            $ThisHost = $Allhost | Where-Object HostName -eq $ThisHostName
+            $ThisHost = $Allhost | Where-Object HostName -EQ $ThisHostName
 
             try {
                 Connect-Svt -VirtualAppliance $ThisHost.ManagementIP -Credential $SvtConnection.Credential -ErrorAction Stop |
-                Out-Null
+                    Out-Null
 
                 Write-Verbose $SvtConnection
             }
@@ -5082,7 +5077,7 @@ function Stop-SvtShutdown {
         throw $_.Exception.Message
     }
     
-    $ThisHost = $Allhost | Where-Object HostName -eq $HostName
+    $ThisHost = $Allhost | Where-Object HostName -EQ $HostName
     $null = Connect-Svt -VirtualAppliance $ThisHost.ManagementIP -Credential $SvtConnection.Credential
 
     $Uri = $global:SvtConnection.VA + '/api/hosts/' + $ThisHost.HostId +
@@ -5153,7 +5148,7 @@ function Get-SvtCluster {
     }
 
     $Uri = $global:SvtConnection.VA + '/api/omnistack_clusters?show_optional_fields=true&case=insensitive' +
-    "&sort=name&order=ascending"
+    '&sort=name&order=ascending'
 
     if ($PSBoundParameters.ContainsKey('ClusterName')) {
         $Uri += "&name=$($ClusterName -join ',')"
@@ -5248,7 +5243,7 @@ function Get-SvtThroughput {
     param (
         [Parameter(Mandatory = $false, Position = 0)]
         [System.String]$ClusterName = (Get-SvtCluster |
-            Sort-Object ClusterName | Select-Object -ExpandProperty ClusterName -First 1),
+                Sort-Object ClusterName | Select-Object -ExpandProperty ClusterName -First 1),
 
         [Parameter(Mandatory = $false, Position = 1)]
         [System.Int32]$Hour = 12,
@@ -5267,7 +5262,7 @@ function Get-SvtThroughput {
 
     try {
         $ClusterId = Get-SvtCluster -ClusterName $ClusterName -ErrorAction Stop |
-        Select-Object -ExpandProperty ClusterId
+            Select-Object -ExpandProperty ClusterId
 
         $Uri = $global:SvtConnection.VA + '/api/omnistack_clusters/' + $ClusterId + '/throughput'
     }
@@ -5385,7 +5380,7 @@ function Set-SvtCluster {
 
     try {
         $ClusterId = Get-SvtCluster -ClusterName $ClusterName -ErrorAction Stop |
-        Select-Object -ExpandProperty ClusterId
+            Select-Object -ExpandProperty ClusterId
     }
     catch {
         throw $_.Exception.Message
@@ -5483,11 +5478,11 @@ function Get-SvtClusterConnected {
 
     if (-Not $PSBoundParameters.ContainsKey('ClusterName')) {
         $ClusterName = $AllCluster | Sort-Object ClusterName |
-        Select-Object -First 1 -ExpandProperty ClusterName
+            Select-Object -First 1 -ExpandProperty ClusterName
         Write-Verbose "No cluster specified, using $ClusterName by default"
     }
-    $ClusterId = $AllCluster | Where-Object ClusterName -eq $ClusterName |
-    Select-Object -ExpandProperty ClusterId
+    $ClusterId = $AllCluster | Where-Object ClusterName -EQ $ClusterName |
+        Select-Object -ExpandProperty ClusterId
 
     try {
         $Uri = $global:SvtConnection.VA + '/api/omnistack_clusters/' + $ClusterId + '/connected_clusters'
@@ -5837,7 +5832,7 @@ function New-SvtPolicyRule {
 
     try {
         $PolicyId = Get-SvtPolicy -PolicyName $PolicyName -ErrorAction Stop |
-        Select-Object -ExpandProperty PolicyId -Unique
+            Select-Object -ExpandProperty PolicyId -Unique
     }
     catch {
         throw $_.Exception.Message
@@ -6401,7 +6396,7 @@ function Rename-SvtPolicy {
 
     try {
         $PolicyId = Get-SvtPolicy -PolicyName $PolicyName -ErrorAction Stop |
-        Select-Object -ExpandProperty PolicyId -Unique
+            Select-Object -ExpandProperty PolicyId -Unique
 
         $Uri = $global:SvtConnection.VA + '/api/policies/' + $PolicyId + '/rename'
 
@@ -6460,7 +6455,7 @@ function Remove-SvtPolicy {
 
     try {
         $PolicyId = Get-SvtPolicy -PolicyName $PolicyName -ErrorAction Stop |
-        Select-Object -ExpandProperty PolicyId -Unique
+            Select-Object -ExpandProperty PolicyId -Unique
     }
     catch {
         throw $_.Exception.Message
@@ -6565,7 +6560,7 @@ function Suspend-SvtPolicy {
     if ($PSBoundParameters.ContainsKey('ClusterName')) {
         try {
             $TargetId = Get-SvtCluster -ClusterName $ClusterName -ErrorAction Stop |
-            Select-Object -ExpandProperty ClusterId
+                Select-Object -ExpandProperty ClusterId
 
             $TargetType = 'omnistack_cluster'
         }
@@ -6576,8 +6571,8 @@ function Suspend-SvtPolicy {
     elseif ($PSBoundParameters.ContainsKey('HostName')) {
         try {
             $HostName = Resolve-SvtFullHostName -HostName $HostName -ErrorAction Stop
-            $TargetId = $global:SvtHost | Where-Object HostName -eq $HostName |
-            Select-Object -ExpandProperty HostId
+            $TargetId = $global:SvtHost | Where-Object HostName -EQ $HostName |
+                Select-Object -ExpandProperty HostId
 
             $TargetType = 'host'
         }
@@ -6666,7 +6661,7 @@ function Resume-SvtPolicy {
     if ($PSBoundParameters.ContainsKey('ClusterName')) {
         try {
             $TargetId = Get-SvtCluster -ClusterName $ClusterName -ErrorAction Stop |
-            Select-Object -ExpandProperty ClusterId
+                Select-Object -ExpandProperty ClusterId
 
             $TargetType = 'omnistack_cluster'
         }
@@ -6677,8 +6672,8 @@ function Resume-SvtPolicy {
     elseif ($PSBoundParameters.ContainsKey('HostName')) {
         try {
             $HostName = Resolve-SvtFullHostName -HostName $HostName -ErrorAction Stop
-            $TargetId = $global:SvtHost | Where-Object HostName -eq $HostName |
-            Select-Object -ExpandProperty HostId
+            $TargetId = $global:SvtHost | Where-Object HostName -EQ $HostName |
+                Select-Object -ExpandProperty HostId
 
             $TargetType = 'host'
         }
@@ -6884,7 +6879,7 @@ function Get-SvtVm {
     if ($PSBoundParameters.ContainsKey('HostName')) {
         try {
             $HostName = Resolve-SvtFullHostName -HostName $HostName -ErrorAction Stop
-            $HostId = $global:SvtHost | Where-Object HostName -eq $HostName | Select-Object -ExpandProperty HostId
+            $HostId = $global:SvtHost | Where-Object HostName -EQ $HostName | Select-Object -ExpandProperty HostId
             $Uri += "&host_id=$HostId"
         }
         catch {
@@ -6927,7 +6922,7 @@ function Get-SvtVm {
 
     $Response.virtual_machines | ForEach-Object {
 
-        $ThisHost = $global:SvtHost | Where-Object HostID -eq $_.host_id | Select-Object -ExpandProperty HostName
+        $ThisHost = $global:SvtHost | Where-Object HostID -EQ $_.host_id | Select-Object -ExpandProperty HostName
         if ($null -eq $ThisHost -and $_.state -eq 'ALIVE') {
             $ThisHost = '*ComputeNode'
         }
@@ -7025,17 +7020,17 @@ function Get-SvtVmReplicaSet {
 
     process {
         foreach ($VM in $VmObj) {
-            $PrimaryId = $VM.ReplicaSet | Where-Object role -eq 'PRIMARY' |
-            Select-Object -ExpandProperty id
+            $PrimaryId = $VM.ReplicaSet | Where-Object role -EQ 'PRIMARY' |
+                Select-Object -ExpandProperty id
 
-            $SecondaryId = $VM.ReplicaSet | Where-Object role -eq 'SECONDARY' |
-            Select-Object -ExpandProperty id
+            $SecondaryId = $VM.ReplicaSet | Where-Object role -EQ 'SECONDARY' |
+                Select-Object -ExpandProperty id
 
-            $PrimaryHost = $global:SvtHost | Where-Object HostId -eq $PrimaryId |
-            Select-Object -ExpandProperty HostName
+            $PrimaryHost = $global:SvtHost | Where-Object HostId -EQ $PrimaryId |
+                Select-Object -ExpandProperty HostName
 
-            $SecondaryHost = $global:SvtHost | Where-Object HostId -eq $SecondaryId |
-            Select-Object -ExpandProperty HostName
+            $SecondaryHost = $global:SvtHost | Where-Object HostId -EQ $SecondaryId |
+                Select-Object -ExpandProperty HostName
 
             [PSCustomObject]@{
                 PSTypeName  = 'HPE.SimpliVity.ReplicaSet'
@@ -7218,7 +7213,7 @@ function Move-SvtVm {
 
         try {
             $DatastoreId = Get-SvtDatastore -DatastoreName $DatastoreName -ErrorAction Stop |
-            Select-Object -ExpandProperty DatastoreId
+                Select-Object -ExpandProperty DatastoreId
         }
         catch {
             throw $_.Exception.Message
@@ -7376,7 +7371,7 @@ function Set-SvtVm {
             $VmList = @()
             try {
                 $PolicyId = Get-SvtPolicy -PolicyName $PolicyName -ErrorAction Stop |
-                Select-Object -ExpandProperty PolicyId -Unique
+                    Select-Object -ExpandProperty PolicyId -Unique
             }
             catch {
                 throw $_.Exception.Message
