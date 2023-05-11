@@ -1,3 +1,4 @@
+
 # HPE SimpliVity PowerShell Module
 
 [![PSGallery Version](https://img.shields.io/powershellgallery/v/HPESimpliVity.png?style=for-the-badge&logo=powershell&label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/HPESimpliVity/) [![PSGallery Downloads](https://img.shields.io/powershellgallery/dt/PSCalendar.png?style=for-the-badge&label=Downloads)](https://www.powershellgallery.com/packages/HPESimpliVity/)
@@ -6,9 +7,12 @@ This PowerShell module utilizes the HPE SimpliVity REST API to manage a SimpliVi
 
 Example usage:
 
+
 ```
     PS C:\> Connect-Svt -VirtualAppliance 192.168.1.11 -Credential $Cred
     PS C:\> Get-SvtHost
+
+
 
 
     HostName      DataCenterName  ClusterName  FreeSpaceGB  ManagementIP  StorageIP    FederationIP
@@ -17,6 +21,7 @@ Example usage:
     srvr2.sg.com  SunGod          Production1        2,671  192.168.1.12  192.168.2.2  192.168.3.2
     srvr3.sg.com  SunGod          DR1                2,671  192.170.1.11  192.170.2.1  192.170.3.1
 ```
+
 
 ## Latest Update
 
@@ -72,6 +77,7 @@ Refer to the [documentation](/Docs) for more information.
     PS C:\> $Cred = Get-Credential -Message 'Enter credentials'
     PS C:\> Connect-Svt -VirtualAppliance <IP or FQDN of an SVA or MVA> -Credential $Cred
 ```
+
 
 * Or, if you need to run commands in batch (non-interactively), save your credentials to a file first:
 
