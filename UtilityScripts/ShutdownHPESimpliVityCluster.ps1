@@ -45,17 +45,17 @@ OTHER DEALINGS IN THE SOFTWARE.
     This script will shutdown all the virtual machines in the specified cluster, followed by the HPE Omnistack
     Virtual Controllers. Finally, it will place the ESXi hosts into maintenance mode and then shut them down.
 
-    The intention for this script is to execute a safe shutdown of the specifed cluster, following a power failure.
+    The intention for this script is to execute a safe shutdown of the specified cluster, following a power failure.
     
     Requirements:
     1. You must be able to connect to the vCenter server where the SimpliVity cluster is registered throughout the entire process. 
-       A managmement cluster running vCenter would be the ideal scenario.
+       A management cluster running vCenter would be the ideal scenario.
 
     1. VMware PowerCLI must be installed locally. You can install this using:
             Install-Module -Name VMware.PowerCLI
 
     2. HPESimpliVity PowerShell module V1.1.5 or above must be installed locally. You can install this using:
-            Install-Module -Name HPEsimpliVity -RequiredVersion 1.1.5
+            Install-Module -Name HPESimpliVity -RequiredVersion 1.1.5
 
     3. In order to power off the VMs with a specific order in the target cluster, you can optionally implement VM tagging in vCEnter. For example, the
        PowerCLI commands required to implement the default configuration are:
@@ -79,7 +79,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
     2. vCenter (on a VCSA or on Windows Server) must be running outside of the target VMware cluster.
 
-.PARAMETER OVC
+.PARAMETER VA
     A HPE Omnistack Virtual Controller in the SimpliVity Federation where the target vSphere cluster resides. Note that the virtual
     controller does not need to be within the target cluster - the script will identify the appropriate virtual controllers to shut them
     down.
@@ -90,22 +90,22 @@ OTHER DEALINGS IN THE SOFTWARE.
     including what order it would power off VMs, shutdown virtual controllers and finally turn off the ESXi hosts. In either case, the script writes
     output to a log file.
 .EXAMPLE
-    PS C:\> .\ShutdownHPESimpliVityCluster.ps1 -OVC 192.168.1.21 -ClusterName Cluster01
+    PS C:\> .\ShutdownHPESimpliVityCluster.ps1 -VA 192.168.1.21 -ClusterName Cluster01
 
     This command will report on the shutdown tasks only, including connecting to the specified virtual controller, connecting to the correct 
     vCenter (PowerCLI is a pre-requisite), iterating through powered on VMs to power them off, shutting down all the virtual controllers in the 
-    specfiied cluster and finally placing the hosts into maintenance mode and powering them off.
+    specified cluster and finally placing the hosts into maintenance mode and powering them off.
 
     NOTE: The specified virtual controller does not need to be in the specified cluster. This script will reconnect to each
     appropriate virtual controller in turn to shut them down.
 
     NOTE: This script will prompt you to enter your current credentials the first time you run it. They are saved in the current
-    folder in a file called OVCcred.xml so that the script can run in batch mode. This allows execution from UPS software following a power
+    folder in a file called VAcred.xml so that the script can run in batch mode. This allows execution from UPS software following a power
     outage. The account specified must be a member of the Administrators role in vCenter. You will need to recreate the credential file if you
     change your password.
 
 .EXAMPLE
-    PS C:\> .\ShutdownHPESimpliVityCluster.ps1 -OVC 192.168.1.21 -ClusterName Cluster01 -Force
+    PS C:\> .\ShutdownHPESimpliVityCluster.ps1 -VA 192.168.1.21 -ClusterName Cluster01 -Force
 
     Execute the shutdown with the -Force parameter. Assuming you have entered your current credentials at least once before (by running in
     report mode, for example), no other prompts are made, so be sure this is what you want to do.
@@ -118,7 +118,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 [cmdletBinding()]
 Param (
     [Parameter(Mandatory = $true, Position = 0, HelpMessage = "A HPE OmniStack Virtual Controller in the Federation")]
-    [System.String]$OVC,
+    [System.String]$VA,
 
     [Parameter(Mandatory = $true, Position = 1)]
     [System.String]$ClusterName,
@@ -175,7 +175,7 @@ $LogFile = "$CurrentPath\ShutdownHPESimpliVityCluster-$FileDate.log"
 
 
 # Obtain credentials using the same admin account for both vCenter and the Omnistack Virtual Controllers.
-$CredFile = "$CurrentPath\OVCcred.xml"
+$CredFile = "$CurrentPath\VAcred.xml"
 if (Test-Path $CredFile) {
     $Cred = Import-Clixml $CredFile
 }
@@ -187,11 +187,11 @@ else {
 
 # Connect to the virtual controller and enumerate the list of hosts in the target cluster, as well as the vCenter instance being used by the target cluster
 try {
-    Connect-SVT -OVC $OVC -Credential $Cred -ErrorAction Stop | Out-Null
-    $HostList = Get-SVTHost -ClusterName $ClusterName -ErrorAction Stop
+    Connect-Svt -VA $VA -Credential $Cred -ErrorAction Stop | Out-Null
+    $HostList = Get-SvtHost -ClusterName $ClusterName -ErrorAction Stop
     $vCenterIP = $HostList | Select-Object -First 1 -ExpandProperty HypervisorManagementIP
     $vCenterName = $HostList | Select-Object -First 1 -ExpandProperty HypervisorManagementName
-    Write-Log "Connected to HPE Omnistack Virtual Controller: $OVC"
+    Write-Log "Connected to HPE Omnistack Virtual Controller: $VA"
 }
 catch {
     Write-Log "Error connecting to the HPE OmniStack Virtual Controller : $($_.Exception.Message)" 2
@@ -208,18 +208,18 @@ catch {
     throw "Error connecting to vCenter server: $($_.Exception.Message)"
 }
 
-# Shutdown VMs using tags in reverse order. Skip any unfound shutdown order tags.
+# Shutdown VMs using tags in reverse order. Skip any un-found shutdown order tags.
 [array]$TaggedVM = @()
-$NumberOfTags..1 | Foreach-Object {   
+$NumberOfTags..1 | Foreach-Object {
     [string]$Tag = "$TagName$_"
     try {
-        $VMcluster = Get-Cluster -Name $ClusterName -ErrorAction Stop
-        $VMhost = $VMcluster | Get-VMhost -ErrorAction Stop # This is used later to shutdown hosts
-        $VMlist = $VMcluster | Get-VM -Tag $Tag -ErrorAction Stop | 
+        $VmCluster = Get-Cluster -Name $ClusterName -ErrorAction Stop
+        $VmHost = $VmCluster | Get-VmHost -ErrorAction Stop # This is used later to shutdown hosts
+        $VmList = $VmCluster | Get-Vm -Tag $Tag -ErrorAction Stop | 
         Where-Object Name -notmatch 'OmniStackVC' | 
         Where-Object PowerState -eq 'PoweredOn'
-        $VMcount = $VMlist | Measure-Object | Select-Object -ExpandProperty Count
-        Write-Log "Found $VMcount powered on VMs on cluster $ClusterName with a shutdown order tag set to $Tag"
+        $VmCount = $VmList | Measure-Object | Select-Object -ExpandProperty Count
+        Write-Log "Found $VmCount powered on VMs on cluster $ClusterName with a shutdown order tag set to $Tag"
     }
     catch {
         if ($_.Exception.Message -match 'Could not find Tag') {
@@ -231,8 +231,8 @@ $NumberOfTags..1 | Foreach-Object {
         }
     }
 
-    if ($VMcount -gt 0) {
-        foreach ($VM in $VMlist) {
+    if ($VmCount -gt 0) {
+        foreach ($VM in $VmList) {
             Write-Log "Found $($VM.Name) with shutdown order tag set to $Tag"
             
             # Keep track of the tagged VMs we're powering off here so we don't try to power them off again later.
@@ -240,11 +240,11 @@ $NumberOfTags..1 | Foreach-Object {
             
             try {
                 if ($Force) {
-                    $Response = $VM | Stop-VMGuest -Confirm:$false -ErrorAction Stop
+                    $Response = $VM | Stop-VmGuest -Confirm:$false -ErrorAction Stop
                     Write-Log "$($Response.VM) (tools version:$($response.ToolsVersion)) is shutting down" 
                 }
                 else {
-                    $VM | Stop-VMGuest -Whatif -ErrorAction Stop
+                    $VM | Stop-VmGuest -WhatIf -ErrorAction Stop
                 }
             }
             catch {
@@ -267,8 +267,8 @@ $NumberOfTags..1 | Foreach-Object {
 # Now that we've powered off all the tagged VMs, shutdown any other VMs left running. We ignore tagged VMs and the virtual controllers
 Write-Log "Looking for any other powered on VMs on cluster $ClusterName with no/unrecognised tags"
 try {
-    $VMlist = $VMcluster | 
-    Get-VM -ErrorAction Stop | 
+    $VmList = $VmCluster | 
+    Get-Vm -ErrorAction Stop | 
     Where-Object Name -NotMatch 'OmniStackVC' | 
     Where-Object Name -NotIn $TaggedVM |
     Where-Object PowerState -eq 'PoweredOn'
@@ -277,15 +277,15 @@ catch {
     Write-Log "$_.Exception.Message" 2
     throw $_.Exception.Message
 }           
-foreach ($VM in $VMlist) {
+foreach ($VM in $VmList) {
     Write-Log "Found $($VM.Name) with no shutdown order tag"
     try {
         if ($Force) {
-            $Response = $VM | Stop-VMGuest -Confirm:$false -ErrorAction Stop
+            $Response = $VM | Stop-VmGuest -Confirm:$false -ErrorAction Stop
             Write-Log "$($Response.VM) (tools version:$($response.ToolsVersion)) is shutting down" 
         }
         else {
-            $VM | Stop-VMGuest -Whatif -ErrorAction Stop
+            $VM | Stop-VmGuest -WhatIf -ErrorAction Stop
         }
     }
     catch {
@@ -304,28 +304,28 @@ foreach ($VM in $VMlist) {
 if ($Force) {
     do {
         try {
-            $VMpoweredOn = $VMcluster | 
-            Get-VM -ErrorAction Stop | 
+            $VmPoweredOn = $VmCluster | 
+            Get-Vm -ErrorAction Stop | 
             Where-Object Name -NotMatch 'OmniStackVC' | 
             Where-Object PowerState -eq 'PoweredOn' | 
             Measure-Object | 
             Select-Object -ExpandProperty Count
-            if ($VMpoweredOn) {
+            if ($VmPoweredOn) {
                 if ($WaitSec -ge $TotalWaitSec) {
-                    $VMname = $VMcluster | 
-                    Get-VM -ErrorAction Stop | 
+                    $VmName = $VmCluster | 
+                    Get-Vm -ErrorAction Stop | 
                     Where-Object Name -NotMatch 'OmniStackVC' | 
                     Where-Object PowerState -eq 'PoweredOn' |
                     Select-Object -ExpandProperty Name
-                    $VMname | ForEach-Object {
+                    $VmName | ForEach-Object {
                         Write-Log "Could not shutdown the guest OS on VM $_ within the assigned time ($TotalWaitSec seconds); powering off $_" 1
-                        Stop-VM -VM $_ -Confirm:$false | Out-Null
+                        Stop-Vm -Vm $_ -Confirm:$false | Out-Null
                     }
                     break
                 }
                 else {
                     $WaitSec += 10
-                    Write-Log "Waited $WaitSec of $TotalWaitSec seconds to allow $VMpoweredOn VMs to shutdown"
+                    Write-Log "Waited $WaitSec of $TotalWaitSec seconds to allow $VmPoweredOn VMs to shutdown"
                     Start-Sleep -Seconds 10
                 }
             }
@@ -335,20 +335,20 @@ if ($Force) {
             throw "Unexpected error when attempting to finalize VM powered off"
         }
     
-    } while ($VMpoweredOn)
+    } while ($VmPoweredOn)
 
     # NOTE: Here would be good a place to attempt a remote backup, if you have multiple sites, your infrastructure 
     # (i.e. network) is still running and you have enough UPS battery to try it. Its not implemented, but you could 
     # do something as simple as the following in small environments:
-    # Get-SVTvm | New-SVTbackup -ClusterName <destination cluster>
-    # and then keep checking with Get-SVTtask until State = 'COMPLETED' for all backup tasks before shutting down 
+    # Get-SvtVm | New-SvtBackup -ClusterName <destination cluster>
+    # and then keep checking with Get-SvtTask until State = 'COMPLETED' for all backup tasks before shutting down 
     # the virtual controllers.
 
     # Shutdown the virtual controllers now
     try {
         $HostList | ForEach-Object {
             Write-Log "Shutting down the HPE Omnistack virtual controller on host $($_.Hostname)..."
-            $null = Start-SVTshutdown -HostName $_.Hostname -Confirm:$False -ErrorAction Stop
+            $null = Start-SvtShutdown -HostName $_.Hostname -Confirm:$False -ErrorAction Stop
             Write-Log "Successfully shutdown HPE Omnistack virtual controller on host $($_.Hostname)"
         }
     }
@@ -361,7 +361,7 @@ else {
     try {
         $HostList | Foreach-Object {
             Write-Log "Shutting down the HPE Omnistack virtual controller on host $($_.Hostname)..."
-            Start-SVTshutdown -HostName $_.Hostname -Whatif -ErrorAction Stop
+            Start-SvtShutdown -HostName $_.Hostname -WhatIf -ErrorAction Stop
             Write-Log "Successfully shutdown HPE Omnistack virtual controller on host $($_.Hostname)"
         }
     }
@@ -377,24 +377,24 @@ if ($Force) {
         Write-Log "Waiting 10 seconds to allow the HPE OmniStack Virtual Controllers to completely shutdown"
         Start-Sleep -Seconds 10
         try {
-            $VMname = $VMcluster | Get-VM -ErrorAction Stop | Where-Object PowerState -eq 'PoweredOn'
+            $VmName = $VmCluster | Get-Vm -ErrorAction Stop | Where-Object PowerState -eq 'PoweredOn'
         }
         catch {
             Write-Log "Failed to shutdown the HPE Omnistack Virtual Controller $($_.Exception.Message)" 2
             throw $_.Exception.Message
         }
-    } while ($VMname)
+    } while ($VmName)
     
 
     # Shutdown the host(s)
     try {
         Write-Log "Placing hosts into maintenance mode..." 
-        $Response = $VMhost | Set-VMHost -State Maintenance -Confirm:$false -ErrorAction Stop
+        $Response = $VmHost | Set-VmHost -State Maintenance -Confirm:$false -ErrorAction Stop
         $Response | Foreach-object {
             Write-Log "$_ is in connection state of $($_.ConnectionState) and a power state of $($_.PowerState)"
         }
         Write-Log "Shutting down hosts..."
-        $Response = $VMhost | Stop-VMHost -Confirm:$false -ErrorAction Stop
+        $Response = $VmHost | Stop-VmHost -Confirm:$false -ErrorAction Stop
         $Response | Foreach-object {
             Write-Log "$_ is in connection state of $($_.ConnectionState) and a power state of $($_.PowerState)"
         }
@@ -406,9 +406,9 @@ if ($Force) {
 }
 else {
     Write-Log "Placing hosts into maintenance mode..." 
-    $VMhost | Set-VMHost -State Maintenance -Whatif
+    $VmHost | Set-VmHost -State Maintenance -WhatIf
     Write-Log "Shutting down hosts..."
-    $VMhost | Stop-VMHost -Whatif
+    $VmHost | Stop-VmHost -WhatIf
 }
 Write-Log "Created a log file called: $LogFile"
 Write-Log "Done"

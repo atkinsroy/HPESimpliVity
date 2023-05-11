@@ -2,7 +2,7 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTClusterTable</Name>
+            <Name>SvtPartitionTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.Partition</TypeName>
             </ViewSelectedBy>
@@ -10,22 +10,27 @@
                 <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>BackupId</Label>
                         <Width>36</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>PartitionNumber</Label>
                         <Width>15</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>SizeMB</Label>
                         <Width>6</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>DiskType</Label>
                         <Width>8</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>Mountable</Label>
                         <Width>9</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>

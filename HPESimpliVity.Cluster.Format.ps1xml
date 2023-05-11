@@ -2,7 +2,7 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTClusterTable</Name>
+            <Name>SvtClusterTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.Cluster</TypeName>
             </ViewSelectedBy>
@@ -10,30 +10,37 @@
                 <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>ClusterName</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>DataCenterName</Label>
                         <Width>25</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>Version</Label>
                         <Width>20</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>TimeZone</Label>
                         <Width>20</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>14</Width>
+                        <Label>FreeSpaceGB</Label>
+                        <Width>21</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ArbiterIP</Label>
                         <Width>16</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ArbiterConnected</Label>
                         <Width>16</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
@@ -55,7 +62,21 @@
                                 <PropertyName>TimeZone</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>FreeSpaceGB</PropertyName>
+                                <!--PropertyName>FreeSpaceGB</PropertyName-->
+                                <ScriptBlock>
+                                if ($host.name -match 'Console') {
+                                    $PercentUsed = 100 * (($_.AllocatedCapacityGB-$_.FreespaceGB) / $_.AllocatedCapacityGB)
+                                    switch ($PercentUsed) {
+                                        {$PSItem -gt 90 } {$ansi = "[38;5;9m"; break} #8bit red
+                                        {$PSItem -gt 80 } {$ansi = "[38;5;11m"; break} #8bit yellow
+                                        default { $ansi = "[38;5;10m"} #8bit green 
+                                    }
+                                    "$([char]27)$ansi$($_.FreeSpaceGB)$([char]27)[0m"
+                                }
+                                else {
+                                    $_.FreespaceGB
+                                }
+                                </ScriptBlock>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>ArbiterIP</PropertyName>

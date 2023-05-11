@@ -2,7 +2,7 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>SVTHostTable</Name>
+            <Name>SvtDiskTable</Name>
             <ViewSelectedBy>
                 <TypeName>HPE.SimpliVity.Disk</TypeName>
             </ViewSelectedBy>
@@ -10,42 +10,52 @@
                 <AutoSize />
                 <TableHeaders>
                     <TableColumnHeader>
+                        <Label>SerialNumber</Label>
                         <Width>13</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>Manufacturer</Label>
                         <Width>12</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>ModelNumber</Label>
                         <Width>13</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>Firmware</Label>
                         <Width>8</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
-                        <Width>8</Width>
-                        <Alignment>left</Alignment>
-                    </TableColumnHeader>
-                    <TableColumnHeader>
+                        <Label>Health</Label>
                         <Width>7</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>RemainingLife</Label>
+                        <Width>13</Width>
+                        <Alignment>right</Alignment>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Label>CapacityTB</Label>
                         <Width>11</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>Slot</Label>
                         <Width>4</Width>
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
-		    <TableColumnHeader>
+		            <TableColumnHeader>
+                        <Label>HostStorageKit</Label>
                         <Width>33</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>HostName</Label>
                         <Width>40</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
@@ -66,10 +76,22 @@
                                 <PropertyName>Firmware</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>Status</PropertyName>
+                                <!--PropertyName>Health</PropertyName-->
+                                <ScriptBlock>
+                                if ($host.name -match 'Console') {
+                                    switch ($_.Health) { 
+                                        'HEALTHY' {$ansi = "[38;5;10m"; break} #8bit green
+                                        default {$ansi = "[38;5;9m"} #8bit red
+                                    }
+                                    "$([char]27)$ansi$($_.Health)$([char]27)[0m"
+                                }
+                                else {
+                                    $_.Health
+                                }
+                                </ScriptBlock>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>Health</PropertyName>
+                                <PropertyName>RemainingLife</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>CapacityTB</PropertyName>
