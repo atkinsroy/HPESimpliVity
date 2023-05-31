@@ -1,51 +1,44 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVmReplicaSet.md
 schema: 2.0.0
 ---
 
 # Get-SvtVmReplicaSet
 
 ## SYNOPSIS
-
 Display the primary and secondary replica locations for HPE SimpliVity virtual machines
 
 ## SYNTAX
 
 ### ByVm (Default)
-
-```PowerShell
+```
 Get-SvtVmReplicaSet [[-VmName] <String[]>] [<CommonParameters>]
 ```
 
 ### ByDatastore
-
-```PowerShell
+```
 Get-SvtVmReplicaSet -DatastoreName <String[]> [<CommonParameters>]
 ```
 
 ### ByCluster
-
-```PowerShell
+```
 Get-SvtVmReplicaSet -ClusterName <String[]> [<CommonParameters>]
 ```
 
 ### ByHost
-
-```PowerShell
+```
 Get-SvtVmReplicaSet -HostName <String> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-
 Display the primary and secondary replica locations for HPE SimpliVity virtual machines
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-
-```PowerShell
+```
 Get-SvtVmReplicaSet
 ```
 
@@ -54,7 +47,6 @@ Displays the primary and secondary locations for all virtual machine replica set
 ## PARAMETERS
 
 ### -VmName
-
 Display information for the specified virtual machine
 
 ```yaml
@@ -70,7 +62,6 @@ Accept wildcard characters: False
 ```
 
 ### -DatastoreName
-
 Display information for virtual machines on the specified datastore
 
 ```yaml
@@ -86,7 +77,6 @@ Accept wildcard characters: False
 ```
 
 ### -ClusterName
-
 Display information for virtual machines on the specified cluster
 
 ```yaml
@@ -102,7 +92,6 @@ Accept wildcard characters: False
 ```
 
 ### -HostName
-
 Display information for virtual machines on the specified host
 
 ```yaml
@@ -118,19 +107,18 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
-
 ## OUTPUTS
 
 ### System.Management.Automation.PSCustomObject
-
 ## NOTES
-
-Author: Roy Atkins, HPE Pointnext Services
+Author: Roy Atkins, HPE Services
 
 ## RELATED LINKS
+
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVmReplicaSet.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVmReplicaSet.md)
+

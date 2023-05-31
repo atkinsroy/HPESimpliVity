@@ -1,66 +1,68 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: HPESimpliVity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
+Module Name: hpesimplivity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtBackup.md
 schema: 2.0.0
 ---
 
 # New-SvtBackup
 
 ## SYNOPSIS
-
 Create one or more new HPE SimpliVity backups
 
 ## SYNTAX
 
-```PowerShell
+```
 New-SvtBackup [-VmName] <String> [[-DestinationName] <String>] [[-BackupName] <String>]
  [[-RetentionDay] <Int32>] [[-RetentionHour] <Int32>] [[-ConsistencyType] <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-
-Creates a backup of one or more virtual machines hosted on HPE SimpliVity. Either specify the VM names via the VmName parameter or use Get-SvtVm output to pass in the HPE SimpliVity VM objects to backup. Backups are directed to the specified destination cluster or external store, or to the local cluster for each VM if no destination name is specified.
+Creates a backup of one or more virtual machines hosted on HPE SimpliVity.
+Either specify the VM names
+via the VmName parameter or use Get-SvtVm output to pass in the HPE SimpliVity VM objects to backup.
+Backups are directed to the specified destination cluster or external store, or to the local cluster
+for each VM if no destination name is specified.
 
 ## EXAMPLES
 
 ### EXAMPLE 1
-
-```PowerShell
+```
 New-SvtBackup -VmName MyVm -DestinationName ClusterDR
 ```
 
 Backup the specified VM to the specified SimpliVity cluster, using the default backup name and retention
 
 ### EXAMPLE 2
-
-```PowerShell
+```
 New-SvtBackup MyVm StoreOnce-Data01 -RetentionDay 365 -ConsistencyType DEFAULT
 ```
 
-Backup the specified VM to the specified external datastore, using the default backup name and retain the backup for 1 year. A consistency type of DEFAULT creates a VMware snapshot to quiesce the disk prior to taking the backup
+Backup the specified VM to the specified external datastore, using the default backup name and retain the
+backup for 1 year.
+A consistency type of DEFAULT creates a VMware snapshot to quiesce the disk prior to
+taking the backup
 
 ### EXAMPLE 3
-
-```PowerShell
+```
 New-SvtBackup -BackupName "BeforeSQLupgrade" -VmName SQL01 -DestinationName SvtCluster -RetentionHour 2
 ```
 
 Backup the specified SQL server with a backup name and a short (2 hour) retention
 
 ### EXAMPLE 4
-
-```PowerShell
+```
 Get-SvtVm | ? VmName -match '^DB' | New-SvtBackup -BackupName 'Manual backup prior to SQL upgrade'
 ```
 
-Locally backup up all VMs with names starting with 'DB' using the specified backup name and with default retention of 1 day.
+Locally backup up all VMs with names starting with 'DB' using the specified backup name and with default
+retention of 1 day.
 
 ## PARAMETERS
 
 ### -VmName
-
-The virtual machine(s) to backup. Optionally use the output from Get-SvtVm to provide the required VM names.
+The virtual machine(s) to backup.
+Optionally use the output from Get-SvtVm to provide the required VM names.
 
 ```yaml
 Type: String
@@ -75,8 +77,10 @@ Accept wildcard characters: False
 ```
 
 ### -DestinationName
-
-The destination cluster name or external store name. If nothing is specified, the virtual machine(s) is/are backed up locally. If there is a cluster with the same name as an external store, the cluster wins.
+The destination cluster name or external store name.
+If nothing is specified, the virtual machine(s)
+is/are backed up locally.
+If there is a cluster with the same name as an external store, the cluster wins.
 
 ```yaml
 Type: String
@@ -91,7 +95,6 @@ Accept wildcard characters: False
 ```
 
 ### -BackupName
-
 Give the backup(s) a unique name, otherwise a default name with a date stamp is used.
 
 ```yaml
@@ -108,7 +111,6 @@ Accept wildcard characters: False
 ```
 
 ### -RetentionDay
-
 Specifies the retention in days.
 
 ```yaml
@@ -124,7 +126,6 @@ Accept wildcard characters: False
 ```
 
 ### -RetentionHour
-
 Specifies the retention in hours.
 This parameter takes precedence if RetentionDay is also specified.
 
@@ -141,12 +142,15 @@ Accept wildcard characters: False
 ```
 
 ### -ConsistencyType
-
 Available options are:
-
-1. NONE - This is the default and creates a crash consistent backup
-2. DEFAULT - Create application consistent backups using VMware Snapshot
-3. VSS - Create application consistent backups using Microsoft VSS in the guest operating system. Refer to the admin guide for requirements and supported applications
+1.
+NONE - This is the default and creates a crash consistent backup
+2.
+DEFAULT - Create application consistent backups using VMware Snapshot
+3.
+VSS - Create application consistent backups using Microsoft VSS in the guest operating system.
+Refer
+   to the admin guide for requirements and supported applications
 
 ```yaml
 Type: String
@@ -161,21 +165,19 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
-
 ### HPE.SimpliVity.VirtualMachine
-
 ## OUTPUTS
 
 ### HPE.SimpliVity.Task
-
 ## NOTES
-
-Author: Roy Atkins, HPE Pointnext Services
+Author: Roy Atkins, HPE Services
 
 ## RELATED LINKS
+
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtBackup.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtBackup.md)
+

@@ -78,9 +78,8 @@
                             <TableColumnItem>
                                 <!--PropertyName>BackupState</PropertyName-->
                                 <ScriptBlock>
-                                if ($host.name -match 'Console') {
+                                if ($host.name -match 'Console' -and $_.BackupState -ne "PROTECTED") {
                                     Switch ($_.BackupState) {
-                                        "PROTECTED" {$ansi = "[37m"}  #white
                                         "FAILED" {$ansi = "[38;5;9m"} #8bit red
                                         default {$ansi = "[38;5;11m"} #8bit yellow
                                     }
