@@ -1,12 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-<<<<<<< HEAD
 Module Name: HPESimpliVity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtBackup.md
-=======
-Module Name: hpesimplivity
 online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtBackup.md
->>>>>>> working
 schema: 2.0.0
 ---
 
