@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtMetric.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtMetric.md
 schema: 2.0.0
 ---
 
@@ -271,5 +271,5 @@ Author: Roy Atkins, HPE Services
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtMetric.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtMetric.md)
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtMetric.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtMetric.md)
 

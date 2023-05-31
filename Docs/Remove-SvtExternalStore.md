@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtExternalStore.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtExternalStore.md
 schema: 2.0.0
 ---
 
@@ -87,5 +87,5 @@ This command works with HPE SimpliVity 4.0.1 and above
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtExternalStore.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtExternalStore.md)
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtExternalStore.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtExternalStore.md)
 

@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtDatastoreComputeNode.md
 schema: 2.0.0
 ---
 
@@ -94,5 +94,5 @@ Compute nodes are not supported with Hyper-V
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md)
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtDatastoreComputeNode.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtDatastoreComputeNode.md)
 

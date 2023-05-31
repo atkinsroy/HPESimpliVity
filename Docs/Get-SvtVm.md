@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVm.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtVm.md
 schema: 2.0.0
 ---
 
@@ -265,5 +265,5 @@ OMNI-69918 - GET calls for virtual machine objects may result in OutOfMemortErro
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVm.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVm.md)
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtVm.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtVm.md)
 

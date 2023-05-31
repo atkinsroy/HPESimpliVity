@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Stop-SvtVm.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Stop-SvtVm.md
 schema: 2.0.0
 ---
 
@@ -98,5 +98,5 @@ Author: Roy Atkins, HPE Services
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Stop-SvtVm.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Stop-SvtVm.md)
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Stop-SvtVm.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Stop-SvtVm.md)
 

@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtBackup.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtBackup.md
 schema: 2.0.0
 ---
 
@@ -99,5 +99,5 @@ remote backups.
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtBackup.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtBackup.md)
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtBackup.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtBackup.md)
 

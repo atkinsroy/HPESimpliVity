@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtExternalStore.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/New-SvtExternalStore.md
 schema: 2.0.0
 ---
 
@@ -168,5 +168,5 @@ This command works with HPE SimpliVity 4.0.0 and above
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtExternalStore.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtExternalStore.md)
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/New-SvtExternalStore.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/New-SvtExternalStore.md)
 

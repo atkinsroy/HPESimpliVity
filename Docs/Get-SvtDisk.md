@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDisk.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtDisk.md
 schema: 2.0.0
 ---
 
@@ -91,5 +91,5 @@ Author: Roy Atkins, HPE Services
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDisk.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDisk.md)
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtDisk.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtDisk.md)
 

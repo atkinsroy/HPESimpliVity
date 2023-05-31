@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtBackupRetention.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Set-SvtBackupRetention.md
 schema: 2.0.0
 ---
 
@@ -117,5 +117,5 @@ OMNI-53536: Setting the retention time to a time that causes backups to be delet
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtBackupRetention.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtBackupRetention.md)
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Set-SvtBackupRetention.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Set-SvtBackupRetention.md)
 

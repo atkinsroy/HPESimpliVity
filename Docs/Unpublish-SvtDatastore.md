@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Unpublish-SvtDatastore.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Unpublish-SvtDatastore.md
 schema: 2.0.0
 ---
 
@@ -77,5 +77,5 @@ Compute nodes are not supported with Hyper-V
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Unpublish-SvtDatastore.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Unpublish-SvtDatastore.md)
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Unpublish-SvtDatastore.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Unpublish-SvtDatastore.md)
 

@@ -1,7 +1,7 @@
 ---
 external help file: HPESimpliVity-help.xml
-Module Name: hpesimplivity
-online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Update-SvtPolicyRule.md
+Module Name: HPESimpliVity
+online version: https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Update-SvtPolicyRule.md
 schema: 2.0.0
 ---
 
@@ -355,5 +355,5 @@ Use New-SvtPolicyRule instead.
 
 ## RELATED LINKS
 
-[https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Update-SvtPolicyRule.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Update-SvtPolicyRule.md)
+[https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Update-SvtPolicyRule.md](https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Update-SvtPolicyRule.md)
 
