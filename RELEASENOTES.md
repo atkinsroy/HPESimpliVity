@@ -1,5 +1,19 @@
 # HPE SimpliVity PowerShell Module Release Notes
 
+## Version 2.2.0
+
+* Added support for new HPE SimpliVity V4.2.0 features:
+
+  * New properties with Get-SvtVm, such as allocated CPU and memory from the hypervisor as well as network interfaces.
+
+  * Minor additions to properties for Get-Cluster and Get-Host.
+
+* Added new server models, including the larger capacity x6, x8, x9, and x12 models (with 3.84TB disks). Note that dual disk resiliency (introduced in 4.1.3) cannot be determined from the SimpliVity API. The x6 and x12 Gen10 G models could be either single or dual disk (FTT2) configurations, whilst the x8 models are always single disk resiliency and the newly introduced x9 models are always dual disk resiliency. So for now, the Get-SvtDisk command assumes single disk resiliency for x6 and x12 models in terms of showing usable capacity.
+
+* Added the -Raw paramater to many of the "Get" commands. This optional parameter displays information from the HPE SimpliVity API in raw JSON rather than a formatted PowerShell object. Full disclosure, with the introduction of additional supported models (Gen11 and others), together with changing disk formats, it will be unlikely that the HPESimpliVity module will be tested on all types of supported servers. End users can capture the JSON output to assist with troubleshooting and maintaining the module. Please post any issues in Github.
+
+* Bug fixes
+
 ## Version 2.1.29
 
 * Added support for new HPE SimpliVity V4.1.0 features:

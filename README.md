@@ -92,7 +92,7 @@ and then in your script, import the credential for a new session:
 
 **Note:** You must login with an admin account (e.g. an account with the vCenter Admin Role for VMware environments).
 
-## Known issues with the REST API (HPE SimpliVity V4.1.0)
+## Known issues with the REST API
 
 The API has some documented and undocumented issues:
 

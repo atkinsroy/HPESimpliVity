@@ -1,7 +1,2 @@
-UtilityScripts/Build.ps1
-UtilityScripts/Run-Coverage.ps1
-UtilityScripts/HPEsimpliVity.Tests.ps1
-UtilityScripts/SignCode.ps1
-UtilityScripts/New-Docs.ps1
-UtilityScripts/README.internal.md
+Build/
 Signed/
