@@ -61,13 +61,8 @@ Refer to the [documentation](/Docs) for more information.
 ## Requirements
 
 * Windows PowerShell V5.1 or PowerShell Core V7.x (PowerShell Core V6.x is not recommended)
-<<<<<<< HEAD
-* The IP address of an SVA and the credentials of an authorized user account
-* The module has been tested with HPE SimpliVity V4.1.0 and should be compatible with older versions (but has not been tested)
-=======
 * The IP address and the credentials of an authorized user account
 * The module has been tested with the lastest version of HPE SimpliVity and should be compatible with older versions (but has not been tested)
->>>>>>> working
 
 ## Installation
 
