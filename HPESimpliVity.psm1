@@ -472,7 +472,7 @@ function Invoke-SvtRestMethod {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtTask.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtTask.md
 #>
 function Get-SvtTask {
     [CmdletBinding(DefaultParameterSetName = 'ByObject')]
@@ -559,7 +559,7 @@ function Get-SvtTask {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Connect-Svt.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Connect-Svt.md
 #>
 function Connect-Svt {
     [CmdletBinding()]
@@ -673,7 +673,7 @@ function Connect-Svt {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVersion.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtVersion.md
 #>
 function Get-SvtVersion {
     $Header = @{
@@ -782,7 +782,7 @@ function Get-SvtVersion {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtMetric.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtMetric.md
 #>
 function Get-SvtMetric {
     [CmdletBinding(DefaultParameterSetName = 'Host')]
@@ -1628,7 +1628,7 @@ function Get-SvtImpactReport {
     3. Filtering on a cluster destination also displays external store backups. This issue applies when connected to
     SimpliVity Virtual Appliances only. It works as expected when connected to a Managed Virtual Appliance.
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtBackup.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtBackup.md
 #>
 function Get-SvtBackup {
     [CmdletBinding(DefaultParameterSetName = 'ByVmName')]
@@ -2048,7 +2048,7 @@ function Get-SvtBackup {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtBackup.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/New-SvtBackup.md
 #>
 function New-SvtBackup {
     [CmdletBinding()]
@@ -2216,7 +2216,7 @@ function New-SvtBackup {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Restore-SvtVm.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Restore-SvtVm.md
 #>
 function Restore-SvtVm {
     # calling this function 'restore VM' rather than 'restore backup' as per the API, because it makes more sense
@@ -2404,7 +2404,7 @@ function Restore-SvtVm {
     connected to a SimpliVity Virtual Appliance where the backup resides), but this fails when trying to delete
     remote backups.
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtBackup.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtBackup.md
 #>
 function Remove-SvtBackup {
     [CmdletBinding()]
@@ -2473,7 +2473,7 @@ function Remove-SvtBackup {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Stop-SvtBackup.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Stop-SvtBackup.md
 #>
 function Stop-SvtBackup {
     [CmdletBinding()]
@@ -2561,7 +2561,7 @@ function Stop-SvtBackup {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Copy-SvtBackup.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Copy-SvtBackup.md
 #>
 function Copy-SvtBackup {
     [CmdletBinding()]
@@ -2640,7 +2640,7 @@ function Copy-SvtBackup {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Lock-SvtBackup.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Lock-SvtBackup.md
 #>
 function Lock-SvtBackup {
     [CmdletBinding()]
@@ -2712,7 +2712,7 @@ function Lock-SvtBackup {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Rename-SvtBackup.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Rename-SvtBackup.md
 #>
 function Rename-SvtBackup {
     [CmdletBinding()]
@@ -2802,7 +2802,7 @@ function Rename-SvtBackup {
 
     OMNI-53536: Setting the retention time to a time that causes backups to be deleted fails
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtBackupRetention.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Set-SvtBackupRetention.md
 #>
 function Set-SvtBackupRetention {
     [CmdletBinding(DefaultParameterSetName = 'ByDay')]
@@ -2912,7 +2912,7 @@ function Set-SvtBackupRetention {
     cluster to update the backups there. The UniqueSizeDate property is updated on the backup object(s) when you run
     this command
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Update-SvtBackupUniqueSize.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Update-SvtBackupUniqueSize.md
 #>
 function Update-SvtBackupUniqueSize {
     [CmdletBinding()]
@@ -3022,7 +3022,7 @@ function Update-SvtBackupUniqueSize {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtFile.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtFile.md
 #>
 function Get-SvtFile {
     [CmdletBinding()]
@@ -3183,7 +3183,7 @@ function Get-SvtFile {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Restore-SvtFile.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Restore-SvtFile.md
 #>
 function Restore-SvtFile {
     [CmdletBinding()]
@@ -3288,7 +3288,7 @@ function Restore-SvtFile {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastore.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtDatastore.md
 #>
 function Get-SvtDatastore {
     [CmdletBinding()]
@@ -3387,7 +3387,7 @@ function Get-SvtDatastore {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtDatastore.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/New-SvtDatastore.md
 #>
 function New-SvtDatastore {
     [CmdletBinding()]
@@ -3475,7 +3475,7 @@ function New-SvtDatastore {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtDatastore.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtDatastore.md
 #>
 function Remove-SvtDatastore {
     [CmdletBinding()]
@@ -3532,7 +3532,7 @@ function Remove-SvtDatastore {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Resize-SvtDatastore.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Resize-SvtDatastore.md
 #>
 function Resize-SvtDatastore {
     [CmdletBinding()]
@@ -3590,7 +3590,7 @@ function Resize-SvtDatastore {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtDatastorePolicy.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Set-SvtDatastorePolicy.md
 #>
 function Set-SvtDatastorePolicy {
     [CmdletBinding()]
@@ -3650,7 +3650,7 @@ function Set-SvtDatastorePolicy {
 
     This command currently works in VMware environments only. Compute nodes are not supported with Hyper-V
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Publish-SvtDatastore.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Publish-SvtDatastore.md
 #>
 function Publish-SvtDatastore {
     [CmdletBinding()]
@@ -3707,7 +3707,7 @@ function Publish-SvtDatastore {
 
     This command currently works in VMware environments only. Compute nodes are not supported with Hyper-V
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Unpublish-SvtDatastore.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Unpublish-SvtDatastore.md
 #>
 function Unpublish-SvtDatastore {
     [CmdletBinding()]
@@ -3776,7 +3776,7 @@ function Unpublish-SvtDatastore {
 
     This command currently works in VMware environments only. Compute nodes are not supported with Hyper-V
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDatastoreComputeNode.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtDatastoreComputeNode.md
 #>
 function Get-SvtDatastoreComputeNode {
     [CmdletBinding()]
@@ -3864,7 +3864,7 @@ function Get-SvtDatastoreComputeNode {
 
     This command works with HPE SimpliVity 4.0.0 and above
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtExternalStore.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtExternalStore.md
 #>
 function Get-SvtExternalStore {
     [CmdletBinding()]
@@ -3959,7 +3959,7 @@ function Get-SvtExternalStore {
 
     This command works with HPE SimpliVity 4.0.0 and above
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtExternalStore.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/New-SvtExternalStore.md
 #>
 function New-SvtExternalStore {
     [CmdletBinding()]
@@ -4055,7 +4055,7 @@ function New-SvtExternalStore {
 
     This command works with HPE SimpliVity 4.0.1 and above
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtExternalStore.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtExternalStore.md
 #>
 function Remove-SvtExternalStore {
     [CmdletBinding()]
@@ -4128,7 +4128,7 @@ function Remove-SvtExternalStore {
 
     This command works with HPE SimpliVity 4.0.1 and above
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtExternalStore.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Set-SvtExternalStore.md
 #>
 function Set-SvtExternalStore {
     [CmdletBinding()]
@@ -4221,7 +4221,7 @@ function Set-SvtExternalStore {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtHost.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtHost.md
 #>
 function Get-SvtHost {
     [CmdletBinding(DefaultParameterSetName = 'ByHostName')]
@@ -4378,7 +4378,7 @@ function Get-SvtHost {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtHardware.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtHardware.md
 #>
 function Get-SvtHardware {
     [CmdletBinding()]
@@ -4483,7 +4483,7 @@ function Get-SvtHardware {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtDisk.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtDisk.md
 #>
 function Get-SvtDisk {
     [CmdletBinding()]
@@ -4602,7 +4602,7 @@ function Get-SvtDisk {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtCapacity.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtCapacity.md
 #>
 function Get-SvtCapacity {
     [CmdletBinding()]
@@ -4778,7 +4778,7 @@ function Get-SvtCapacity {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtHost.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtHost.md
 #>
 function Remove-SvtHost {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
@@ -4866,7 +4866,7 @@ function Remove-SvtHost {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Start-SvtShutdown.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Start-SvtShutdown.md
 #>
 function Start-SvtShutdown {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
@@ -5056,7 +5056,7 @@ function Start-SvtShutdown {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtShutdownStatus.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtShutdownStatus.md
 #>
 function Get-SvtShutdownStatus {
     [CmdletBinding()]
@@ -5151,7 +5151,7 @@ function Get-SvtShutdownStatus {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Stop-SvtShutdown.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Stop-SvtShutdown.md
 #>
 function Stop-SvtShutdown {
     [CmdletBinding()]
@@ -5238,7 +5238,7 @@ function Stop-SvtShutdown {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtCluster.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtCluster.md
 #>
 function Get-SvtCluster {
     [CmdletBinding()]
@@ -5359,7 +5359,7 @@ function Get-SvtCluster {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtThroughput.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtThroughput.md
 #>
 function Get-SvtThroughput {
     [CmdletBinding()]
@@ -5444,7 +5444,7 @@ function Get-SvtThroughput {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtTimezone.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtTimezone.md
 #>
 function Get-SvtTimezone {
     $Header = @{
@@ -5493,7 +5493,7 @@ function Get-SvtTimezone {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtCluster.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Set-SvtCluster.md
 #>
 function Set-SvtCluster {
     [CmdletBinding(DefaultParameterSetName = 'TimeZone')]
@@ -5592,7 +5592,7 @@ function Set-SvtCluster {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtClusterConnected.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtClusterConnected.md
 #>
 function Get-SvtClusterConnected {
     [CmdletBinding()]
@@ -5700,7 +5700,7 @@ function Get-SvtClusterConnected {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtPolicy.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtPolicy.md
 #>
 function Get-SvtPolicy {
     [CmdletBinding()]
@@ -5825,7 +5825,7 @@ function Get-SvtPolicy {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtPolicy.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/New-SvtPolicy.md
 #>
 function New-SvtPolicy {
     [CmdletBinding()]
@@ -5942,7 +5942,7 @@ function New-SvtPolicy {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtPolicyRule.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/New-SvtPolicyRule.md
 #>
 function New-SvtPolicyRule {
     [CmdletBinding(DefaultParameterSetName = 'ByWeekDay')]
@@ -6221,7 +6221,7 @@ function New-SvtPolicyRule {
     - Changing ConsistencyType to anything other than None or Default doesn't appear to work.
     - Use Remove-SvtPolicyRule and New-SvtPolicyRule to update ConsistencyType to VSS.
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Update-SvtPolicyRule.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Update-SvtPolicyRule.md
 #>
 function Update-SvtPolicyRule {
     [CmdletBinding(DefaultParameterSetName = 'ByWeekDay')]
@@ -6429,7 +6429,7 @@ function Update-SvtPolicyRule {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtPolicyRule.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtPolicyRule.md
 #>
 function Remove-SvtPolicyRule {
     [CmdletBinding()]
@@ -6521,7 +6521,7 @@ function Remove-SvtPolicyRule {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Rename-SvtPolicy.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Rename-SvtPolicy.md
 #>
 function Rename-SvtPolicy {
     [CmdletBinding()]
@@ -6583,7 +6583,7 @@ function Rename-SvtPolicy {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Remove-SvtPolicy.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Remove-SvtPolicy.md
 #>
 function Remove-SvtPolicy {
     [CmdletBinding()]
@@ -6680,7 +6680,7 @@ function Remove-SvtPolicy {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Suspend-SvtPolicy.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Suspend-SvtPolicy.md
 #>
 function Suspend-SvtPolicy {
     [CmdletBinding(DefaultParameterSetName = 'ByHost')]
@@ -6780,7 +6780,7 @@ function Suspend-SvtPolicy {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Resume-SvtPolicy.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Resume-SvtPolicy.md
 #>
 function Resume-SvtPolicy {
     [CmdletBinding(DefaultParameterSetName = 'ByHost')]
@@ -6863,7 +6863,7 @@ function Resume-SvtPolicy {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtPolicyScheduleReport.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtPolicyScheduleReport.md
 #>
 function Get-SvtPolicyScheduleReport {
     $Header = @{
@@ -6969,7 +6969,7 @@ function Get-SvtPolicyScheduleReport {
     Known issues:
     OMNI-69918 - GET calls for virtual machine objects may result in OutOfMemortError when exceeding 8000 objects
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVm.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtVm.md
 #>
 function Get-SvtVm {
     [CmdletBinding(DefaultParameterSetName = 'ByVmName')]
@@ -7153,7 +7153,7 @@ function Get-SvtVm {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Get-SvtVmReplicaSet.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-SvtVmReplicaSet.md
 #>
 function Get-SvtVmReplicaSet {
     [CmdletBinding(DefaultParameterSetName = 'ByVm')]
@@ -7260,7 +7260,7 @@ function Get-SvtVmReplicaSet {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/New-SvtClone.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/New-SvtClone.md
 #>
 function New-SvtClone {
     [CmdletBinding()]
@@ -7362,7 +7362,7 @@ function New-SvtClone {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Move-SvtVm.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Move-SvtVm.md
 #>
 function Move-SvtVm {
     [CmdletBinding()]
@@ -7502,7 +7502,7 @@ function Move-SvtVm {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Set-SvtVm.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Set-SvtVm.md
 #>
 function Set-SvtVm {
     [CmdletBinding(DefaultParameterSetName = 'SetPolicy')]
@@ -7701,7 +7701,7 @@ function Set-SvtVm {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Stop-SvtVm.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Stop-SvtVm.md
 #>
 function Stop-SvtVm {
     [CmdletBinding()]
@@ -7795,7 +7795,7 @@ function Stop-SvtVm {
 .NOTES
     Author: Roy Atkins, HPE Services
 .LINK
-    https://github.com/atkinsroy/HPESimpliVity/blob/master/docs/Start-SvtVm.md
+    https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Start-SvtVm.md
 #>
 function Start-SvtVm {
     [CmdletBinding()]
