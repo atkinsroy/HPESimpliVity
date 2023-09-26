@@ -61,7 +61,7 @@ Refer to the [documentation](/Docs) for more information.
 ## Requirements
 
 * Windows PowerShell V5.1 or PowerShell Core V7.x (PowerShell Core V6.x is not recommended)
-* The IP address and the credentials of an authorized user account
+* The IP address of a Simplivity Virtual Appliance and the credentials of an authorized user account
 * The module has been tested with the lastest version of HPE SimpliVity and should be compatible with older versions (but has not been tested)
 
 ## Installation
