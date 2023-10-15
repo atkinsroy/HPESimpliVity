@@ -12,7 +12,7 @@
 #   Roy Atkins    HPE Services
 #
 ##############################################################################################################
-$HPESimplivityVersion = '2.2.0'
+$HPESimplivityVersion = '2.2.1'
 
 <#
 (C) Copyright 2023 Hewlett Packard Enterprise Development LP
@@ -1471,8 +1471,8 @@ function Get-SvtImpactReport {
     Show backups sourced from a specified HPE SimpliVity cluster name or names. By default a limit of 500 backups are
     shown.
 .PARAMETER DatastoreName
-    Show backups sourced from a specified SimpliVity datastore or datastores. By default a limit of 500 backups are
-    shown.
+    Show backups sourced from virtual machines location on a specified SimpliVity datastore or datastores. 
+    By default a limit of 500 backups are shown.
 .PARAMETER DestinationName
     Show backups located on the specified destination HPE SimpliVity cluster name or external datastore name.
     Multiple destinations can be specified, but they must all be of one type (i.e. cluster or external store)
@@ -7142,10 +7142,21 @@ function Get-SvtVm {
     Display information for virtual machines on the specified cluster
 .PARAMETER HostName
     Display information for virtual machines on the specified host
+.PARAMETER All
+    Used to display any VM located on the specified host. i.e. host is either primary or 
+    secondary replica for a VM. 
 .EXAMPLE
     PS C:\> Get-SvtVmReplicaSet
 
     Displays the primary and secondary locations for all virtual machine replica sets.
+.EXAMPLE
+    PS C:\> Get-SvtVmReplicaSet -HostName Host01
+
+    Display the VMs with their primary location on the specified host.
+.EXAMPLE
+    PS C:\> Get-SvtVmReplicaSet -HostName Host01 -All
+
+    Display the VMs that are located (either primary or secondary) on the specified host.
 .INPUTS
     System.String
 .OUTPUTS
@@ -7169,7 +7180,10 @@ function Get-SvtVmReplicaSet {
         [System.String[]]$ClusterName,
 
         [Parameter(Mandatory, ParameterSetName = 'ByHost')]
-        [System.String]$HostName
+        [System.String]$HostName,
+
+        [Parameter(ParameterSetName = 'ByHost')]
+        [Switch]$All
     )
 
     begin {
@@ -7182,7 +7196,7 @@ function Get-SvtVmReplicaSet {
         elseif ($PSBoundParameters.ContainsKey('ClusterName')) {
             $VmObj = Get-SvtVm -ClusterName $ClusterName
         }
-        elseif ($PSBoundParameters.ContainsKey('HostName')) {
+        elseif ($PSBoundParameters.ContainsKey('HostName') -and -not $PSBoundParameters.ContainsKey('All')) {
             $VmObj = Get-SvtVm -HostName $HostName
         }
         else {
@@ -7203,6 +7217,14 @@ function Get-SvtVmReplicaSet {
 
             $SecondaryHost = $global:SvtHost | Where-Object HostId -EQ $SecondaryId |
                 Select-Object -ExpandProperty HostName
+
+            # if -all is specified with -hostname, then show VMs that have either primary or secondary location
+            # on the host. 
+            if ($PSBoundParameters.ContainsKey('All')) {
+                if ($HostName -notmatch $PrimaryHost -or $HostName -notmatch $SecondaryHost) {
+                    continue
+                }
+            }
 
             [pscustomobject]@{
                 PSTypeName  = 'HPE.SimpliVity.ReplicaSet'
