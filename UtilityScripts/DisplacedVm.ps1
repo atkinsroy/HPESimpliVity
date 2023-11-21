@@ -4,7 +4,7 @@
 .DESCRIPTION
     Simplivity uses virtual machine and host affinity rules in vCenter to ensure VMs run on the same SimpliVity
     node as their primary storage replica. If this not possible, they run where their secondary replica is 
-    hosted. In some cases there are situations where this will not be the case. Ususally, this is because there 
+    hosted. In some cases there are situations where this will not be the case. Usually, this is because there 
     is a conflicting affinity rule which forces the VM to run on another host. In these situations, 
     SimpliVity displays a warning alarm in vCenter stating that "SimpliVity VM Data Access Not Optimized".
 
@@ -14,8 +14,8 @@
     This command displays SimpliVity virtual machines that are running on hosts other than where their primary
     storage replica is located.
 .NOTES
-    This command assumes that the HPESimpliVity has been imported and that you have already connected to a 
-    SimpliVity Federation using the Connect-Svt command.
+    This command assumes that the HPESimpliVity PowerShell module has been imported and that you have already 
+    connected to a SimpliVity Federation using the Connect-Svt command.
 .LINK
     https://github.com/atkinsroy/HPESimpliVity/blob/master/Docs/Get-DisplacedVm.md
 .EXAMPLE
