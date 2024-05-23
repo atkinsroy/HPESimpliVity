@@ -4516,7 +4516,7 @@ function Get-SvtDisk {
             # We MUST sort by slot number to ensure SSDs are at the top to properly support 380 H
             # This command removes duplicates - all models have at least two logical disks where physical
             # disks would otherwise appear twice in the collection.
-            $Disk = $Hardware.logicaldrives.drive_sets.physical_drives |
+            $Disk = $Hardware.LogicalDrives.drive_sets.physical_drives |
                 Sort-Object { [Int32]($_.Slot -replace '(\d+).*', '$1') } | Get-Unique -AsString
 
             # Check capacity of first disk in collection (works ok all most models - 380 H included, for now)
