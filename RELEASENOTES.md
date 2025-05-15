@@ -1,5 +1,13 @@
 # HPE SimpliVity PowerShell Module Release Notes
 
+## Version 2.2.1
+
+* Added support for the supported storage configurations with HPE SimpliVity V5.3.1. This includes the new 7.68TB disk support added for the 325 Gen11. Also Get-SvtDisk now shows the single-disk or dual-disk resiliency (FTT1/FTT2). Unfortunately, the REST API doesn't advertise the
+resiliency level, or even RAID levels used on logical drives, so resiliency is calculated based on disk size, disk count and total system
+capacity.
+
+* Bug fixes
+
 ## Version 2.2.0
 
 * Added support for new HPE SimpliVity V4.2.0 features:

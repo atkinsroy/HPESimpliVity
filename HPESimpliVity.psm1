@@ -293,7 +293,7 @@ Function Get-SvtBackupDestination {
         }
 
         try {
-            $Dest = Get-SvtExternalStore -Name $Destination -ErrorAction Stop
+            $Dest = Get-SvtExternalStore -Name $Destination -ErrorAction Stop | Select-Object -First 1
             if ($FoundCluster) {
                 throw 'FoundMultipleDestinationTypes'
             }
@@ -1351,71 +1351,95 @@ function Get-SvtCapacityChart {
 
 # Helper function for Get-SvtDisk
 # Notes:
-# This method works quite well when all the disks are the same capacity. The 380 H introduces a bit
-# of a problem. As long as the disks are sorted by slot number (i.e. the first disk will always be an SSD),
-# then the 380H disk capacity will be 1.92TB - the first disk is used to confirm the server type. This
-# method may break if additional models continue to be added.
-# G (all flash) and H are both software optimized models.
-#
-# Notes: 
-# Tier1 disk group is always RAID 10 (with or without ADM in various configs - e.g. 2+2, 3+3, 2+2+2 etc.)
-# Tier2 disk group (capacity) is RAID 5 (Single disk resiliency)  or RAID 6 (Dual disk resiliency)
-# Single disk resiliency on x6, x8, x12
-# Dual disk resiliency on x6, x9 and x12
-# The API doesn't provide RAID formatting so single/dual resiliency (and relative capacity) can't be determined.
-function Get-SvtModel {
-    $Model = (
-        '325',
-        '325',
-        '2600',
-        '380',
-        '380',
-        '380',
-        '380',
-        '380',
-        '380 Gen10 H',
-        '380 Gen10 H',
-        '380 Gen10 G',
-        '380 Gen10 G',
-        '380 Gen10 G',
-        '380 Gen10 G',
-        '380 Gen10 G',
-        '380 Gen10 G',
-        '380 Gen10 G',
-        '380 Gen10 G',
-        '380 Gen10 G'
+# This method works quite well when all the disks are the same capacity - so older models like 380H might not be accurate
+# Tested with new supported models for SimpliVity V5.3.1 - 380 Gen11, 325 Gen11, 380 Gen10 Plus and 325 Gen10 Plus V2. 
+
+# These models generally support the following:
+# 325 Gen11 (both Genoa and Turin variants) - 4, 6, 8x 1.92TB, 4, 6, 8x 3.84TB and new with V5.3.1, 4, 6, 8x 7.68TB
+# 380 Gen11 - 6, 8, 12, 16x 1.92TB, 6, 8, 12, 16x 3.84TB and new 6, 8, 12, 16x 7.68TB
+# 380 Gen10 Plus - 4, 8, 9x 1.92TB, 6, 8, 9x 1.92TB, 6, 8, 9, 12x 3.84TB
+# 325 Gen10 Plus V2 - 4, 6, 8x 1.92TB
+
+# The assumption is that systems with 4, 8, and 16 disks are alway FTT1. Systems with 9 or 18 disks are always FTT2.
+# So here we are concerned with systems with 6 and 12 disks. These could be either FTT1 or FTT2
+
+function Get-SvtDiskConfig {
+    [CmdletBinding()]
+    param (
+        [int]$DiskCount,
+        [int]$DiskCapacity,
+        [float]$SystemCapacity
     )
-    $DiskCount = (4, 6, 6, 5, 5, 9, 12, 12, 12, 24, 6, 8, 12, 16, 9, 6, 8, 9, 12)
-    $DiskCapacity = (2, 2, 2, 1, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 4, 4, 4)
-    $Kit = (
-        '  4-8TB - SVT325 Extra Small', #4x 2
-        ' 7-15TB - SVT325 Small', # 6x 2
-        ' 7-15TB - SVT2600', # 6x 2
-        '  3-6TB - SVT380Gen10 Extra Small', # 5x 960GB disk ~ 1TB
-        ' 6-12TB - SVT380Gen10 Small', # 5x 2
-        '12-25TB - SVT380Gen10 Medium', # 9x 2
-        '20-40TB - SVT380Gen10 Large', # 12x 2
-        '40-80TB - SVT380Gen10 Extra Large', #12x 3.8TB disk ~ 4TB
-        '20-40TB - SVT380Gen10H (LFF)', # 4x 1.92 SSD + 8X4TB HDD = 12 disks (Backup/Archive)
-        '25-50TB - SVT380Gen10H (SFF)', # 4x 1.92 SSD + 20X1.2TB HDD = 24 disks (General Purpose)
-        '  7.5TB - SVT380Gen10G x6', # 6x 1.92TB SSD
-        '   10TB - SVT380Gen10G x8', # 8x 1.92TB SSD (always single resiliency)
-        '   15TB - SVT380Gen10G x12', # 12x 1.92TB SSD
-        '   20TB - SVT380Gen10G x16', # Discontinued - larger disk models introduced
-        '   10TB - SVT380Gen10G x9', # added in 4.1.3 - 9x 1.92TB SSD (always dual resiliency - FTT2)
-        '   15TB - SVT380Gen10G x6', # added in 4.1.3 - 6x 3.84TB SSD
-        '   21TB - SVT380Gen10G x8', # added in 4.1.3 - 8x 3.84TB SSD (single)
-        '   21TB - SVT380Gen10G x9', # added in 4.1.3 - 9x 3.84TB SSD (dual - FTT2)
-        '   32TB - SVT380Gen10G x12' # added in 4.1.3 - 12x 3.84TB SSD
-    )
-    # return a custom object
-    0..18 | ForEach-Object {
-        [pscustomobject]@{
-            Model        = $Model[$_]
-            DiskCount    = $DiskCount[$_]
-            DiskCapacity = $DiskCapacity[$_]
-            StorageKit   = $Kit[$_]
+    
+    process {
+        if ($DiskCount -eq 6) {
+            if ($DiskCapacity -eq 2) {
+                if ($SystemCapacity -lt 7) {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT2)' -f $SystemCapacity, $DiskCount
+                }
+                else {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT1)' -f $SystemCapacity, $DiskCount
+                }
+            }
+            elseif ($DiskCapacity -eq 4) {
+                if ($SystemCapacity -lt 14) {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT2)' -f $SystemCapacity, $DiskCount
+                }
+                else {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT1)' -f $SystemCapacity, $DiskCount
+                }
+            }
+            elseif ($DiskCapacity -eq 8) {
+                if ($SystemCapacity -lt 28) {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT2)' -f $SystemCapacity, $DiskCount
+                }
+                else {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT1)' -f $SystemCapacity, $DiskCount
+                }
+            }
+            else {
+                # Future proof. Larger disks will at least show correct usable capacity and disk count.
+                $DiskConfig = '{0:N1}TB usable (x{1:N0} disks)' -f $SystemCapacity, $DiskCount
+            }
         }
+        elseif ($DiskCount -eq 12) {
+            if ($DiskCapacity -eq 2) {
+                if ($SystemCapacity -lt 14) {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT2)' -f $SystemCapacity, $DiskCount
+                }
+                else {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT1)' -f $SystemCapacity, $DiskCount
+                }
+            }
+            elseif ($DiskCapacity -eq 4) {
+                if ($SystemCapacity -lt 28) {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT2)' -f $SystemCapacity, $DiskCount
+                }
+                else {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT1)' -f $SystemCapacity, $DiskCount
+                }
+            }
+            elseif ($DiskCapacity -eq 8) {
+                if ($SystemCapacity -lt 65) {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT2)' -f $SystemCapacity, $DiskCount
+                }
+                else {
+                    $DiskConfig = '{0:N1}TB usable (x{1:N0} FTT1)' -f $SystemCapacity, $DiskCount
+                }
+            }
+            else {
+                # Future proof. Larger disks will at least show correct usable capacity and disk count.
+                $DiskConfig = '{0:N1}TB usable (x{1:N0} disks)' -f $SystemCapacity, $DiskCount
+            }
+        }
+        else {
+            # We only get here if disk count is not 6 or 12. At least show correct usable capacity and disk count.
+            $DiskConfig = '{0:N1}TB usable (x{1:N0} disks)' -f $SystemCapacity, $DiskCount
+        }
+    }
+
+    end {
+        Write-Output $DiskConfig
     }
 }
 
@@ -4494,6 +4518,7 @@ function Get-SvtDisk {
     )
 
     begin {
+        Write-Verbose 'Note: Usable capacities shown for system storage configurations are prior to compression and deduplication'
         $LocalCulture = Get-Culture #[System.Threading.Thread]::CurrentThread.CurrentCulture
 
         if ($PSBoundParameters.ContainsKey('HostName')) {
@@ -4516,46 +4541,47 @@ function Get-SvtDisk {
             # We MUST sort by slot number to ensure SSDs are at the top to properly support 380 H
             # This command removes duplicates - all models have at least two logical disks where physical
             # disks would otherwise appear twice in the collection.
-            $Disk = $Hardware.LogicalDrives.drive_sets.physical_drives |
+            $Disk = $Hardware.logicaldrives.drive_sets.physical_drives |
                 Sort-Object { [Int32]($_.Slot -replace '(\d+).*', '$1') } | Get-Unique -AsString
 
-            # Check capacity of first disk in collection (works ok all most models - 380 H included, for now)
+            # Check capacity of first disk in collection
             $DiskCapacity = [Int32][Math]::Ceiling(($Disk | Select-Object -First 1).capacity / 1TB)
             $DiskCount = ($Disk | Measure-Object).Count
 
-            $SvtModel = Get-SvtModel | Where-Object {
-                $Hardware.Model -match $_.Model -and
-                $DiskCount -eq $_.DiskCount -and
-                $DiskCapacity -eq $_.DiskCapacity
-            }
+            $SystemCapacity = (($Hardware.LogicalDrives.capacity | Measure-Object -Sum).Sum / 1TB)
 
-            if ($SvtModel) {
-                $Kit = $SvtModel.StorageKit
+            # Systems with 4, 8 or 16 disks are always FTT1
+            if ($Disk -in (4, 8, 16)) {
+                $DiskConfig = '{0:N1}Tb usable (x{1:N0} FTT1)' -f $SystemCapacity, $DiskCount
+            }
+            elseif ($Disk -in (9, 18)) {
+                # Systems with 9 or 18 (18 was only done for 380G (Gen10), dropped in favour of x16)
+                $DiskConfig = '{0:N1}Tb usable (x{1:N0} FTT2)' -f $SystemCapacity, $DiskCount
             }
             else {
-                $Kit = 'Unknown Storage Kit'
+                $DiskConfig = Get-SvtDiskConfig -DiskCount $DiskCount -DiskCapacity $DiskCapacity -SystemCapacity $SystemCapacity   
             }
 
             $Disk | ForEach-Object {
                 [pscustomobject]@{
-                    PSTypeName       = 'HPE.SimpliVity.Disk'
-                    SerialNumber     = $_.serial_number
-                    Manufacturer     = $_.manufacturer
-                    ModelNumber      = $_.model_number
-                    Firmware         = $_.firmware_revision
-                    Status           = $_.status
-                    Health           = $_.health
-                    Enclosure        = [System.Int32]$_.enclosure
-                    Slot             = [System.Int32]$_.slot
-                    CapacityTB       = [single]::Parse('{0:n2}' -f ($_.capacity / 1000000000000), $LocalCulture)
-                    WWN              = $_.wwn
-                    PercentRebuilt   = [System.Int32]$_.percent_rebuilt
-                    AdditionalStatus = $_.additional_status
-                    MediaType        = $_.media_type
-                    DrivePosition    = $_.drive_position
-                    RemainingLife    = $_.life_remaining
-                    HostStorageKit   = $Kit
-                    HostName         = $ThisHost
+                    PSTypeName        = 'HPE.SimpliVity.Disk'
+                    SerialNumber      = $_.serial_number
+                    Manufacturer      = $_.manufacturer
+                    ModelNumber       = $_.model_number
+                    Firmware          = $_.firmware_revision
+                    Status            = $_.status
+                    Health            = $_.health
+                    Enclosure         = [System.Int32]$_.enclosure
+                    Slot              = [System.Int32]$_.slot
+                    CapacityTB        = [single]::Parse('{0:n2}' -f ($_.capacity / 1000000000000), $LocalCulture)
+                    WWN               = $_.wwn
+                    PercentRebuilt    = [System.Int32]$_.percent_rebuilt
+                    AdditionalStatus  = $_.additional_status
+                    MediaType         = $_.media_type
+                    DrivePosition     = $_.drive_position
+                    RemainingLife     = $_.life_remaining
+                    HostStorageConfig = $DiskConfig
+                    HostName          = $ThisHost
                 }
             } # end foreach disk
         } #end foreach host
