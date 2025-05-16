@@ -2,9 +2,9 @@
 # HPE SimpliVity PowerShell Module
 
 ![PowerShell Gallery](https://img.shields.io/powershellgallery/v/HPESimplivity?style=for-the-badge&logo=powershell)
-![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/HPESimplivity?style=for-the-badge=flat)
-
 ![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/HPESimplivity?style=for-the-badge)
+
+![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/HPESimplivity?style=for-the-badge=flat-square)
 
 
 
