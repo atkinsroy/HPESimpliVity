@@ -9,7 +9,7 @@
 ![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/HPESimplivity?style=plastic)
 ![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/HPESimplivity?style=social)
 ![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/HPESimplivity?style=for-the-badge)
-![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/HPESimplivity?logo=hp)
+![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/HPESimplivity?logo=powers)
 
 
 
