@@ -11,6 +11,8 @@
 ![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/HPESimplivity?style=for-the-badge)
 ![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/HPESimplivity?logo=powers)
 ![Endpoint Badge](https://img.shields.io/endpoint?url=github.com%2Fatkinsroy%2FHPESimpliVity%2Fblob%2Fmain%2FMedia%2FCodeCoverage.json)
+![Endpoint Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fgithub.com%2Fatkinsroy%2FHPESimpliVity%2Fblob%2Fmain%2FMedia%2FCodeCoverage.json)
+
 
 
 
