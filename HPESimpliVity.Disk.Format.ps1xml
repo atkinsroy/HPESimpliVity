@@ -50,7 +50,7 @@
                         <Alignment>right</Alignment>
                     </TableColumnHeader>
 		            <TableColumnHeader>
-                        <Label>HostStorageKit</Label>
+                        <Label>HostStorageConfig</Label>
                         <Width>33</Width>
                         <Alignment>left</Alignment>
                     </TableColumnHeader>
@@ -100,7 +100,7 @@
                                 <PropertyName>Slot</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>HostStorageKit</PropertyName>
+                                <PropertyName>HostStorageConfig</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>HostName</PropertyName>
